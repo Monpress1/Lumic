@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>lumic — Music that moves with you</title>
+<meta name="description" content="lumic is the streaming app built for life on the move. Download offline, share playlists with friends, and unlock free premium by referring people you love.">
+<meta name="theme-color" content="#0B0A14">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#F7F5FC;
+    --surface:#FFFFFF;
+    --surface-2:#EFEBFA;
+    --text:#17151F;
+    --muted:#615C79;
+    --amber:#E8952C;
+    --violet:#6A4CE0;
+    --line: rgba(23,21,31,0.10);
+    --shadow: 0 20px 50px -25px rgba(30,20,60,0.35);
+    --radius: 20px;
+  }
+  html.dark{
+    --bg:#0B0A14;
+    --surface:#15131F;
+    --surface-2:#1D1A2A;
+    --text:#F5F3FF;
+    --muted:#9C97B8;
+    --amber:#FFB238;
+    --violet:#8A6CFF;
+    --line: rgba(245,243,255,0.10);
+    --shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background .35s ease, color .35s ease;
+    overflow-x:hidden;
+  }
+  h1,h2,h3{
+    font-family:'Space Grotesk', 'Inter', sans-serif;
+    margin:0;
+    letter-spacing:-0.02em;
+  }
+  p{margin:0;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--amber);
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:0 22px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 22px;
+    max-width:560px; margin:0 auto;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand img{width:34px; height:34px; border-radius:9px; display:block; object-fit:cover;}
+  .brand span{font-weight:700; font-size:19px;}
+  .mode-toggle{
+    width:42px; height:42px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    color:var(--text);
+  }
+  .mode-toggle svg{width:18px; height:18px;}
+  .mode-toggle .sun{display:none;}
+  html.dark .mode-toggle .moon{display:none;}
+  html.dark .mode-toggle .sun{display:block;}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:44px 0 8px;}
+  .hero h1{
+    font-size:clamp(32px, 8vw, 42px);
+    line-height:1.05;
+    margin-top:14px;
+  }
+  .hero h1 em{
+    font-style:normal;
+    background:linear-gradient(100deg, var(--violet), var(--amber));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .hero p.lead{
+    margin-top:16px;
+    font-size:16px;
+    line-height:1.6;
+    color:var(--muted);
+    max-width:46ch;
+  }
+
+  /* waveform signature */
+  .waveform{
+    display:flex; align-items:flex-end; gap:4px;
+    height:56px; margin-top:26px;
+  }
+  .waveform i{
+    display:block; width:5px; border-radius:3px;
+    background:linear-gradient(180deg, var(--amber), var(--violet));
+    animation:bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes bounce{
+    0%,100%{transform:scaleY(0.35);}
+    50%{transform:scaleY(1);}
+  }
+
+  .cta-row{margin-top:28px; display:flex; flex-direction:column; gap:12px;}
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:16px 22px;
+    border-radius:14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:16px;
+    border:1px solid transparent;
+    cursor:pointer;
+    text-decoration:none;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{
+    background:linear-gradient(100deg, var(--amber), var(--violet));
+    color:#0B0A14;
+    box-shadow:var(--shadow);
+  }
+  .btn-ghost{
+    background:var(--surface);
+    color:var(--text);
+    border-color:var(--line);
+  }
+  .btn svg{width:20px; height:20px; flex-shrink:0;}
+  .meta-line{
+    margin-top:12px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    display:flex; gap:14px; flex-wrap:wrap;
+  }
+
+  /* ---------- Section shell ---------- */
+  section{padding:52px 0;}
+  .section-head{margin-bottom:22px;}
+  .section-head h2{font-size:26px; margin-top:10px; line-height:1.15;}
+  .section-head p{color:var(--muted); margin-top:10px; font-size:15px; line-height:1.6;}
+
+  /* ---------- Blended images ---------- */
+  .bleed-img{
+    position:relative;
+    width:100vw;
+    margin-left:calc(-50vw + 50%);
+    padding:26px 0;
+  }
+  .bleed-img .frame{
+    position:relative;
+    height:280px;
+    overflow:hidden;
+  }
+  .bleed-img img{
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+  .bleed-img .fade{
+    position:absolute; left:0; right:0; height:70px; pointer-events:none;
+  }
+  .bleed-img .fade.top{top:0; background:linear-gradient(to bottom, var(--bg), transparent);}
+  .bleed-img .fade.bottom{bottom:0; background:linear-gradient(to top, var(--bg), transparent);}
+  .bleed-img figcaption{
+    text-align:center; margin-top:12px;
+    font-size:13px; color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ---------- Features ---------- */
+  .feature-grid{display:grid; grid-template-columns:1fr; gap:14px;}
+  .feature-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .feature-card .icon{
+    width:42px; height:42px; border-radius:12px;
+    background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .feature-card .icon svg{width:20px; height:20px; color:var(--amber);}
+  .feature-card h3{font-size:16px; font-weight:600;}
+  .feature-card p{margin-top:6px; font-size:14px; line-height:1.55; color:var(--muted);}
+
+  /* ---------- Referral banner ---------- */
+  .referral{
+    margin-top:36px;
+    background:linear-gradient(135deg, var(--surface-2), var(--surface));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+  }
+  .referral .eyebrow{margin-bottom:8px;}
+  .referral h3{font-size:20px;}
+  .referral p{margin-top:10px; font-size:14px; color:var(--muted); line-height:1.6;}
+
+  /* ---------- Install panels ---------- */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+  }
+  .steps{list-style:none; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:14px;}
+  .steps li{display:flex; gap:14px; align-items:flex-start; font-size:14px; line-height:1.5; color:var(--text);}
+  .steps .num{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--surface-2); color:var(--amber);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .steps svg{width:16px; height:16px; vertical-align:-3px; margin:0 2px;}
+
+  .platform-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted);
+    border:1px solid var(--line); border-radius:999px;
+    padding:5px 10px; margin-bottom:14px;
+  }
+  .platform-badge .dot{width:6px; height:6px; border-radius:50%; background:var(--amber);}
+
+  /* ---------- Footer ---------- */
+  footer{
+    padding:40px 0 60px;
+    border-top:1px solid var(--line);
+    margin-top:20px;
+  }
+  footer .brand{margin-bottom:14px;}
+  footer p{font-size:13px; color:var(--muted); line-height:1.6;}
+  footer .links{display:flex; gap:16px; margin-top:16px; flex-wrap:wrap;}
+  footer .links a{color:var(--muted); font-size:13px; text-decoration:none; border-bottom:1px solid var(--line);}
+
+  @media(min-width:640px){
+    .feature-grid{grid-template-columns:1fr 1fr;}
+    .bleed-img .frame{height:360px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <img src="logo.png" alt="lumic logo">
+      <span>lumic</span>
+    </div>
+    <button class="mode-toggle" id="modeToggle" aria-label="Toggle dark mode">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <span class="eyebrow">Streaming, unplugged from the wall</span>
+    <h1>Your music,<br><em>everywhere</em> you go.</h1>
+    <p class="lead">lumic is a streaming app built around one idea: your favorite songs shouldn't stop when your signal does. Download tracks to your phone, share playlists with friends in seconds, and take your whole library offline — no buffering, no interruptions, no excuses.</p>
+
+    <div class="waveform" aria-hidden="true">
+      <i style="animation-delay:0s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.2s"></i>
+      <i style="animation-delay:.3s"></i><i style="animation-delay:.15s"></i><i style="animation-delay:.05s"></i>
+      <i style="animation-delay:.25s"></i><i style="animation-delay:.35s"></i><i style="animation-delay:.1s"></i>
+      <i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.3s"></i>
+    </div>
+
+    <!-- ANDROID -->
+    <div id="androidCta" class="cta-row" style="display:none;">
+      <a class="btn btn-primary" href="https://fhogysmvpqakzoxwhxht.supabase.co/storage/v1/object/public/Apk/Lumic_1.apk" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+        Download for Android
+      </a>
+      <button class="btn btn-ghost" id="installPwaBtn" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+        Add lumic to your home screen
+      </button>
+      <div class="meta-line">
+        <span>v1.0</span><span>~2.4MB</span><span>Android 8.0+</span>
+      </div>
+    </div>
+
+    <!-- IOS -->
+    <div id="iosCta" class="cta-row" style="display:none;">
+      <a class="btn btn-primary" href="#install-ios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3m0 0l-4 4m4-4l4 4"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>
+        Get lumic on iPhone
+      </a>
+      <div class="meta-line">
+        <span>Add to Home Screen</span><span>No App Store needed</span>
+      </div>
+    </div>
+
+    <!-- DEFAULT / DESKTOP -->
+    <div id="defaultCta" class="cta-row" style="display:none;">
+      <a class="btn btn-primary" href="https://fhogysmvpqakzoxwhxht.supabase.co/storage/v1/object/public/Apk/Lumic_1.apk" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+        Download for Android
+      </a>
+      <a class="btn btn-ghost" href="#install-ios">Have an iPhone? Tap here</a>
+    </div>
+  </section>
+
+  <!-- WHAT IS lumic -->
+  <section id="about">
+    <div class="section-head">
+      <span class="eyebrow">What is lumic</span>
+      <h2>A streaming platform made for people who live with headphones in.</h2>
+      <p>lumic started with a simple frustration: great music apps punish you the second you go offline. So we built one that doesn't. Stream millions of tracks when you're online, download them in one tap when you're not, and keep listening on the train, on a flight, or wherever your signal disappears. It's the same idea Spotify made popular — just tuned for people who share more, save more, and pay less.</p>
+    </div>
+  </section>
+
+  <figure class="bleed-img">
+    <div class="frame">
+      <div class="fade top"></div>
+      <img src="img1.jpg" alt="Person listening to lumic with headphones on the go">
+      <div class="fade bottom"></div>
+    </div>
+    <figcaption>Downloaded once. Played anywhere.</figcaption>
+  </figure>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="section-head">
+      <span class="eyebrow">Why people switch</span>
+      <h2>Everything you'd expect. A few things you wouldn't.</h2>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg></div>
+        <div>
+          <h3>Offline downloads</h3>
+          <p>Save any song, album, or playlist to your device and play it with zero data and zero interruptions.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></div>
+        <div>
+          <h3>Share songs & playlists</h3>
+          <p>Send a track or a full playlist to a friend in one tap, straight from the player — no copy-pasting links.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <div>
+          <h3>Unlock premium your way</h3>
+          <p>Pay a one-time ₦300, or skip the payment entirely by referring 3 friends who install lumic. Either path removes the ads for good.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div>
+          <h3>Made-for-you playlists</h3>
+          <p>Daily mixes and radio stations that actually learn your taste, instead of repeating the same 20 songs.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></div>
+        <div>
+          <h3>High-fidelity audio</h3>
+          <p>Switch between data-saver and studio-quality streaming depending on your connection and your mood.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <div>
+          <h3>Synced across devices</h3>
+          <p>Pause on your phone, pick up on any other device, exactly where you left off — playlists included.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+        <div>
+          <h3>Real-time lyrics</h3>
+          <p>Follow along line by line, or jump straight to your favorite part of the song by tapping a lyric.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="referral">
+      <span class="eyebrow">Two ways to go premium</span>
+      <h3>₦300, or 3 friends. Your call.</h3>
+      <p>lumic is free to use with ads. To unlock ad-free premium, either pay a one-time ₦300, or refer 3 friends who download and install the app — no card required. Share the app the same way you'd share a song, and premium unlocks automatically once your 3rd friend joins.</p>
+    </div>
+  </section>
+
+  <figure class="bleed-img">
+    <div class="frame">
+      <div class="fade top"></div>
+      <img src="img2.jpg" alt="Friends sharing a playlist together on lumic">
+      <div class="fade bottom"></div>
+    </div>
+    <figcaption>Better with friends.</figcaption>
+  </figure>
+
+  <!-- IOS INSTALL -->
+  <section id="install-ios">
+    <div class="section-head">
+      <span class="eyebrow">iPhone & iPad</span>
+      <h2>Add lumic to your Home Screen</h2>
+      <p>lumic isn't on the App Store yet — instead, it installs straight from Safari as a full app icon on your Home Screen. Once it's added, it opens full-screen, works offline, and feels exactly like a native app — no App Store, no waiting on review.</p>
+    </div>
+
+    <div id="iosWarning" class="panel" style="display:none; border-color:var(--amber); margin-bottom:14px;">
+      <span class="platform-badge"><span class="dot"></span>Action needed</span>
+      <p style="font-size:14px; line-height:1.6;">You're viewing this in an in-app browser (like Instagram, Facebook, or TikTok), and "Add to Home Screen" won't show up here. Tap the <strong>•••</strong> or share icon in this app and choose <strong>Open in Safari</strong> first, then follow the steps below.</p>
+    </div>
+
+    <div class="panel">
+      <span class="platform-badge"><span class="dot"></span>Safari · takes 15 seconds</span>
+      <ol class="steps">
+        <li><span class="num">1</span><span>Open this page in <strong>Safari</strong>. Add to Home Screen only works from Safari — not Chrome, and not an app's built-in browser.</span></li>
+        <li><span class="num">2</span><span>Tap the <strong>Share</strong> icon <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M4 14v5a2 2 0 002 2h12a2 2 0 002-2v-5"/></svg>. On iPhone it's in the bottom toolbar; on iPad it's at the top, next to the address bar.</span></li>
+        <li><span class="num">3</span><span>Scroll down the share menu and tap <strong>Add to Home Screen</strong>. If you don't see it, tap <strong>Edit Actions</strong> at the bottom and add it.</span></li>
+        <li><span class="num">4</span><span>Confirm the name reads <strong>lumic</strong>, then tap <strong>Add</strong> in the top-right corner.</span></li>
+        <li><span class="num">5</span><span>Find the lumic icon on your Home Screen and tap it to open — you're in, no App Store required.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ANDROID DOWNLOAD DETAIL -->
+  <section id="install-android">
+    <div class="section-head">
+      <span class="eyebrow">Android</span>
+      <h2>Direct download, no store required</h2>
+      <p>Tap download, open the file once it finishes, and allow installs from this browser if your phone asks. Takes less than a minute.</p>
+    </div>
+    <div class="panel">
+      <span class="platform-badge"><span class="dot"></span>APK · v1.0</span>
+      <a class="btn btn-primary" href="https://fhogysmvpqakzoxwhxht.supabase.co/storage/v1/object/public/Apk/Lumic_1.apk" download style="margin-top:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+        Download lumic.apk
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><img src="logo.png" alt="lumic logo"><span>lumic</span></div>
+    <p>lumic is an independent music streaming app. Music, artwork, and playlist content belong to their respective owners and rights holders.</p>
+    <div class="links">
+      <a href="#about">About</a>
+      <a href="#features">Features</a>
+      <a href="#install-ios">iPhone install</a>
+      <a href="#install-android">Android download</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---------- Theme handling ----------
+  var root = document.documentElement;
+  var toggle = document.getElementById('modeToggle');
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+  var isAndroid = /Android/.test(ua);
+
+  function applyTheme(mode){
+    if(mode === 'dark'){ root.classList.add('dark'); }
+    else { root.classList.remove('dark'); }
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode === 'dark' ? '#0B0A14' : '#F7F5FC');
+  }
+
+  var saved = localStorage.getItem('lumic-theme');
+  if(saved){
+    applyTheme(saved);
+  } else {
+    // Android default: light. iOS/other default: light too, per spec.
+    applyTheme('light');
+  }
+
+  toggle.addEventListener('click', function(){
+    var next = root.classList.contains('dark') ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem('lumic-theme', next);
+  });
+
+  // ---------- Device-based CTA ----------
+  var androidCta = document.getElementById('androidCta');
+  var iosCta = document.getElementById('iosCta');
+  var defaultCta = document.getElementById('defaultCta');
+
+  if(isAndroid){
+    androidCta.style.display = 'flex';
+  } else if(isIOS){
+    iosCta.style.display = 'flex';
+  } else {
+    defaultCta.style.display = 'flex';
+  }
+
+  // ---------- iOS in-app browser warning ----------
+  // Add to Home Screen is unavailable inside embedded browsers
+  // (Instagram, Facebook, TikTok, etc.) — flag it so people don't get stuck.
+  if(isIOS){
+    var inAppBrowser = /FBAN|FBAV|Instagram|Line\/|TikTok|Twitter|MicroMessenger/i.test(ua) || !window.navigator.standalone && /WebView/i.test(ua);
+    var iosWarning = document.getElementById('iosWarning');
+    if(inAppBrowser && iosWarning){
+      iosWarning.style.display = 'block';
+    }
+  }
+
+  // ---------- Service worker ----------
+  // Registers the same sw.js already used by the main lumic app, so this
+  // download page becomes installable too and shares its offline cache.
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){ /* PWA install is a progressive enhancement */ });
+  }
+
+  // ---------- Android "Add to Home Screen" install prompt ----------
+  var deferredPrompt = null;
+  var installBtn = document.getElementById('installPwaBtn');
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if(installBtn) installBtn.style.display = 'flex';
+  });
+  if(installBtn){
+    installBtn.addEventListener('click', function(){
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; installBtn.style.display = 'none'; });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
