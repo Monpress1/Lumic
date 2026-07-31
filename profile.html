@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lumic — Profile</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  html,body{width:100%;}
+  body{background:#09090b;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;}
+  *{box-sizing:border-box;}
+  .app-content-wrap{overflow-x:hidden;max-width:100vw;}
+  .glass-nav{background:rgba(18,18,22,0.92);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.08);}
+  .glass-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);}
+  .no-scrollbar::-webkit-scrollbar{display:none;}
+  .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+  .skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 37%,rgba(255,255,255,0.04) 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;}
+  @keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+  .uid-chip{font-family:ui-monospace,Menlo,monospace;letter-spacing:.12em;}
+  .premium-card{background:linear-gradient(135deg,rgba(16,185,129,0.16),rgba(5,150,105,0.06));border:1px solid rgba(16,185,129,0.25);}
+  .btn-primary{background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 20px rgba(16,185,129,0.35);}
+  .btn-primary:active{transform:scale(0.97);}
+  .btn-primary:disabled{opacity:0.5;box-shadow:none;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .modal-box{background:#1a1a22;border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:24px;width:100%;max-width:380px;}
+  .progress-track{height:8px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .4s ease;}
+</style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between">
+
+<div id="screen-boot" class="fixed inset-0 z-50 flex items-center justify-center bg-[#09090b]">
+  <div class="w-9 h-9 rounded-full border-2 border-white/10 border-t-emerald-500 animate-spin"></div>
+</div>
+
+<div class="max-w-2xl mx-auto w-full px-4 pt-6 pb-32 flex-1 flex flex-col app-content-wrap hidden" id="pageContent">
+
+  <!-- HEADER -->
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-black text-white tracking-tight">Profile</h1>
+    <button onclick="logout()" class="text-xs font-semibold text-slate-400 hover:text-rose-400 flex items-center gap-1.5">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i> Log out
+    </button>
+  </div>
+
+  <!-- IDENTITY CARD -->
+  <div class="glass-card rounded-3xl p-5 mb-5 flex items-center gap-4">
+    <div id="avatarInitial" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-2xl font-black text-black flex-shrink-0">?</div>
+    <div class="min-w-0 flex-1">
+      <p id="displayName" class="font-bold text-base text-white truncate">—</p>
+      <p id="userEmail" class="text-xs text-slate-400 truncate mt-0.5">—</p>
+      <div class="flex items-center gap-2 mt-2">
+        <span id="uidBadge" class="uid-chip text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full">—</span>
+        <button onclick="copyUid()" class="text-slate-400 hover:text-white text-xs"><i class="fa-regular fa-copy"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREMIUM STATUS -->
+  <div id="premiumCard" class="premium-card rounded-3xl p-5 mb-5">
+    <div class="flex items-start justify-between mb-1">
+      <div>
+        <span id="premiumBadgeLabel" class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Free plan</span>
+        <h2 id="premiumTitle" class="text-lg font-black text-white mt-1">Unlock Lumic Premium</h2>
+      </div>
+      <i class="fa-solid fa-crown text-2xl text-amber-400"></i>
+    </div>
+    <p id="premiumSub" class="text-xs text-slate-300 leading-relaxed mb-4">Offline downloads, unlimited skips and zero interruptions — ₦300/month.</p>
+    <button id="payBtn" onclick="startPayment()" class="btn-primary w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition">
+      Pay ₦300 with Paystack
+    </button>
+  </div>
+
+  <!-- REFERRAL PROGRAM -->
+  <div class="glass-card rounded-3xl p-5 mb-5">
+    <div class="flex items-center justify-between mb-1">
+      <h3 class="text-sm font-black text-white"><i class="fa-solid fa-user-group text-emerald-400 mr-2"></i>Refer 3, get Premium free</h3>
+    </div>
+    <p class="text-xs text-slate-400 leading-relaxed mb-4">Share your Universal ID below. Once 3 friends sign up with it, Premium unlocks automatically — no card needed.</p>
+
+    <div class="flex items-center justify-between mb-2">
+      <span id="referralCountLabel" class="text-xs font-bold text-slate-300">0 / 3 friends joined</span>
+    </div>
+    <div class="progress-track mb-4">
+      <div id="referralProgressFill" class="progress-fill" style="width:0%"></div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div class="flex-1 glass-card rounded-xl px-3.5 py-2.5 flex items-center justify-between">
+        <span id="referralShareUid" class="uid-chip text-sm font-bold text-white">—</span>
+      </div>
+      <button onclick="copyUid()" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center flex-shrink-0 transition">
+        <i class="fa-solid fa-share-nodes text-sm text-white"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ACCOUNT INFO -->
+  <div class="glass-card rounded-3xl p-5 mb-5 space-y-3">
+    <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-circle-info text-slate-400 mr-2"></i>Account</h3>
+    <div class="flex items-center justify-between text-xs">
+      <span class="text-slate-400">Member since</span>
+      <span id="memberSince" class="text-white font-semibold">—</span>
+    </div>
+    <div class="flex items-center justify-between text-xs">
+      <span class="text-slate-400">Referred by</span>
+      <span id="referredByLabel" class="text-white font-semibold">—</span>
+    </div>
+  </div>
+
+  <a href="lumic.html" class="text-center text-xs font-semibold text-slate-500 hover:text-slate-300 mt-1">
+    <i class="fa-solid fa-arrow-left mr-1"></i> Back to player
+  </a>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[300] text-center text-xs font-semibold py-2.5 px-5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="fixed bottom-0 left-0 right-0 glass-nav z-40 px-6 py-2.5">
+  <div class="max-w-md mx-auto flex items-center justify-around">
+    <button onclick="window.location.href='lumic.html'" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px]">Home</span></button>
+    <button onclick="window.location.href='lumic.html'" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px]">Search</span></button>
+    <button onclick="window.location.href='lumic.html'" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-layer-group text-lg"></i><span class="text-[10px]">Library</span></button>
+    <button class="flex flex-col items-center gap-1 text-emerald-400 font-bold transition"><i class="fa-solid fa-circle-user text-lg"></i><span class="text-[10px]">Profile</span></button>
+  </div>
+</nav>
+
+<script>
+// ==================== CONFIG ====================
+const SUPABASE_URL = "https://fhogysmvpqakzoxwhxht.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob2d5c212cHFha3pveHdoeGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MTg0OTcsImV4cCI6MjEwMDI5NDQ5N30.0WBV1--98XFx_WyL5TkRIsQ1sc-FkUCixv2uf0j8T9g";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// TODO: replace with your live/test Paystack public key (starts with pk_).
+// This is safe to expose client-side — Paystack public keys are designed for it.
+const PAYSTACK_PUBLIC_KEY = "pk_live_fab019f9df1b6cb89cb32bdef25c7d2c048c63c2";
+
+const REFERRALS_NEEDED = 3;
+const PREMIUM_PRICE_NGN = 300;
+
+let currentUser = null;
+let currentProfile = null;
+
+window.addEventListener("DOMContentLoaded", boot);
+
+async function boot() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "index.html"; return; }
+  currentUser = session.user;
+
+  const { data: profile, error } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+  if (error || !profile) { window.location.href = "index.html"; return; }
+  currentProfile = profile;
+
+  await Promise.all([renderProfile(), checkReferralUnlock()]);
+
+  document.getElementById("screen-boot").classList.add("hidden");
+  document.getElementById("pageContent").classList.remove("hidden");
+}
+
+async function renderProfile() {
+  const name = currentProfile.display_name || (currentUser.email || "").split("@")[0] || "Listener";
+  document.getElementById("displayName").innerText = name;
+  document.getElementById("userEmail").innerText = currentUser.email || "Signed in with Google";
+  document.getElementById("avatarInitial").innerText = name.charAt(0).toUpperCase();
+  document.getElementById("uidBadge").innerText = currentProfile.username;
+  document.getElementById("referralShareUid").innerText = currentProfile.username;
+  document.getElementById("memberSince").innerText = new Date(currentProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+  if (currentProfile.referred_by) {
+    const { data: referrer } = await supabaseClient.from("profiles").select("username").eq("id", currentProfile.referred_by).maybeSingle();
+    document.getElementById("referredByLabel").innerText = referrer ? referrer.username : "—";
+  } else {
+    document.getElementById("referredByLabel").innerText = "No one";
+  }
+
+  const { count } = await supabaseClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", currentUser.id);
+  const referredCount = count || 0;
+  document.getElementById("referralCountLabel").innerText = `${Math.min(referredCount, REFERRALS_NEEDED)} / ${REFERRALS_NEEDED} friends joined`;
+  document.getElementById("referralProgressFill").style.width = `${Math.min(100, (referredCount / REFERRALS_NEEDED) * 100)}%`;
+
+  renderPremiumCard();
+}
+
+function renderPremiumCard() {
+  const isPremium = !!currentProfile.is_premium;
+  const badge = document.getElementById("premiumBadgeLabel");
+  const title = document.getElementById("premiumTitle");
+  const sub = document.getElementById("premiumSub");
+  const payBtn = document.getElementById("payBtn");
+
+  if (isPremium) {
+    badge.innerText = "Premium active";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-amber-300";
+    title.innerText = "You're Premium 🎉";
+    const source = currentProfile.premium_source === "referral" ? "Unlocked by referring 3 friends." :
+                   currentProfile.trial_ends_at ? `Premium until ${new Date(currentProfile.trial_ends_at).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}.` :
+                   "Enjoy unlimited listening.";
+    sub.innerText = source;
+    payBtn.classList.add("hidden");
+  } else {
+    badge.innerText = "Free plan";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-emerald-400";
+    title.innerText = "Unlock Lumic Premium";
+    sub.innerText = `Offline downloads, unlimited skips and zero interruptions — ₦${PREMIUM_PRICE_NGN}/month.`;
+    payBtn.classList.remove("hidden");
+  }
+}
+
+// If the user has already hit 3 referrals but the flag hasn't been flipped
+// yet, unlock it automatically — no payment required.
+async function checkReferralUnlock() {
+  if (currentProfile.is_premium) return;
+  const { count } = await supabaseClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", currentUser.id);
+  if ((count || 0) >= REFERRALS_NEEDED) {
+    const { data, error } = await supabaseClient.from("profiles")
+      .update({ is_premium: true, premium_source: "referral" })
+      .eq("id", currentUser.id).select().maybeSingle();
+    if (!error && data) {
+      currentProfile = data;
+      showToast("Premium unlocked — thanks for the referrals!");
+    }
+  }
+}
+
+// ==================== PAYSTACK ====================
+function startPayment() {
+  if (!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY.includes("REPLACE")) {
+    showToast("Add your Paystack public key in the code to enable payments.");
+    return;
+  }
+  if (typeof PaystackPop === "undefined") {
+    showToast("Payment couldn't load. Check your connection and try again.");
+    return;
+  }
+  const reference = "LUMIC_" + currentUser.id.slice(0, 8) + "_" + Date.now();
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: currentUser.email || `${currentProfile.username.toLowerCase()}@lumic.app`,
+    amount: PREMIUM_PRICE_NGN * 100, // kobo
+    currency: "NGN",
+    ref: reference,
+    metadata: { user_id: currentUser.id, username: currentProfile.username },
+    callback: function (response) {
+      finalizePaymentClientSide(response.reference);
+    },
+    onClose: function () {}
+  });
+  handler.openIframe();
+}
+
+// Frontend-only confirmation (no backend to verify the transaction against
+// Paystack's servers) — fine for this prototype, but note this is not
+// secure for production since a user could forge a "successful" callback.
+async function finalizePaymentClientSide(reference) {
+  showToast("Confirming payment...");
+  const premiumUntil = new Date();
+  premiumUntil.setDate(premiumUntil.getDate() + 30);
+
+  try {
+    await supabaseClient.from("payments").insert({
+      user_id: currentUser.id,
+      reference,
+      amount: PREMIUM_PRICE_NGN * 100,
+      currency: "NGN",
+      status: "success",
+      verified_at: new Date().toISOString()
+    });
+    const { data, error } = await supabaseClient.from("profiles")
+      .update({ is_premium: true, premium_source: "payment", trial_ends_at: premiumUntil.toISOString() })
+      .eq("id", currentUser.id).select().maybeSingle();
+    if (error) throw error;
+    currentProfile = data;
+    renderPremiumCard();
+    showToast("Payment successful — Premium unlocked!");
+  } catch (e) {
+    showToast("Payment recorded but activation failed. Contact support.");
+  }
+}
+
+// ==================== HELPERS ====================
+function copyUid() {
+  if (!currentProfile) return;
+  navigator.clipboard.writeText(currentProfile.username).then(() => showToast("Universal ID copied"));
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.remove("hidden");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.add("hidden"), duration);
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+}
+</script>
+</body>
+</html>

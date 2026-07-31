@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lumic - Music Player</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    html, body { width: 100%; }
+    body { background:#09090b; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+    * { box-sizing: border-box; }
+    .app-content-wrap { overflow-x: hidden; max-width: 100vw; }
+    .glass-nav { background:rgba(18,18,22,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid rgba(255,255,255,0.08); }
+    .glass-card { background:rgba(255,255,255,0.03); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.06); }
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+    .scroll-snap-x { scroll-snap-type:x mandatory; }
+    .scroll-snap-item { scroll-snap-align:start; }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:4px; }
+    .skeleton { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 37%,rgba(255,255,255,0.04) 63%); background-size:400% 100%; animation:sk 1.4s ease infinite; }
+    @keyframes sk { 0%{background-position:100% 50%} 100%{background-position:0 50%} }
+
+    /* Lyrics */
+    .lyric-line { transition:all 0.4s ease; padding:6px 10px; border-radius:10px; cursor:pointer; color:rgba(255,255,255,0.3); font-size:15px; line-height:1.6; }
+    .lyric-line:hover { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); }
+    .lyric-line.active { color:#fff; font-size:17px; font-weight:700; background:rgba(16,185,129,0.12); color:#10b981; transform:scale(1.02); }
+    .lyric-line.past { color:rgba(255,255,255,0.5); }
+    #lyricsScroll { scroll-behavior:smooth; overflow-y:auto; max-height:340px; padding:8px 0; }
+    #lyricsScroll::-webkit-scrollbar { display:none; }
+
+    /* Progress bar custom style */
+    input[type=range] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
+    input[type=range]::-webkit-slider-runnable-track { background:rgba(255,255,255,0.12); height:4px; border-radius:2px; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#10b981; margin-top:-5px; box-shadow:0 0 6px rgba(16,185,129,0.7); }
+    #npProgressBar::-webkit-slider-runnable-track { height:5px; }
+    #npProgressBar::-webkit-slider-thumb { width:16px; height:16px; margin-top:-5.5px; }
+
+    /* Action sheet item */
+    .as-item { display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:14px; cursor:pointer; transition:background 0.15s; }
+    .as-item:hover,.as-item:active { background:rgba(255,255,255,0.07); }
+    .as-icon { width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; }
+
+    /* Custom modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .modal-box { background:#1a1a22; border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:24px; width:100%; max-width:380px; }
+
+    /* Artist card hover */
+    .artist-chip { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:3px 10px; border-radius:20px; font-size:11px; color:#94a3b8; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .artist-chip:hover { background:rgba(16,185,129,0.15); color:#10b981; border-color:rgba(16,185,129,0.3); }
+
+    /* Playback bar */
+    .playback-btn { width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:all 0.15s; }
+    .playback-btn:active { transform:scale(0.88); }
+    .play-main { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 20px rgba(16,185,129,0.4); display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .play-main:active { transform:scale(0.92); box-shadow:0 2px 10px rgba(16,185,129,0.3); }
+
+    /* Now playing background blur */
+    #nowPlayingScreen { background:#09090b; }
+    .np-bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:blur(60px) saturate(1.5); opacity:0.25; transition:background 1s; }
+
+    /* Fade transition */
+    .fade-img { transition:opacity .3s ease; }
+    .shimmer { animation:sk 1.4s ease infinite; background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 37%,rgba(255,255,255,0.04) 63%); background-size:400% 100%; }
+
+    /* About artist magazine style */
+    .artist-magazine { background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+    .artist-magazine-photo { width:100%; height:200px; object-fit:cover; }
+
+    /* Local import drag */
+    .import-zone { border:2px dashed rgba(16,185,129,0.3); border-radius:16px; padding:24px; text-align:center; cursor:pointer; transition:all 0.2s; }
+    .import-zone:hover,.import-zone.drag-over { border-color:#10b981; background:rgba(16,185,129,0.05); }
+
+    /* Queue action bar */
+    .queue-action-bar { display:flex; gap:8px; padding:8px 16px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .queue-action-btn { flex:1; padding:8px 0; border-radius:10px; background:rgba(255,255,255,0.06); color:#94a3b8; font-size:11px; font-weight:600; text-align:center; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:5px; }
+    .queue-action-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+    .queue-action-btn.danger:hover { background:rgba(239,68,68,0.15); color:#f87171; }
+
+    /* Like floating heart animation */
+    .heart-float-wrap { position:relative; }
+    .heart-float { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.6); pointer-events:none; color:#f472b6; opacity:0; z-index:50; }
+    .heart-float.play { animation: heartFloat 0.9s cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes heartFloat {
+      0% { opacity:0; transform:translate(-50%,-50%) scale(0.4) rotate(-8deg); }
+      15% { opacity:1; transform:translate(-50%,-50%) scale(1.3) rotate(4deg); }
+      35% { transform:translate(-50%,-55%) scale(1) rotate(0deg); }
+      100% { opacity:0; transform:translate(-50%,-140%) scale(0.9) rotate(-6deg); }
+    }
+    .heart-particle { position:absolute; left:50%; top:50%; pointer-events:none; color:#f472b6; opacity:0; z-index:49; }
+    .heart-particle.play { animation: particleFloat 0.8s ease-out forwards; }
+    @keyframes particleFloat {
+      0% { opacity:0.9; transform:translate(-50%,-50%) scale(0.5) translate(var(--tx,0),0); }
+      100% { opacity:0; transform:translate(-50%,-50%) scale(0.2) translate(var(--tx,0),-40px); }
+    }
+
+    /* ===== Gem avatar badge ===== */
+    .gem-badge {
+      width:38px; height:38px; flex-shrink:0; cursor:pointer; position:relative;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:15px; color:#fff;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 2px 10px rgba(0,0,0,0.4);
+      transition: transform .15s;
+    }
+    .gem-badge:active { transform: scale(0.9); }
+    .gem-badge::after {
+      content:""; position:absolute; inset:0;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      background: linear-gradient(135deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 55%);
+      pointer-events:none;
+    }
+
+    /* ===== Nav badge ===== */
+    .nav-badge { position:absolute; top:-4px; right:-8px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#f43f5e; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #101018; }
+
+    /* ===== Request card ===== */
+    .request-card { background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(255,255,255,0.02)); border:1px solid rgba(16,185,129,0.18); border-radius:18px; padding:12px; }
+
+    /* ===== Premium block banner (subtle, non-blocking) ===== */
+    #premiumBlockBanner { position:fixed; left:0; right:0; bottom:80px; z-index:55; padding:0 12px; }
+
+    /* Friend picker rows */
+    .friend-row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:14px; cursor:pointer; transition:background .15s; }
+    .friend-row:hover { background:rgba(255,255,255,0.06); }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between">
+
+  <!-- MAIN WRAPPER -->
+  <div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-44 flex-1 flex flex-col app-content-wrap">
+
+    <!-- Filter Chips Header -->
+    <header id="mainHeader" class="sticky top-0 z-30 pt-2 pb-4 bg-[#09090b]/90 backdrop-blur-md">
+      <div class="flex items-center gap-2 mb-3">
+        <div id="gemBadge" onclick="switchView('profile')" class="gem-badge">?</div>
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
+          <button onclick="filterCategory('all')" id="chip-all" class="px-4 py-1.5 rounded-full bg-emerald-500 text-black font-semibold text-xs transition flex-shrink-0">All</button>
+          <button onclick="filterCategory('music')" id="chip-music" class="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0">Music</button>
+          <button onclick="filterCategory('afro')" id="chip-afro" class="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0">Afrobeats</button>
+          <button onclick="filterCategory('mood')" id="chip-mood" class="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0">Moods</button>
+        </div>
+      </div>
+    </header>
+
+    <div id="status" class="hidden text-center text-xs font-semibold py-2 px-4 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-4 transition-all sticky top-14 z-20"></div>
+
+    <!-- VIEW: HOME -->
+    <section id="view-home" class="space-y-8">
+      <div id="recentlyPlayedSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Recently played</h2>
+        <div id="recentlyPlayedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Your top mixes</h2>
+        <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2">
+          <div onclick="openCuratedPlaylistView('asake_mix','Asake Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Asake Mix</div>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-2">Seyi Vibez, Olamide, Fireboy DML</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('heartbreak_mix','Heartbreak')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
+              <img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-rose-400">Heartbreak</div>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-2">Lewis Capaldi, Olivia Rodrigo, Adele</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('olivia_rodrigo_mix','Olivia Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
+              <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-violet-400">Olivia Mix</div>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-2">Olivia Rodrigo essentials</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('billie_eilish_mix','Billie Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
+              <img src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-green-300">Billie Mix</div>
+            </div>
+            <p class="text-[11px] text-slate-400 line-clamp-2">Billie Eilish deep cuts</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Jump back in</h2>
+        <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2">
+          <div onclick="openCuratedPlaylistView('hot_hits_naija','Hot Hits Naija')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-orange-600 to-red-600 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">HOT HITS<br><span class="text-black">NAIJA</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Hot Hits Naija</h4>
+            <p class="text-[11px] text-slate-400 truncate">Asake, Davido, BNXN, Rema</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('soul_indie','Soul & Indie')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-rose-500 to-pink-900 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">SOUL<br><span class="text-rose-300">INDIE</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Soul & Indie</h4>
+            <p class="text-[11px] text-slate-400 truncate">Benson Boone, Lewis Capaldi</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('afro_top_100','Top 100 Afrobeats')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-amber-500 to-purple-800 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Top 100</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">AFRO<br><span class="text-amber-300">100</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Top 100 Afrobeats</h4>
+            <p class="text-[11px] text-slate-400 truncate">Burna Boy, Wizkid, Tems</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('amapiano_grooves','Amapiano Grooves')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-fuchsia-600 to-indigo-800 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">AMAPIANO<br><span class="text-fuchsia-300">GROOVES</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Amapiano Grooves</h4>
+            <p class="text-[11px] text-slate-400 truncate">Kabza De Small, Uncle Waffles</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('hiphop_naija','Naija Hip Hop')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-slate-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">NAIJA<br><span class="text-slate-300">HIP HOP</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Naija Hip Hop</h4>
+            <p class="text-[11px] text-slate-400 truncate">Odumodublvck, Blaqbonez</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Artist spotlights -->
+      <div>
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Artist spotlight</h2>
+        <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          <div onclick="openArtistView('Olivia Rodrigo')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-violet-500/50 group-hover:border-violet-400 transition">
+              <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Olivia</span>
+          </div>
+          <div onclick="openArtistView('Billie Eilish')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-green-500/50 group-hover:border-green-400 transition">
+              <img src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Billie</span>
+          </div>
+          <div onclick="openArtistView('Benson Boone')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-sky-500/50 group-hover:border-sky-400 transition">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Benson</span>
+          </div>
+          <div onclick="openArtistView('Lewis Capaldi')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-rose-500/50 group-hover:border-rose-400 transition">
+              <img src="https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Lewis</span>
+          </div>
+          <div onclick="openArtistView('Burna Boy')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500/50 group-hover:border-amber-400 transition">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Burna</span>
+          </div>
+          <div onclick="openArtistView('Asake')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
+            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/50 group-hover:border-emerald-400 transition">
+              <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200" class="w-full h-full object-cover">
+            </div>
+            <span class="text-[11px] text-slate-300 font-semibold">Asake</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Browse categories -->
+      <div>
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Browse categories</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <div onclick="openCuratedPlaylistView('heartbreak_mix','Heartbreak')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Heartbreak</h4><p class="text-[10px] text-slate-400 mt-0.5">Cry it out anthems</p></div>
+            <i class="fa-solid fa-heart-crack text-rose-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('feel_good','Feel Good')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Feel Good</h4><p class="text-[10px] text-slate-400 mt-0.5">Happy vibes only</p></div>
+            <i class="fa-solid fa-sun text-yellow-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('rnb_soul','R&B & Soul')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">R&B & Soul</h4><p class="text-[10px] text-slate-400 mt-0.5">Smooth vocals</p></div>
+            <i class="fa-solid fa-record-vinyl text-rose-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('gospel_praise','Gospel & Praise')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Gospel & Praise</h4><p class="text-[10px] text-slate-400 mt-0.5">Worship & inspiration</p></div>
+            <i class="fa-solid fa-dove text-sky-300 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('indie_sad','Sad Indie')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Sad Indie</h4><p class="text-[10px] text-slate-400 mt-0.5">Late night feelings</p></div>
+            <i class="fa-solid fa-moon text-indigo-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('party_turnup','Party & Amapiano')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Party & Amapiano</h4><p class="text-[10px] text-slate-400 mt-0.5">High energy basslines</p></div>
+            <i class="fa-solid fa-fire text-amber-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('throwback_2010s','2010s Throwback')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">2010s Throwback</h4><p class="text-[10px] text-slate-400 mt-0.5">Naija classics</p></div>
+            <i class="fa-solid fa-compact-disc text-yellow-300 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('female_naija','Naija Queens')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Naija Queens</h4><p class="text-[10px] text-slate-400 mt-0.5">Women leading the sound</p></div>
+            <i class="fa-solid fa-crown text-pink-300 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('chill_vibes','Chill & Acoustic')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Chill & Acoustic</h4><p class="text-[10px] text-slate-400 mt-0.5">Relax & unwind</p></div>
+            <i class="fa-solid fa-cloud-moon text-slate-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('pop_hits','Global Pop')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Global Pop</h4><p class="text-[10px] text-slate-400 mt-0.5">Chart toppers worldwide</p></div>
+            <i class="fa-solid fa-star text-purple-300 text-lg"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: SEARCH -->
+    <section id="view-search" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-2 flex items-center gap-2 sticky top-2 z-20 shadow-xl">
+        <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3"></i>
+        <input id="searchInput" type="text" inputmode="search" oninput="debounceSearch()" onfocus="onSearchFocus()" onkeydown="onSearchKeydown(event)" placeholder="Songs, artists (e.g. Billie Eilish, Benson Boone)..." class="bg-transparent flex-1 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none">
+        <button onclick="clearSearch()" id="searchClearBtn" class="hidden p-2 text-slate-400 hover:text-white mr-1"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="searchResults" class="space-y-2">
+        <!-- recently searched shown on focus -->
+      </div>
+    </section>
+
+    <!-- VIEW: ARTIST -->
+    <section id="view-artist" class="hidden">
+      <button onclick="switchView(prevView || 'search')" class="text-slate-400 hover:text-white mb-4 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </button>
+      <div id="artistHeader" class="mb-6">
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 rounded-full overflow-hidden bg-slate-800 border-2 border-emerald-500/40 flex-shrink-0">
+            <img id="artistHeaderImg" src="" class="w-full h-full object-cover">
+          </div>
+          <div>
+            <h2 id="artistHeaderName" class="text-2xl font-black text-white"></h2>
+            <p id="artistHeaderCount" class="text-sm text-slate-400 mt-1"></p>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button onclick="playArtistAll(false)" class="flex-1 bg-emerald-500 text-black font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-play"></i>Play all</button>
+          <button onclick="playArtistAll(true)" class="flex-1 bg-white/10 text-white font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-shuffle"></i>Shuffle</button>
+        </div>
+      </div>
+      <div id="artistSongsList" class="space-y-2"></div>
+    </section>
+
+    <!-- VIEW: LIBRARY -->
+    <section id="view-library" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-slate-200">Your Library</h3>
+        <button onclick="openCreatePlaylistModal()" class="w-8 h-8 rounded-full bg-emerald-500 text-black flex items-center justify-center active:scale-90 transition">
+          <i class="fa-solid fa-plus text-sm"></i>
+        </button>
+      </div>
+
+      <div id="requestsSection" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-bold text-sm text-slate-300"><i class="fa-solid fa-inbox text-emerald-400 mr-1.5"></i>Sent to you</h4>
+          <span id="requestsCountLabel" class="text-[11px] text-slate-500"></span>
+        </div>
+        <div id="requestsList" class="space-y-3"></div>
+      </div>
+
+      <div onclick="openPlaylistView('__favorites')" class="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-600 to-rose-800 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-heart text-white"></i></div>
+        <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white">Favourites</h4><p id="favCount" class="text-[11px] text-slate-400">0 songs</p></div>
+        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+      </div>
+
+      <div onclick="openPlaylistView('__offline')" class="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-600 to-blue-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-download text-white"></i></div>
+        <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white">Downloaded</h4><p id="offlineCount" class="text-[11px] text-slate-400">0 songs saved</p></div>
+        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+      </div>
+
+      <!-- Local files import -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-bold text-sm text-slate-300">Local Files</h4>
+          <label for="localFileInput" class="text-xs text-emerald-400 cursor-pointer hover:text-emerald-300 font-semibold">+ Import</label>
+          <input type="file" id="localFileInput" accept="audio/*" multiple class="hidden" onchange="importLocalFiles(event)">
+        </div>
+        <label for="localFileInput" class="import-zone block">
+          <div class="pointer-events-none">
+            <i class="fa-solid fa-music text-emerald-400 text-2xl mb-2 block"></i>
+            <p class="text-sm text-slate-300 font-semibold">Import local songs</p>
+            <p class="text-[11px] text-slate-500 mt-1">MP3, AAC, FLAC, WAV supported</p>
+          </div>
+        </label>
+        <div id="localFilesList" class="mt-3 space-y-2"></div>
+      </div>
+
+      <div>
+        <h4 class="font-bold text-sm text-slate-300 mb-2">Playlists</h4>
+        <div id="userPlaylistsList" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: PLAYLIST DETAIL -->
+    <section id="view-playlist" class="hidden">
+      <button onclick="switchView(prevView || 'library')" class="text-slate-400 hover:text-white mb-3 text-sm"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+      <div id="playlistHeader" class="rounded-2xl overflow-hidden relative mb-4 border border-white/10 min-h-[180px] flex items-end p-4 bg-slate-900">
+        <div id="playlistHeaderCollage" class="absolute inset-0 grid grid-cols-2 opacity-40"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/40 to-transparent"></div>
+        <div class="relative z-10">
+          <span id="playlistKind" class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Playlist</span>
+          <h2 id="playlistName" class="text-2xl font-black text-white leading-tight">Playlist</h2>
+          <p id="playlistMeta" class="text-xs text-slate-400 mt-1">0 songs</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 mb-4">
+        <button onclick="playAllInPlaylist(false)" class="flex-1 bg-emerald-500 text-black font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-play"></i>Play all</button>
+        <button onclick="playAllInPlaylist(true)" class="flex-1 bg-white/10 text-white font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-shuffle"></i>Shuffle</button>
+        <button onclick="addAllCurrentPlaylistSongs()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-square-plus text-sm"></i></button>
+        <button onclick="sharePlaylistWithFriends()" id="playlistShareBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-share-nodes text-sm"></i></button>
+        <button onclick="downloadPlaylistOffline()" id="playlistDownloadBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-download text-sm"></i></button>
+      </div>
+      <div id="playlistSongsList" class="space-y-2"></div>
+    </section>
+
+    <!-- VIEW: PROFILE -->
+    <section id="view-profile" class="hidden">
+      <button onclick="switchView(prevView || 'home')" class="text-slate-400 hover:text-white mb-4 text-sm flex items-center gap-2"><i class="fa-solid fa-arrow-left"></i> Back</button>
+
+      <!-- Identity -->
+      <div class="relative rounded-3xl overflow-hidden mb-5 border border-white/10 p-6" style="background:radial-gradient(120% 140% at 0% 0%, rgba(16,185,129,0.18), rgba(9,9,11,0.2) 60%);">
+        <div class="flex items-center gap-4">
+          <div id="profileGem" class="gem-badge" style="width:64px;height:64px;font-size:26px;">?</div>
+          <div class="min-w-0 flex-1">
+            <p id="profileDisplayName" class="font-black text-lg text-white truncate">—</p>
+            <p id="profileEmail" class="text-xs text-slate-400 truncate mt-0.5">—</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mt-4">
+          <span id="profileUidBadge" class="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full" style="font-family:ui-monospace,Menlo,monospace;letter-spacing:.1em;">—</span>
+          <button onclick="copyUid()" class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><i class="fa-regular fa-copy"></i></button>
+          <button onclick="logout()" class="ml-auto text-xs font-semibold text-slate-400 hover:text-rose-400 flex items-center gap-1.5"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</button>
+        </div>
+      </div>
+
+      <!-- Premium status -->
+      <div id="profilePremiumCard" class="rounded-3xl p-5 mb-5 border" style="background:linear-gradient(135deg,rgba(16,185,129,0.14),rgba(5,150,105,0.04));border-color:rgba(16,185,129,0.22);">
+        <div class="flex items-start justify-between mb-1">
+          <div>
+            <span id="profilePremiumBadgeLabel" class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Free trial</span>
+            <h2 id="profilePremiumTitle" class="text-lg font-black text-white mt-1">Unlock Lumic Premium</h2>
+          </div>
+          <i class="fa-solid fa-gem text-2xl text-amber-400"></i>
+        </div>
+        <p id="profilePremiumSub" class="text-xs text-slate-300 leading-relaxed mb-4">Offline downloads, unlimited skips and zero interruptions — ₦300/month.</p>
+        <button id="profilePayBtn" onclick="startPayment()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition" style="background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 20px rgba(16,185,129,0.35);">
+          Pay ₦300 with Paystack
+        </button>
+      </div>
+
+      <!-- Referral -->
+      <div class="glass-card rounded-3xl p-5 mb-5">
+        <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-user-group text-emerald-400 mr-2"></i>Refer 3, get Premium free</h3>
+        <p class="text-xs text-slate-400 leading-relaxed mb-4">Share your Universal ID below. Once 3 friends sign up with it, Premium unlocks automatically — no card needed.</p>
+        <div class="flex items-center justify-between mb-2">
+          <span id="profileReferralCountLabel" class="text-xs font-bold text-slate-300">0 / 3 friends joined</span>
+        </div>
+        <div style="height:8px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;" class="mb-4">
+          <div id="profileReferralProgressFill" style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .4s ease;width:0%"></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex-1 glass-card rounded-xl px-3.5 py-2.5 flex items-center justify-between">
+            <span id="profileReferralShareUid" class="text-sm font-bold text-white" style="font-family:ui-monospace,Menlo,monospace;">—</span>
+          </div>
+          <button onclick="copyUid()" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center flex-shrink-0 transition"><i class="fa-solid fa-share-nodes text-sm text-white"></i></button>
+        </div>
+      </div>
+
+      <!-- Account info -->
+      <div class="glass-card rounded-3xl p-5 mb-5 space-y-3">
+        <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-circle-info text-slate-400 mr-2"></i>Account</h3>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">Member since</span>
+          <span id="profileMemberSince" class="text-white font-semibold">—</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">Referred by</span>
+          <span id="profileReferredByLabel" class="text-white font-semibold">—</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">This device</span>
+          <span class="text-white font-semibold">Active session</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- STICKY BOTTOM PLAYER BAR -->
+  <div id="playerBar" class="fixed bottom-16 left-0 right-0 z-40 transform translate-y-full transition-all duration-300">
+    <div class="max-w-2xl mx-auto glass-nav mx-3 rounded-2xl shadow-2xl border border-white/10 p-3">
+      <!-- Slim progress line -->
+      <div class="mb-2 px-1">
+        <input type="range" id="progressBar" value="0" min="0" max="100" class="w-full" style="height:3px; accent-color:#10b981;">
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="openNowPlaying()">
+          <div class="relative flex-shrink-0 heart-float-wrap">
+            <img id="playerImg" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150" class="w-12 h-12 rounded-xl object-cover bg-slate-900 border border-white/10">
+            <div id="playerPlayingDot" class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#09090b] hidden"></div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h4 id="playerTitle" class="font-bold text-xs text-slate-100 truncate">Select a song</h4>
+            <p id="playerArtist" class="text-[11px] text-slate-400 truncate mt-0.5">Artist</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-0.5 flex-shrink-0">
+          <button onclick="toggleLikeCurrent(event)" id="playerLikeBtn" class="playback-btn text-slate-400 hover:text-pink-400 heart-float-wrap"><i class="fa-regular fa-heart text-sm"></i></button>
+          <button onclick="togglePlayPause()" id="playPauseBtn" class="play-main text-black text-base font-bold flex-shrink-0">
+            <i class="fa-solid fa-play ml-0.5"></i>
+          </button>
+          <button onclick="playNextTrack()" class="playback-btn text-slate-300 hover:text-white"><i class="fa-solid fa-forward-step text-base"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOW PLAYING FULL SCREEN -->
+  <div id="nowPlayingScreen" class="fixed inset-0 z-[60] transform translate-y-full transition-transform duration-300 flex flex-col max-w-2xl mx-auto overflow-y-auto no-scrollbar" style="background:#09090b;">
+    <div class="np-bg" id="npBgBlur"></div>
+
+    <div class="relative z-10 flex flex-col flex-1">
+      <div class="p-4 flex items-center justify-between sticky top-0 bg-[#09090b]/80 backdrop-blur-xl z-10">
+        <button onclick="closeNowPlaying()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-chevron-down text-lg"></i></button>
+        <div class="text-center">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Now Playing</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="toggleQueueDrawer()" class="p-2 text-slate-300 hover:text-white relative">
+            <i class="fa-solid fa-list-ul text-base"></i>
+            <span id="queueBadge" class="absolute top-0 right-0 w-4 h-4 rounded-full bg-emerald-500 text-black text-[8px] font-black flex items-center justify-center hidden">0</span>
+          </button>
+          <button onclick="openActionSheet(currentTrack, event)" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-ellipsis text-lg"></i></button>
+        </div>
+      </div>
+
+      <div class="px-6 pt-2 pb-6">
+        <!-- Album art -->
+        <div class="w-full aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10 mb-6 bg-slate-800">
+          <img id="npImg" src="" class="w-full h-full object-cover">
+        </div>
+
+        <!-- Title + like -->
+        <div class="flex items-center justify-between mb-5">
+          <div class="min-w-0 pr-4">
+            <h2 id="npTitle" class="text-2xl font-black text-white truncate">---</h2>
+            <button onclick="openArtistViewFromNp()" id="npArtist" class="text-sm text-emerald-400 truncate mt-1 text-left hover:text-emerald-300 transition">---</button>
+          </div>
+          <button onclick="toggleLikeCurrent(event)" id="npLikeBtn" class="text-2xl text-slate-400 hover:text-pink-400 flex-shrink-0 transition heart-float-wrap"><i class="fa-regular fa-heart"></i></button>
+        </div>
+
+        <!-- Progress -->
+        <div class="mb-1">
+          <input type="range" id="npProgressBar" value="0" min="0" max="100" class="w-full" style="height:5px; accent-color:#10b981;">
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-6 px-1">
+          <span id="npCurrentTime">0:00</span>
+          <span id="npDurationTime">0:00</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center justify-between px-2 mb-10">
+          <button onclick="toggleShuffle()" id="npShuffleBtn" class="text-slate-400 hover:text-white p-2 transition"><i class="fa-solid fa-shuffle text-lg"></i></button>
+          <button onclick="playPrevTrack()" class="text-slate-200 hover:text-white p-2 transition active:scale-90"><i class="fa-solid fa-backward-step text-2xl"></i></button>
+          <button onclick="togglePlayPause()" id="npPlayPauseBtn" class="play-main text-black text-xl font-bold" style="width:68px; height:68px;">
+            <i class="fa-solid fa-play ml-1"></i>
+          </button>
+          <button onclick="playNextTrack()" class="text-slate-200 hover:text-white p-2 transition active:scale-90"><i class="fa-solid fa-forward-step text-2xl"></i></button>
+          <button onclick="toggleRepeat()" id="npRepeatBtn" class="text-slate-400 hover:text-white p-2 transition"><i class="fa-solid fa-repeat text-lg"></i></button>
+        </div>
+
+        <!-- Crossfade indicator -->
+        <div id="crossfadeIndicator" class="hidden text-center mb-4">
+          <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Crossfading to next track...</span>
+        </div>
+
+        <!-- Lyrics section -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-black uppercase tracking-widest text-slate-400"><i class="fa-solid fa-music mr-2 text-emerald-400"></i>Lyrics</h3>
+            <button id="syncLyricsBtn" onclick="syncLyricsForCurrentTrack()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 px-2.5 py-1 rounded-full transition">
+              <i id="syncLyricsIcon" class="fa-solid fa-arrows-rotate text-[10px]"></i>
+              <span id="syncLyricsLabel">Sync lyrics</span>
+            </button>
+          </div>
+          <div class="glass-card rounded-2xl p-4" style="background:rgba(16,185,129,0.03); border:1px solid rgba(16,185,129,0.08);">
+            <div id="lyricsScroll" class="no-scrollbar">
+              <div id="lyricsContent" class="text-center py-4 text-slate-500 text-xs">Play a song to see lyrics</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- About artist magazine -->
+        <div class="mb-8">
+          <h3 class="text-sm font-black uppercase tracking-widest text-slate-400 mb-3"><i class="fa-solid fa-user mr-2 text-purple-400"></i>About the artist</h3>
+          <div id="npArtistInfo" class="artist-magazine">
+            <div class="p-5 text-center text-slate-500 text-xs">Loading artist info...</div>
+          </div>
+        </div>
+
+        <!-- Gallery -->
+        <div>
+          <h3 class="text-sm font-black uppercase tracking-widest text-slate-400 mb-3"><i class="fa-regular fa-images mr-2 text-amber-400"></i>Gallery</h3>
+          <div id="npGallery" class="grid grid-cols-3 gap-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTION SHEET -->
+  <div id="actionSheetOverlay" class="fixed inset-0 bg-black/60 z-[70] hidden backdrop-blur-sm" onclick="closeActionSheet()"></div>
+  <div id="actionSheet" class="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto z-[80] transform translate-y-full transition-transform duration-300">
+    <div class="bg-[#16161e] border border-white/10 rounded-t-3xl overflow-hidden pb-safe">
+      <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-2"></div>
+      <!-- Song info header -->
+      <div id="actionSheetSongInfo" class="flex items-center gap-4 px-5 py-3 border-b border-white/10">
+        <img id="asImg" src="" class="w-14 h-14 rounded-xl object-cover bg-slate-800 flex-shrink-0">
+        <div class="min-w-0 flex-1">
+          <h4 id="asTitle" class="font-bold text-sm text-white truncate">---</h4>
+          <p id="asArtist" class="text-xs text-slate-400 truncate mt-0.5">---</p>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div class="p-3 space-y-0.5">
+        <div class="as-item" onclick="actionPlayNext()">
+          <div class="as-icon bg-emerald-500/15"><i class="fa-solid fa-list-ol text-emerald-400"></i></div>
+          <span class="text-sm text-white font-medium">Play next</span>
+        </div>
+        <div class="as-item" onclick="actionAddToQueue()">
+          <div class="as-icon bg-teal-500/15"><i class="fa-solid fa-plus text-teal-400"></i></div>
+          <span class="text-sm text-white font-medium">Add to queue</span>
+        </div>
+        <div class="as-item" onclick="actionAddToPlaylist()">
+          <div class="as-icon bg-violet-500/15"><i class="fa-solid fa-record-vinyl text-violet-400"></i></div>
+          <span class="text-sm text-white font-medium">Add to playlist</span>
+        </div>
+        <div class="as-item" onclick="actionShareWithFriends()">
+          <div class="as-icon bg-fuchsia-500/15"><i class="fa-solid fa-share-nodes text-fuchsia-400"></i></div>
+          <span class="text-sm text-white font-medium">Share with friends</span>
+        </div>
+        <div class="as-item" onclick="actionToggleLike()">
+          <div class="as-icon bg-pink-500/15"><i class="fa-solid fa-heart text-pink-400"></i></div>
+          <span id="asLikeLabel" class="text-sm text-white font-medium">Add to favourites</span>
+        </div>
+        <div class="as-item" onclick="actionDownload()">
+          <div class="as-icon bg-sky-500/15"><i class="fa-solid fa-download text-sky-400"></i></div>
+          <span class="text-sm text-white font-medium">Save offline</span>
+        </div>
+        <div class="as-item" onclick="actionMoreByArtist()">
+          <div class="as-icon bg-amber-500/15"><i class="fa-solid fa-user text-amber-400"></i></div>
+          <span class="text-sm text-white font-medium">More by this artist</span>
+        </div>
+      </div>
+      <div class="h-6"></div>
+    </div>
+  </div>
+
+  <!-- PLAYLIST PICKER (styled) -->
+  <div id="playlistPickerOverlay" class="fixed inset-0 bg-black/60 z-[90] hidden backdrop-blur-sm" onclick="closePlaylistPicker()"></div>
+  <div id="playlistPicker" class="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto bg-[#16161e] border border-white/10 rounded-t-3xl z-[95] transform translate-y-full transition-transform duration-300 p-4 pb-8 max-h-[70vh] overflow-y-auto">
+    <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4"></div>
+    <h4 class="font-bold text-base text-white mb-4">Add to playlist</h4>
+    <button onclick="openCreatePlaylistModal(true)" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-left mb-3 transition">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-plus text-black text-sm"></i></div>
+      <span class="text-sm text-emerald-300 font-bold">Create new playlist</span>
+    </button>
+    <div id="playlistPickerList" class="space-y-2"></div>
+  </div>
+
+  <!-- SHARE / FRIEND PICKER -->
+  <div id="sharePickerOverlay" class="fixed inset-0 bg-black/60 z-[90] hidden backdrop-blur-sm" onclick="closeSharePicker()"></div>
+  <div id="sharePicker" class="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto bg-[#16161e] border border-white/10 rounded-t-3xl z-[95] transform translate-y-full transition-transform duration-300 p-4 pb-8 max-h-[75vh] overflow-y-auto">
+    <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4"></div>
+    <h4 class="font-bold text-base text-white mb-1">Share with friends</h4>
+    <p id="sharePickerSubtitle" class="text-xs text-slate-400 mb-4">Send this to someone on Lumic</p>
+    <div class="glass-card rounded-2xl p-2 flex items-center gap-2 mb-4">
+      <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2 text-sm"></i>
+      <input id="shareSearchInput" type="text" oninput="onShareSearchInput()" placeholder="Search by username..." class="bg-transparent flex-1 px-2 py-2 text-sm text-white placeholder-slate-400 outline-none">
+    </div>
+    <div id="sharePickerList" class="space-y-1"></div>
+  </div>
+
+  <!-- QUEUE DRAWER -->
+  <div id="queueDrawer" class="fixed inset-0 z-[65] transform translate-y-full transition-transform duration-300 flex flex-col max-w-2xl mx-auto" style="background:rgba(13,13,18,0.94); backdrop-filter:blur(28px) saturate(1.4); -webkit-backdrop-filter:blur(28px) saturate(1.4);">
+    <div class="p-4 border-b border-white/10 flex items-center justify-between" style="background:rgba(18,18,24,0.85); backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);">
+      <div class="flex items-center gap-2"><i class="fa-solid fa-bars-staggered text-emerald-400"></i><h3 class="font-bold text-base">Up Next</h3></div>
+      <button onclick="toggleQueueDrawer()" class="p-2 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <!-- Now playing in queue -->
+    <div class="p-4 border-b border-emerald-500/15" style="background:linear-gradient(180deg, rgba(16,185,129,0.14), rgba(13,13,18,0.85));">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Now Playing</span>
+      <div class="flex items-center gap-3 mt-2">
+        <img id="queueNowImg" src="" class="w-10 h-10 rounded-lg object-cover bg-slate-800">
+        <div class="min-w-0 flex-1"><h4 id="queueNowTitle" class="font-bold text-xs text-white truncate">---</h4><p id="queueNowArtist" class="text-[11px] text-slate-400 truncate">---</p></div>
+      </div>
+    </div>
+    <!-- Queue actions -->
+    <div class="queue-action-bar" style="background:rgba(13,13,18,0.7);">
+      <div class="queue-action-btn" onclick="shuffleQueueRemaining()"><i class="fa-solid fa-shuffle"></i> Shuffle remaining</div>
+      <div class="queue-action-btn danger" onclick="clearQueueRemaining()"><i class="fa-solid fa-trash-can"></i> Clear queue</div>
+    </div>
+    <div id="queueList" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+  </div>
+
+  <!-- CUSTOM CREATE PLAYLIST MODAL -->
+  <div id="createPlaylistModal" class="modal-overlay hidden" onclick="closeCreatePlaylistModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 class="font-black text-lg text-white mb-1">New playlist</h3>
+      <p class="text-xs text-slate-400 mb-5">Give your playlist a name</p>
+      <input id="playlistNameInput" type="text" placeholder="My awesome playlist..." maxlength="60"
+        class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-sm !text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:bg-white/15 transition mb-4" style="color:#fff; background-color:rgba(255,255,255,0.08);"
+        onkeydown="if(event.key==='Enter') confirmCreatePlaylist()">
+      <div class="flex gap-3">
+        <button onclick="closeCreatePlaylistModal()" class="flex-1 py-3 rounded-2xl bg-white/10 text-slate-300 font-semibold text-sm hover:bg-white/20 transition">Cancel</button>
+        <button onclick="confirmCreatePlaylist()" class="flex-1 py-3 rounded-2xl bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREMIUM EXPIRED BANNER (subtle, non-blocking — browsing still works) -->
+  <div id="premiumBlockBanner" class="hidden">
+    <div class="max-w-2xl mx-auto glass-card rounded-2xl p-3.5 flex items-center gap-3 border shadow-2xl" style="background:rgba(22,22,28,0.97); border-color:rgba(245,158,11,0.25);">
+      <i class="fa-solid fa-gem text-amber-400 text-lg flex-shrink-0"></i>
+      <div class="min-w-0 flex-1">
+        <p class="text-[12px] font-bold text-white leading-tight">Trial ended — streaming paused</p>
+        <p class="text-[10.5px] text-slate-400 mt-0.5 leading-tight">Refer 3 friends or get Premium for ₦300/month.</p>
+      </div>
+      <button onclick="closePremiumBlock(); switchView('profile');" class="text-[11px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-3 py-2 rounded-full flex-shrink-0 transition active:scale-95">Get Premium</button>
+      <button onclick="closePremiumBlock()" class="text-slate-500 hover:text-white p-1.5 flex-shrink-0"><i class="fa-solid fa-xmark text-sm"></i></button>
+    </div>
+  </div>
+
+  <!-- BOTTOM TAB NAVIGATION -->
+  <nav class="fixed bottom-0 left-0 right-0 glass-nav z-40 px-6 py-2.5">
+    <div class="max-w-md mx-auto flex items-center justify-around">
+      <button onclick="switchView('home')" id="tab-home" class="flex flex-col items-center gap-1 text-emerald-400 font-bold transition"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px]">Home</span></button>
+      <button onclick="switchView('search')" id="tab-search" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px]">Search</span></button>
+      <button onclick="switchView('library')" id="tab-library" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition relative">
+        <i class="fa-solid fa-layer-group text-lg"></i>
+        <span id="libraryNavBadge" class="nav-badge hidden">0</span>
+        <span class="text-[10px]">Library</span>
+      </button>
+      <button onclick="switchView('profile')" id="tab-profile" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-circle-user text-lg"></i><span class="text-[10px]">Profile</span></button>
+    </div>
+  </nav>
+
+  <audio id="audioPlayerA" referrerpolicy="no-referrer" class="hidden"></audio>
+  <audio id="audioPlayerB" referrerpolicy="no-referrer" class="hidden"></audio>
+
+<script>
+// ==================== CONFIG ====================
+const SUPABASE_URL = "https://fhogysmvpqakzoxwhxht.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob2d5c212cHFha3pveHdoeGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MTg0OTcsImV4cCI6MjEwMDI5NDQ5N30.0WBV1--98XFx_WyL5TkRIsQ1sc-FkUCixv2uf0j8T9g";
+const LYRICS_FUNCTION = "https://fhogysmvpqakzoxwhxht.supabase.co/functions/v1/Lyrics";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const PAYSTACK_PUBLIC_KEY = "pk_live_fab019f9df1b6cb89cb32bdef25c7d2c048c63c2";
+const REFERRALS_NEEDED = 3;
+const PREMIUM_PRICE_NGN = 300;
+
+const PLACEHOLDER_IMAGES = [
+  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300",
+  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300",
+  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300",
+  "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=300",
+  "https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=300"
+];
+function placeholderFor(seed) {
+  let h = 0;
+  for (let i = 0; i < (seed || "").length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return PLACEHOLDER_IMAGES[h % PLACEHOLDER_IMAGES.length];
+}
+
+// Curated playlists
+const PLAYLIST_PRESETS = {
+  hot_hits_naija: ["asake","davido","bnxn","rema","seyi vibez","wizkid","burna boy","fireboy"],
+  street_vibes: ["seyi vibez","portable","shallipopi","zinoleesky","naira marley","bella shmurda"],
+  afro_top_100: ["burna boy","wizkid","tems","ayra starr","kizz daniel","rema","omah lay","victony"],
+  asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn"],
+  heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid"],
+  olivia_rodrigo_mix: ["olivia rodrigo","sabrina carpenter","gracie abrams","chappell roan","tate mcrae"],
+  billie_eilish_mix: ["billie eilish","lorde","clairo","girl in red","gracie abrams"],
+  soul_indie: ["benson boone","lewis capaldi","charlie puth","john legend","sam smith","ed sheeran"],
+  indie_sad: ["lewis capaldi","benson boone","james arthur","niall horan","lauv","conan gray"],
+  pop_hits: ["taylor swift","ariana grande","dua lipa","the weeknd","post malone","harry styles"],
+  feel_good: ["pharrell williams","justin timberlake","charlie puth","bruno mars","dua lipa"],
+  chill_vibes: ["johnny drille","chike","simi","asa","brymo","tems","ric hassani","praiz"],
+  party_turnup: ["kelvin momo","kabza de small","uncle waffles","shallipopi","asake"],
+  amapiano_grooves: ["kabza de small","uncle waffles","tyler icu","dj maphorisa","musa keys","focalistic"],
+  hiphop_naija: ["odumodublvck","blaqbonez","ladipoe","vector","ycee","phyno"],
+  rnb_soul: ["chike","praiz","johnny drille","ric hassani","simi","tems"],
+  gospel_praise: ["nathaniel bassey","sinach","mercy chinwo","frank edwards","dunsin oyekan"],
+  throwback_2010s: ["davido","wizkid","psquare","flavour","9ice","iyanya","tiwa savage"],
+  female_naija: ["tiwa savage","tems","ayra starr","simi","yemi alade","niniola"],
+  fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"]
+};
+
+// ==================== STATE ====================
+let activeQueue = [];
+let currentIndex = -1;
+let currentTrack = null;
+let debounceTimer = null;
+let searchAbortController = null;
+let actionSheetTarget = null;
+let shuffleOn = false;
+let repeatOn = false;
+let prevView = "home";
+let currentPlaylistCtx = null;
+let artistImageCache = {};
+let currentArtistSongs = [];
+let currentArtistName = "";
+let createPlaylistFromPicker = false;
+let lyricsLines = [];
+let lyricsCurrentLine = -1;
+let localSongs = [];
+
+let likedSongs = JSON.parse(localStorage.getItem("lumic_likes") || "[]");
+let recentSongs = JSON.parse(localStorage.getItem("lumic_recent") || "[]");
+let recentSearches = JSON.parse(localStorage.getItem("lumic_searches") || "[]");
+let userPlaylists = JSON.parse(localStorage.getItem("lumic_playlists") || "{}");
+
+// ==== Auth / profile / premium / device state ====
+let currentUser = null;
+let currentProfile = null;
+let currentSubscription = null;
+let deviceId = null;
+let sessionPollTimer = null;
+let premiumCheckTimer = null;
+let pendingRequestsCount = 0;
+
+const audioA = document.getElementById("audioPlayerA");
+const audioB = document.getElementById("audioPlayerB");
+let activeAudio = audioA;
+let inactiveAudio = audioB;
+let crossfadeStarted = false;
+let preloadedNext = null;
+const CROSSFADE_SECONDS = 5;
+
+function uidFor(song) {
+  if (!song) return "";
+  if (song._local) return `local_${song.title}_${song.artist}`;
+  if (song.id) return `${song._src || ""}_${song.id}`;
+  return btoa(unescape(encodeURIComponent(`${song.title}__${song.artist}`))).slice(0, 24);
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  setupAudioListeners(audioA);
+  setupAudioListeners(audioB);
+  renderRecentlyPlayed();
+  renderUserPlaylists();
+  renderLocalFiles();
+  restoreLastSession();
+  initOfflineDB();
+  setupMediaSession();
+  bootAuth();
+});
+
+window.addEventListener("beforeunload", saveLastSession);
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveLastSession(); });
+
+// ==================== VIEW SWITCHING ====================
+function switchView(view) {
+  const views = ["home","search","library","playlist","artist","profile"];
+  if (["home","search","library"].includes(view)) prevView = view;
+  views.forEach(v => document.getElementById(`view-${v}`).classList.add("hidden"));
+  ["home","search","library","profile"].forEach(v => {
+    const tab = document.getElementById(`tab-${v}`);
+    if (tab) tab.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition relative";
+  });
+  document.getElementById(`view-${view}`).classList.remove("hidden");
+  const tab = document.getElementById(`tab-${view}`);
+  if (tab) tab.className = "flex flex-col items-center gap-1 text-emerald-400 font-bold transition relative";
+
+  // show/hide filter header
+  const hdr = document.getElementById("mainHeader");
+  if (view === "home") hdr.classList.remove("hidden");
+  else hdr.classList.add("hidden");
+
+  if (view === "profile") renderProfileView();
+  if (view === "library") renderRequests();
+}
+
+let activeCategory = "all";
+function filterCategory(cat) {
+  activeCategory = cat || "all";
+  ["all","music","afro","mood"].forEach(c => {
+    const chip = document.getElementById(`chip-${c}`);
+    if (!chip) return;
+    if (c === activeCategory) chip.className = "px-4 py-1.5 rounded-full bg-emerald-500 text-black font-semibold text-xs transition flex-shrink-0";
+    else chip.className = "px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0";
+  });
+  const categoryMap = {
+    music: "pop_hits",
+    afro: "afro_top_100",
+    mood: "feel_good"
+  };
+  if (activeCategory === "all") return;
+  const preset = categoryMap[activeCategory];
+  if (preset) playCuratedPlaylist(preset);
+}
+
+function showStatus(msg, duration = 3000) {
+  const status = document.getElementById("status");
+  status.innerText = msg;
+  status.classList.remove("hidden");
+  clearTimeout(status._t);
+  status._t = setTimeout(() => status.classList.add("hidden"), duration);
+}
+
+// ==================== IMAGE RESOLUTION ====================
+async function resolveImage(song) {
+  if (song._local) return song.image || placeholderFor(song.title);
+  if (song.image && song.image !== "https://mdundo.com/media/picture/ablank_b.jpg") return song.image;
+  const artist = (song.artist || "").trim();
+  if (!artist) return placeholderFor(song.title || "x");
+  if (artistImageCache[artist] !== undefined) return artistImageCache[artist] || placeholderFor(artist);
+  try {
+    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&limit=1`);
+    const data = await res.json();
+    const art = data.results && data.results[0] ? data.results[0].artworkUrl100.replace("100x100","400x400") : null;
+    artistImageCache[artist] = art;
+    return art || placeholderFor(artist);
+  } catch (e) {
+    artistImageCache[artist] = null;
+    return placeholderFor(artist);
+  }
+}
+
+// ==================== CURATED PLAYLISTS ====================
+function isPreviewJunk(song) { return (song.title || "").toLowerCase().includes("preview"); }
+
+function ilikeAllWords(query, column, name) {
+  const words = (name || "").split(/\s+/).map(w => w.trim()).filter(Boolean);
+  words.forEach(w => { query = query.ilike(column, `%${w}%`); });
+  return query;
+}
+
+// Fetches songs for a list of artists in small batches so the UI can render
+// progressively instead of waiting for every artist to resolve before
+// showing anything. onBatch(songsSoFar) fires after each artist resolves.
+async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
+  let combined = [];
+  const seen = new Set();
+  const BATCH_SIZE = 3;
+  for (let i = 0; i < artists.length; i += BATCH_SIZE) {
+    const chunk = artists.slice(i, i + BATCH_SIZE);
+    const chunkResults = await Promise.all(chunk.map(async (a) => {
+      const [mdundo, mp3] = await Promise.all([
+        ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", a).limit(limitEach)
+          .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
+        ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", a).limit(limitEach)
+          .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" })))
+      ]);
+      return [...mdundo, ...mp3];
+    }));
+    let newOnes = chunkResults.flat().filter(s => !isPreviewJunk(s));
+    newOnes = newOnes.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
+    if (newOnes.length) {
+      combined = combined.concat(newOnes);
+      onBatch && onBatch(combined.slice());
+    }
+  }
+  return combined;
+}
+
+// Kept for callers that just want the final list (playback, etc.) — same
+// progressive fetch under the hood, just without a per-batch callback.
+async function fetchByArtists(artists, limitEach = 12) {
+  return fetchByArtistsProgressive(artists, limitEach, null);
+}
+
+async function playCuratedPlaylist(presetKey) {
+  const artists = PLAYLIST_PRESETS[presetKey] || [];
+  showStatus("Loading playlist...");
+  let songs = await fetchByArtists(artists);
+  if (songs.length === 0) { showStatus("Couldn't find tracks for this mix right now."); return; }
+  activeQueue = songs.sort(() => Math.random() - 0.5);
+  currentIndex = 0;
+  currentPlaylistCtx = null;
+  playTrack(activeQueue[0]);
+  updateQueueDrawer();
+  showStatus(`Playing ${activeQueue.length} songs`);
+}
+
+// Opens a curated mix as a browsable track list. Renders songs little-by-
+// little as each batch of artists resolves, instead of blocking on the
+// whole mix before showing anything.
+let currentPlaylistPresetSongs = [];
+let currentPlaylistPresetTitle = "";
+
+async function openCuratedPlaylistView(presetKey, title) {
+  const ctxKey = "preset:" + presetKey;
+  currentPlaylistCtx = ctxKey;
+  currentPlaylistPresetSongs = [];
+  currentPlaylistPresetTitle = title;
+  prevView = ["home","search","library"].includes(prevView) ? prevView : "home";
+
+  document.getElementById("playlistName").innerText = title;
+  document.getElementById("playlistKind").innerText = "Mix";
+  document.getElementById("playlistMeta").innerText = "Loading...";
+  document.getElementById("playlistDownloadBtn").classList.remove("hidden");
+  document.getElementById("playlistShareBtn").classList.remove("hidden");
+  document.getElementById("playlistHeaderCollage").innerHTML = "";
+  document.getElementById("playlistSongsList").innerHTML = `<div class="space-y-2">${Array(6).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
+  switchView("playlist");
+
+  const artists = PLAYLIST_PRESETS[presetKey] || [];
+  let collageBuilt = false;
+  const songs = await fetchByArtistsProgressive(artists, 20, (songsSoFar) => {
+    if (currentPlaylistCtx !== ctxKey) return; // user navigated away meanwhile
+    currentPlaylistPresetSongs = songsSoFar;
+    document.getElementById("playlistMeta").innerText = `${songsSoFar.length} song${songsSoFar.length === 1 ? "" : "s"}${songsSoFar.length ? "" : ""}`;
+    renderPlaylistSongsList(songsSoFar);
+    if (!collageBuilt && songsSoFar.length) {
+      collageBuilt = true;
+      const collage = document.getElementById("playlistHeaderCollage");
+      songsSoFar.slice(0, 4).forEach(s => {
+        const img = document.createElement("img");
+        img.className = "w-full h-full object-cover";
+        img.src = placeholderFor(s.title);
+        collage.appendChild(img);
+        resolveImage(s).then(url => img.src = url);
+      });
+    }
+  });
+  if (currentPlaylistCtx !== ctxKey) return;
+  currentPlaylistPresetSongs = songs;
+  document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+  if (songs.length === 0) {
+    document.getElementById("playlistSongsList").innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Couldn't find tracks for this mix right now.</div>`;
+  }
+}
+
+// ==================== ARTIST VIEW ====================
+async function openArtistView(artistName) {
+  prevView = document.querySelector('[class*="font-bold"]:not(.hidden)')?.id?.replace("tab-","") || prevView;
+  currentArtistName = artistName;
+  switchView("artist");
+  document.getElementById("artistHeaderName").innerText = artistName;
+  document.getElementById("artistHeaderCount").innerText = "Loading...";
+  document.getElementById("artistSongsList").innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
+
+  resolveImage({ artist: artistName }).then(img => {
+    document.getElementById("artistHeaderImg").src = img;
+  });
+
+  const [mdundo, mp3] = await Promise.all([
+    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="songs"); return r; }),
+    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; })
+  ]);
+  let songs = [...(mdundo.data || []), ...(mp3.data || [])].filter(s => !isPreviewJunk(s));
+  const seen = new Set();
+  songs = songs.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
+
+  currentArtistSongs = songs;
+  document.getElementById("artistHeaderCount").innerText = `${songs.length} song${songs.length !== 1 ? "s" : ""}`;
+  const list = document.getElementById("artistSongsList");
+  list.innerHTML = "";
+  if (songs.length === 0) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No songs found for this artist.</div>`; return; }
+  songs.forEach(song => list.appendChild(renderSearchRow(song, songs)));
+}
+
+async function openArtistViewFromNp() {
+  if (!currentTrack) return;
+  closeNowPlaying();
+  await openArtistView(currentTrack.artist);
+}
+
+function playArtistAll(shuffle) {
+  if (!currentArtistSongs.length) return;
+  activeQueue = shuffle ? [...currentArtistSongs].sort(() => Math.random()-0.5) : [...currentArtistSongs];
+  currentIndex = 0;
+  playTrack(activeQueue[0]);
+  updateQueueDrawer();
+}
+
+// ==================== PLAYBACK CORE ====================
+function playTrack(song, opts = {}) {
+  if (!isPlaybackAllowed()) { showPremiumBlock(); return; }
+  currentTrack = song;
+  crossfadeStarted = false;
+  preloadedNext = null;
+
+  resolveImage(song).then(img => {
+    document.getElementById("playerImg").src = img;
+    document.getElementById("queueNowImg").src = img;
+    document.getElementById("npImg").src = img;
+    document.getElementById("npBgBlur").style.backgroundImage = `url(${img})`;
+  });
+
+  document.getElementById("playerTitle").innerText = song.title;
+  document.getElementById("playerArtist").innerText = song.artist;
+  document.getElementById("queueNowTitle").innerText = song.title;
+  document.getElementById("queueNowArtist").innerText = song.artist;
+  document.getElementById("npTitle").innerText = song.title;
+  document.getElementById("npArtist").innerText = song.artist;
+  updateLikeButtons();
+  document.getElementById("playerPlayingDot").classList.remove("hidden");
+  document.getElementById("crossfadeIndicator").classList.add("hidden");
+
+  getOfflineSrc(song).then(offlineSrc => {
+    const src = offlineSrc || song.stream_url;
+    activeAudio.src = src;
+    activeAudio.volume = 1;
+    activeAudio.currentTime = opts.startAt || 0;
+    activeAudio.play().catch(() => {});
+  });
+
+  document.getElementById("playerBar").classList.remove("translate-y-full");
+  updatePlayPauseIcon(true);
+  updateQueueDrawer();
+  addToRecent(song);
+  updateMediaSession();
+
+  // Always reset lyrics + artist info for the new track, cancelling any in-flight request
+  loadLyrics(song);
+  if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
+    loadArtistInfo(song);
+  }
+
+  // Auto-build queue from same artist if queue is just this one song
+  if (activeQueue.length <= 1) {
+    buildAutoQueue(song);
+  }
+}
+
+async function buildAutoQueue(song) {
+  if (song._local) return;
+  try {
+    const [mdundo, mp3] = await Promise.all([
+      ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", song.artist).limit(30).then(r => { r.data?.forEach(s => s._src="songs"); return r; }),
+      ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", song.artist).limit(30).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; })
+    ]);
+    let similar = [...(mdundo.data || []), ...(mp3.data || [])].filter(s => !isPreviewJunk(s) && uidFor(s) !== uidFor(song));
+    const seen = new Set([uidFor(song)]);
+    similar = similar.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
+    if (similar.length > 0) {
+      activeQueue = [song, ...similar.sort(() => Math.random() - 0.5).slice(0, 20)];
+      currentIndex = 0;
+      updateQueueDrawer();
+    }
+  } catch(e) {}
+}
+
+function togglePlayPause() {
+  if (!activeAudio.src) return;
+  if (!isPlaybackAllowed()) { showPremiumBlock(); activeAudio.pause(); return; }
+  if (activeAudio.paused) { activeAudio.play(); updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); }
+  else { activeAudio.pause(); updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); }
+}
+
+function updatePlayPauseIcon(isPlaying) {
+  const icon = isPlaying ? `<i class="fa-solid fa-pause text-sm"></i>` : `<i class="fa-solid fa-play text-sm ml-0.5"></i>`;
+  document.getElementById("playPauseBtn").innerHTML = icon;
+  const npBtn = document.getElementById("npPlayPauseBtn");
+  if (npBtn) npBtn.innerHTML = isPlaying ? `<i class="fa-solid fa-pause text-xl"></i>` : `<i class="fa-solid fa-play text-xl ml-1"></i>`;
+}
+
+function playNextTrack() {
+  if (activeQueue.length === 0) return;
+  if (currentIndex + 1 < activeQueue.length) currentIndex++;
+  else if (repeatOn) currentIndex = 0;
+  else if (shuffleOn) currentIndex = Math.floor(Math.random() * activeQueue.length);
+  else { showStatus("Queue ended."); return; }
+  playTrack(activeQueue[currentIndex]);
+}
+
+function playPrevTrack() {
+  if (activeQueue.length === 0) return;
+  if (activeAudio.currentTime > 3) { activeAudio.currentTime = 0; return; }
+  if (currentIndex > 0) { currentIndex--; playTrack(activeQueue[currentIndex]); }
+}
+
+function toggleShuffle() {
+  shuffleOn = !shuffleOn;
+  document.getElementById("npShuffleBtn").className = shuffleOn ? "text-emerald-400 hover:text-white p-2 transition" : "text-slate-400 hover:text-white p-2 transition";
+}
+function toggleRepeat() {
+  repeatOn = !repeatOn;
+  document.getElementById("npRepeatBtn").className = repeatOn ? "text-emerald-400 hover:text-white p-2 transition" : "text-slate-400 hover:text-white p-2 transition";
+}
+
+// ==================== PRELOAD + CROSSFADE ====================
+function setupAudioListeners(audio) {
+  audio.addEventListener("timeupdate", () => {
+    if (audio !== activeAudio) return;
+    if (audio.duration) {
+      const pct = (audio.currentTime / audio.duration) * 100;
+      document.getElementById("progressBar").value = pct;
+      document.getElementById("currentTime") && (document.getElementById("currentTime").innerText = formatTime(audio.currentTime));
+      document.getElementById("durationTime") && (document.getElementById("durationTime").innerText = formatTime(audio.duration));
+      const npBar = document.getElementById("npProgressBar");
+      if (npBar) {
+        npBar.value = pct;
+        document.getElementById("npCurrentTime").innerText = formatTime(audio.currentTime);
+        document.getElementById("npDurationTime").innerText = formatTime(audio.duration);
+      }
+      const remaining = audio.duration - audio.currentTime;
+      if (remaining < 15 && remaining > 0 && !preloadedNext && activeQueue.length) {
+        preloadedNext = peekNextTrack();
+        if (preloadedNext) {
+          getOfflineSrc(preloadedNext).then(offlineSrc => {
+            inactiveAudio.src = offlineSrc || preloadedNext.stream_url;
+            inactiveAudio.load();
+          });
+        }
+      }
+      if (remaining <= CROSSFADE_SECONDS && remaining > 0 && preloadedNext && !crossfadeStarted) {
+        crossfadeStarted = true;
+        document.getElementById("crossfadeIndicator").classList.remove("hidden");
+        startCrossfade(audio, remaining);
+      }
+      // Sync lyrics scroll (offset-corrected by any manual alignment tap)
+      syncLyricsScroll(audio.currentTime, audio.duration);
+      // Update media session position
+      if (navigator.mediaSession && navigator.mediaSession.setPositionState) {
+        try { navigator.mediaSession.setPositionState({ duration: audio.duration, position: audio.currentTime, playbackRate: 1 }); } catch(e) {}
+      }
+    }
+  });
+  audio.addEventListener("play", () => { updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); if (audio === activeAudio && "mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; });
+  audio.addEventListener("pause", () => { updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); if (audio === activeAudio && "mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; });
+  audio.addEventListener("ended", () => { if (audio !== activeAudio) return; if (!crossfadeStarted) playNextTrack(); });
+  audio.addEventListener("error", () => {
+    if (!audio.src) return; // no real source assigned yet, ignore
+    if (audio === activeAudio) {
+      skipBrokenTrack();
+    } else {
+      // A preloaded "next" track failed - drop it so crossfade doesn't try to use it.
+      // It'll simply be attempted (and skipped if still broken) when its turn comes.
+      preloadedNext = null;
+    }
+  });
+}
+
+// Removes the currently-playing track from the queue and advances, so a
+// broken/expired stream link doesn't stop playback altogether.
+function skipBrokenTrack() {
+  if (activeQueue.length === 0 || currentIndex < 0) return;
+  showStatus("That track is unavailable, skipping...");
+  crossfadeStarted = false;
+  preloadedNext = null;
+  document.getElementById("crossfadeIndicator").classList.add("hidden");
+  if (currentIndex < activeQueue.length) activeQueue.splice(currentIndex, 1);
+  if (activeQueue.length === 0) {
+    currentTrack = null;
+    activeAudio.pause();
+    updatePlayPauseIcon(false);
+    document.getElementById("playerPlayingDot").classList.add("hidden");
+    return;
+  }
+  if (currentIndex >= activeQueue.length) currentIndex = activeQueue.length - 1;
+  playTrack(activeQueue[currentIndex]);
+}
+
+function peekNextTrack() {
+  let idx = currentIndex + 1;
+  if (idx >= activeQueue.length) {
+    if (repeatOn) idx = 0;
+    else if (shuffleOn) idx = Math.floor(Math.random() * activeQueue.length);
+    else return null;
+  }
+  return activeQueue[idx];
+}
+
+function startCrossfade(outgoing, remaining) {
+  const incoming = inactiveAudio;
+  incoming.volume = 0;
+  incoming.currentTime = 0;
+  incoming.play().catch(() => {});
+  const steps = 20;
+  const stepTime = (remaining * 1000) / steps;
+  let i = 0;
+  const iv = setInterval(() => {
+    i++;
+    const t = i / steps;
+    outgoing.volume = Math.max(0, 1 - t);
+    incoming.volume = Math.min(1, t);
+    if (i >= steps) {
+      clearInterval(iv);
+      outgoing.pause();
+      outgoing.volume = 1;
+      activeAudio = incoming;
+      inactiveAudio = outgoing;
+      if (currentIndex + 1 < activeQueue.length) currentIndex++;
+      else if (repeatOn) currentIndex = 0;
+      else currentIndex = (currentIndex + 1) % activeQueue.length;
+      currentTrack = activeQueue[currentIndex];
+      preloadedNext = null;
+      crossfadeStarted = false;
+      document.getElementById("crossfadeIndicator").classList.add("hidden");
+      resolveImage(currentTrack).then(img => {
+        document.getElementById("playerImg").src = img;
+        document.getElementById("queueNowImg").src = img;
+        document.getElementById("npImg").src = img;
+        document.getElementById("npBgBlur").style.backgroundImage = `url(${img})`;
+      });
+      document.getElementById("playerTitle").innerText = currentTrack.title;
+      document.getElementById("playerArtist").innerText = currentTrack.artist;
+      document.getElementById("queueNowTitle").innerText = currentTrack.title;
+      document.getElementById("queueNowArtist").innerText = currentTrack.artist;
+      document.getElementById("npTitle").innerText = currentTrack.title;
+      document.getElementById("npArtist").innerText = currentTrack.artist;
+      updateLikeButtons();
+      updateQueueDrawer();
+      addToRecent(currentTrack);
+      updateMediaSession();
+      loadLyrics(currentTrack);
+      if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
+        loadArtistInfo(currentTrack);
+      }
+    }
+  }, stepTime);
+}
+
+function formatTime(secs) {
+  if (!secs || isNaN(secs)) return "0:00";
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "progressBar" || e.target.id === "npProgressBar") {
+    if (activeAudio.duration) activeAudio.currentTime = (e.target.value / 100) * activeAudio.duration;
+  }
+});
+
+// ==================== MEDIA SESSION API ====================
+function setupMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.setActionHandler("play", () => { if (!isPlaybackAllowed()) { showPremiumBlock(); return; } activeAudio.play(); updatePlayPauseIcon(true); navigator.mediaSession.playbackState = "playing"; });
+  navigator.mediaSession.setActionHandler("pause", () => { activeAudio.pause(); updatePlayPauseIcon(false); navigator.mediaSession.playbackState = "paused"; });
+  navigator.mediaSession.setActionHandler("nexttrack", playNextTrack);
+  navigator.mediaSession.setActionHandler("previoustrack", playPrevTrack);
+  navigator.mediaSession.setActionHandler("seekto", (d) => { if (d.seekTime !== undefined && activeAudio.duration) activeAudio.currentTime = d.seekTime; });
+  try { navigator.mediaSession.setActionHandler("stop", () => { activeAudio.pause(); navigator.mediaSession.playbackState = "paused"; }); } catch (e) {}
+}
+
+function updateMediaSession() {
+  if (!("mediaSession" in navigator) || !currentTrack) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: currentTrack.title,
+    artist: currentTrack.artist,
+    album: "Lumic",
+    artwork: [{ src: placeholderFor(currentTrack.title), sizes: "512x512", type: "image/jpeg" }]
+  });
+  navigator.mediaSession.playbackState = activeAudio.paused ? "paused" : "playing";
+  resolveImage(currentTrack).then(img => {
+    if (!currentTrack) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+      album: "Lumic",
+      artwork: [{ src: img, sizes: "512x512", type: "image/jpeg" }]
+    });
+  });
+}
+
+// ==================== NOW PLAYING SCREEN ====================
+function openNowPlaying() {
+  if (!currentTrack) return;
+  document.getElementById("nowPlayingScreen").classList.remove("translate-y-full");
+  loadArtistInfo(currentTrack);
+}
+function closeNowPlaying() {
+  document.getElementById("nowPlayingScreen").classList.add("translate-y-full");
+}
+
+// ==================== LYRICS (Supabase Function + IndexedDB cache + Scroll sync) ====================
+let currentLyricsTrackId = null;
+let lyricsAbortController = null;
+let lyricsSyncOffset = 0; // manual correction (in lines) learned from user taps, reset per song
+
+async function loadLyrics(song, forceRefresh = false) {
+  const scrollEl = document.getElementById("lyricsScroll");
+  const trackId = uidFor(song);
+
+  if (lyricsAbortController) {
+    lyricsAbortController.abort();
+    lyricsAbortController = null;
+  }
+
+  currentLyricsTrackId = trackId;
+  lyricsLines = [];
+  lyricsCurrentLine = -1;
+  lyricsSyncOffset = 0;
+  setSyncButtonState("idle");
+  scrollEl.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs animate-pulse">Searching for lyrics...</div>`;
+
+  if (!forceRefresh) {
+    const cached = await getLyricsFromDB(trackId);
+    if (cached) {
+      if (currentLyricsTrackId !== trackId) return;
+      renderLyricsLines(cached);
+      return;
+    }
+  }
+
+  const controller = new AbortController();
+  lyricsAbortController = controller;
+  setSyncButtonState("loading");
+  try {
+    const res = await fetch(LYRICS_FUNCTION, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ title: song.title, artist: song.artist, platform: "musixmatch", refresh: forceRefresh })
+    });
+    const data = await res.json();
+    if (currentLyricsTrackId !== trackId) return;
+
+    const lyricsText = data?.data?.lyrics || data?.lyrics || null;
+    if (lyricsText && lyricsText.trim().length > 10) {
+      renderLyricsLines(lyricsText.trim());
+      saveLyricsToDB(trackId, lyricsText.trim());
+      setSyncButtonState(forceRefresh ? "synced" : "idle");
+    } else {
+      scrollEl.innerHTML = `<div class="text-center py-6 text-slate-500 text-sm">No lyrics found for this track.</div>`;
+      setSyncButtonState("idle");
+    }
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    if (currentLyricsTrackId !== trackId) return;
+    scrollEl.innerHTML = `<div class="text-center py-6 text-slate-500 text-sm">Lyrics unavailable right now.</div>`;
+    setSyncButtonState("idle");
+  } finally {
+    if (lyricsAbortController === controller) lyricsAbortController = null;
+  }
+}
+
+function syncLyricsForCurrentTrack() {
+  if (!currentTrack) return;
+  loadLyrics(currentTrack, true);
+}
+
+function setSyncButtonState(state) {
+  const icon = document.getElementById("syncLyricsIcon");
+  const label = document.getElementById("syncLyricsLabel");
+  const btn = document.getElementById("syncLyricsBtn");
+  if (!icon || !label || !btn) return;
+  if (state === "loading") {
+    icon.className = "fa-solid fa-arrows-rotate text-[10px] animate-spin";
+    label.innerText = "Syncing...";
+    btn.disabled = true;
+  } else if (state === "synced") {
+    icon.className = "fa-solid fa-check text-[10px]";
+    label.innerText = "Synced";
+    btn.disabled = false;
+    setTimeout(() => { if (document.getElementById("syncLyricsLabel")) setSyncButtonState("idle"); }, 1800);
+  } else {
+    icon.className = "fa-solid fa-arrows-rotate text-[10px]";
+    label.innerText = "Sync lyrics";
+    btn.disabled = false;
+  }
+}
+
+function renderLyricsLines(text) {
+  const scroll = document.getElementById("lyricsScroll");
+  lyricsLines = text.split("\n").filter(l => l.trim().length > 0);
+  scroll.innerHTML = "";
+  lyricsLines.forEach((line, i) => {
+    const div = document.createElement("div");
+    div.className = "lyric-line";
+    div.id = `lyric-line-${i}`;
+    div.innerText = line;
+    div.onclick = () => alignLyricLine(i);
+    scroll.appendChild(div);
+  });
+  lyricsCurrentLine = -1;
+  lyricsSyncOffset = 0;
+}
+
+function alignLyricLine(i) {
+  if (!lyricsLines.length || !activeAudio.duration) return;
+  const rawEstimate = Math.floor((activeAudio.currentTime / activeAudio.duration) * lyricsLines.length);
+  lyricsSyncOffset += i - rawEstimate;
+
+  lyricsCurrentLine = i;
+  applyLyricsWindow(i);
+  showStatus("Lyrics synced to playback");
+}
+
+const GLOW_WINDOW = 4;
+function applyLyricsWindow(centerLine) {
+  const windowEnd = centerLine + GLOW_WINDOW - 1;
+  lyricsLines.forEach((_, idx) => {
+    const el = document.getElementById(`lyric-line-${idx}`);
+    if (!el) return;
+    if (idx < centerLine) el.className = "lyric-line past";
+    else if (idx <= windowEnd) el.className = "lyric-line active";
+    else el.className = "lyric-line";
+  });
+  const activeLine = document.getElementById(`lyric-line-${centerLine}`);
+  if (activeLine) {
+    const scroll = document.getElementById("lyricsScroll");
+    const lineTop = activeLine.offsetTop;
+    const scrollTarget = lineTop - scroll.clientHeight / 2 + activeLine.clientHeight / 2;
+    scroll.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
+  }
+}
+
+function syncLyricsScroll(currentTime, duration) {
+  if (!lyricsLines.length || !duration) return;
+  const progress = currentTime / duration;
+  let estimatedLine = Math.floor(progress * lyricsLines.length) + lyricsSyncOffset;
+  estimatedLine = Math.max(0, Math.min(lyricsLines.length - 1, estimatedLine));
+  if (estimatedLine === lyricsCurrentLine) return;
+  lyricsCurrentLine = estimatedLine;
+  applyLyricsWindow(estimatedLine);
+}
+
+// ==================== ARTIST INFO (magazine style) ====================
+async function loadArtistInfo(song) {
+  const el = document.getElementById("npArtistInfo");
+  const gallery = document.getElementById("npGallery");
+  el.innerHTML = `<div class="p-5 text-center text-slate-500 text-xs animate-pulse">Loading artist info...</div>`;
+  gallery.innerHTML = "";
+
+  const [wikiRes, itunesData] = await Promise.all([
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(song.artist)}`).catch(() => null),
+    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(song.artist)}&entity=song&limit=9`).then(r => r.json()).catch(() => ({ results: [] }))
+  ]);
+
+  const images = (itunesData.results || []).map(r => r.artworkUrl100.replace("100x100", "400x400"));
+  let bio = "No biography available.";
+  let wikiImg = null;
+  if (wikiRes && wikiRes.ok) {
+    const wikiData = await wikiRes.json();
+    bio = wikiData.extract || "No biography available.";
+    if (wikiData.thumbnail) wikiImg = wikiData.thumbnail.source;
+  }
+
+  const headerImg = wikiImg || images[0] || placeholderFor(song.artist);
+  const bioShort = bio.length > 400 ? bio.substring(0, 400) + "..." : bio;
+
+  el.innerHTML = `
+    <div>
+      <img src="${headerImg}" class="artist-magazine-photo" onerror="this.src='${placeholderFor(song.artist)}'">
+      <div class="p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">Artist</span>
+          <h4 class="font-black text-base text-white">${escapeHtml(song.artist)}</h4>
+        </div>
+        <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(bioShort)}</p>
+        <button onclick="openArtistView('${escapeHtml(song.artist)}')" class="mt-3 text-xs text-emerald-400 font-semibold hover:text-emerald-300 transition">
+          See all songs by ${escapeHtml(song.artist)} →
+        </button>
+      </div>
+    </div>
+  `;
+
+  images.slice(0, 6).forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.className = "w-full aspect-square object-cover rounded-xl bg-slate-800";
+    gallery.appendChild(img);
+  });
+}
+
+// ==================== LIKE / FAVOURITES ====================
+function saveLikes() {
+  localStorage.setItem("lumic_likes", JSON.stringify(likedSongs));
+  document.getElementById("favCount").innerText = `${likedSongs.length} song${likedSongs.length === 1 ? "" : "s"}`;
+}
+function isLiked(song) { return likedSongs.some(s => uidFor(s) === uidFor(song)); }
+function toggleLikeCurrent(e) { if (e) e.stopPropagation(); if (!currentTrack) return; toggleLike(currentTrack, e); }
+function toggleLike(song, e) {
+  const wasLiked = isLiked(song);
+  if (wasLiked) likedSongs = likedSongs.filter(s => uidFor(s) !== uidFor(song));
+  else likedSongs.unshift(song);
+  saveLikes();
+  updateLikeButtons();
+  if (!wasLiked) {
+    showStatus("Added to Favourites");
+    if (e && e.currentTarget) spawnHeartBurst(e.currentTarget);
+  } else {
+    showStatus("Removed from Favourites");
+  }
+}
+function spawnHeartBurst(wrapEl) {
+  if (!wrapEl) return;
+  const container = wrapEl.classList && wrapEl.classList.contains("heart-float-wrap") ? wrapEl : wrapEl.querySelector(".heart-float-wrap") || wrapEl;
+  const heart = document.createElement("i");
+  heart.className = "fa-solid fa-heart heart-float";
+  container.appendChild(heart);
+  requestAnimationFrame(() => heart.classList.add("play"));
+  setTimeout(() => heart.remove(), 1000);
+  const offsets = [-16, -6, 6, 16];
+  offsets.forEach((tx, idx) => {
+    const p = document.createElement("i");
+    p.className = "fa-solid fa-heart heart-particle";
+    p.style.setProperty("--tx", tx + "px");
+    p.style.fontSize = "8px";
+    p.style.animationDelay = (idx * 0.03) + "s";
+    container.appendChild(p);
+    requestAnimationFrame(() => p.classList.add("play"));
+    setTimeout(() => p.remove(), 900);
+  });
+}
+function updateLikeButtons() {
+  if (!currentTrack) return;
+  const liked = isLiked(currentTrack);
+  document.getElementById("playerLikeBtn").innerHTML = liked ? `<i class="fa-solid fa-heart text-sm"></i>` : `<i class="fa-regular fa-heart text-sm"></i>`;
+  document.getElementById("playerLikeBtn").className = liked ? "playback-btn text-pink-400 heart-float-wrap" : "playback-btn text-slate-400 hover:text-pink-400 heart-float-wrap";
+  document.getElementById("npLikeBtn").innerHTML = liked ? `<i class="fa-solid fa-heart"></i>` : `<i class="fa-regular fa-heart"></i>`;
+  document.getElementById("npLikeBtn").className = liked ? "text-2xl text-pink-400 flex-shrink-0 transition heart-float-wrap" : "text-2xl text-slate-400 hover:text-pink-400 flex-shrink-0 transition heart-float-wrap";
+}
+saveLikes();
+
+// ==================== RECENTLY PLAYED ====================
+function addToRecent(song) {
+  recentSongs = recentSongs.filter(s => uidFor(s) !== uidFor(song));
+  recentSongs.unshift(song);
+  recentSongs = recentSongs.slice(0, 20);
+  localStorage.setItem("lumic_recent", JSON.stringify(recentSongs));
+  renderRecentlyPlayed();
+}
+function renderRecentlyPlayed() {
+  const section = document.getElementById("recentlyPlayedSection");
+  const row = document.getElementById("recentlyPlayedRow");
+  if (recentSongs.length === 0) { section.classList.add("hidden"); return; }
+  section.classList.remove("hidden");
+  row.innerHTML = "";
+  recentSongs.slice(0, 10).forEach(song => {
+    const card = document.createElement("div");
+    card.className = "w-32 flex-shrink-0 cursor-pointer group scroll-snap-item";
+    card.innerHTML = `
+      <div class="w-32 h-32 rounded-2xl overflow-hidden mb-2 bg-slate-800 border border-white/10 relative">
+        <img data-song-img src="${placeholderFor(song.title)}" class="w-full h-full object-cover fade-img group-hover:scale-105 transition duration-300">
+        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+          <i class="fa-solid fa-play text-white text-xl"></i>
+        </div>
+      </div>
+      <h4 class="text-[11px] font-bold text-white truncate">${escapeHtml(song.title)}</h4>
+      <p class="text-[10px] text-slate-400 truncate">${escapeHtml(song.artist)}</p>
+    `;
+    card.onclick = () => { activeQueue = recentSongs; currentIndex = recentSongs.findIndex(s => uidFor(s) === uidFor(song)); playTrack(song); };
+    row.appendChild(card);
+    resolveImage(song).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
+  });
+}
+
+// ==================== SESSION PERSISTENCE ====================
+function saveLastSession() {
+  if (!currentTrack) return;
+  localStorage.setItem("lumic_last_track", JSON.stringify({ song: currentTrack, position: activeAudio.currentTime || 0 }));
+}
+function restoreLastSession() {
+  try {
+    const raw = localStorage.getItem("lumic_last_track");
+    if (!raw) return;
+    const { song, position } = JSON.parse(raw);
+    currentTrack = song;
+    resolveImage(song).then(img => {
+      document.getElementById("playerImg").src = img;
+      document.getElementById("queueNowImg").src = img;
+      document.getElementById("npImg").src = img;
+      document.getElementById("npBgBlur").style.backgroundImage = `url(${img})`;
+    });
+    document.getElementById("playerTitle").innerText = song.title;
+    document.getElementById("playerArtist").innerText = song.artist;
+    document.getElementById("npTitle").innerText = song.title;
+    document.getElementById("npArtist").innerText = song.artist;
+    document.getElementById("playerBar").classList.remove("translate-y-full");
+    updatePlayPauseIcon(false);
+    updateLikeButtons();
+    activeQueue = [song];
+    currentIndex = 0;
+    getOfflineSrc(song).then(offlineSrc => {
+      activeAudio.src = offlineSrc || song.stream_url;
+      activeAudio.currentTime = position || 0;
+    });
+    updateMediaSession();
+    showStatus("Resumed your last session");
+  } catch (e) {}
+}
+setInterval(saveLastSession, 8000);
+
+// ==================== QUEUE DRAWER ====================
+function toggleQueueDrawer() { document.getElementById("queueDrawer").classList.toggle("translate-y-full"); }
+
+function updateQueueDrawer() {
+  const container = document.getElementById("queueList");
+  const badge = document.getElementById("queueBadge");
+  const remaining = Math.max(0, activeQueue.length - (currentIndex + 1));
+  badge.innerText = remaining;
+  if (remaining > 0) badge.classList.remove("hidden");
+  else badge.classList.add("hidden");
+  container.innerHTML = "";
+
+  activeQueue.forEach((song, idx) => {
+    if (idx <= currentIndex) return;
+    const item = document.createElement("div");
+    item.className = "glass-card p-3 rounded-xl flex items-center gap-3 group";
+    item.innerHTML = `
+      <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+        <div class="relative flex-shrink-0">
+          <img data-song-img src="${placeholderFor(song.title)}" class="w-10 h-10 rounded-lg object-cover bg-slate-800 fade-img">
+          <div class="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer">
+            <i class="fa-solid fa-play text-white text-xs"></i>
+          </div>
+        </div>
+        <div class="min-w-0"><h5 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h5><p class="text-[10px] text-slate-400 truncate mt-0.5">${escapeHtml(song.artist)}</p></div>
+      </div>
+      <button data-more class="text-slate-500 hover:text-white p-2 text-xs transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-ellipsis"></i></button>
+      <button data-remove class="text-slate-500 hover:text-red-400 p-2 text-xs transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    item.querySelector("[data-song-img]").closest(".flex-1").onclick = () => jumpToQueueIndex(idx);
+    item.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e); };
+    item.querySelector("[data-remove]").onclick = (e) => { e.stopPropagation(); removeFromQueue(idx); };
+    container.appendChild(item);
+    resolveImage(song).then(img => { const el = item.querySelector("[data-song-img]"); if (el) el.src = img; });
+  });
+
+  if (container.children.length === 0) {
+    container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No upcoming tracks.</div>`;
+  }
+}
+
+function removeFromQueue(index) {
+  activeQueue.splice(index, 1);
+  if (index <= currentIndex) currentIndex--;
+  updateQueueDrawer();
+}
+function jumpToQueueIndex(index) { currentIndex = index; playTrack(activeQueue[currentIndex]); }
+
+function shuffleQueueRemaining() {
+  if (activeQueue.length === 0) return;
+  const current = activeQueue.slice(0, currentIndex + 1);
+  const rest = activeQueue.slice(currentIndex + 1).sort(() => Math.random() - 0.5);
+  activeQueue = [...current, ...rest];
+  updateQueueDrawer();
+  showStatus("Queue shuffled");
+}
+
+function clearQueueRemaining() {
+  activeQueue = activeQueue.slice(0, currentIndex + 1);
+  updateQueueDrawer();
+  showStatus("Queue cleared");
+}
+
+// ==================== SEARCH ====================
+// NOTE: the search RPC path below (search_songs) is untouched per request —
+// only artist/curated-mix loading was made progressive.
+function onSearchFocus() {
+  const query = document.getElementById("searchInput").value.trim();
+  if (!query) renderRecentSearches();
+}
+
+function clearSearch() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("searchClearBtn").classList.add("hidden");
+  renderRecentSearches();
+}
+
+function renderRecentSearches() {
+  const container = document.getElementById("searchResults");
+  if (recentSearches.length === 0) {
+    container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Search for songs, artists or albums</div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+      <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Recent searches</h4>
+      <button onclick="clearRecentSearches()" class="text-[11px] text-slate-500 hover:text-slate-300">Clear</button>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      ${recentSearches.slice(0, 10).map(q => `
+        <button onclick="doSearch('${escapeHtml(q)}')" class="artist-chip">${escapeHtml(q)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function clearRecentSearches() {
+  recentSearches = [];
+  localStorage.setItem("lumic_searches", "[]");
+  renderRecentSearches();
+}
+
+function doSearch(query) {
+  document.getElementById("searchInput").value = query;
+  clearTimeout(debounceTimer);
+  runSearch(query, true);
+}
+
+function saveRecentSearch(query) {
+  recentSearches = recentSearches.filter(q => q.toLowerCase() !== query.toLowerCase());
+  recentSearches.unshift(query);
+  recentSearches = recentSearches.slice(0, 15);
+  localStorage.setItem("lumic_searches", JSON.stringify(recentSearches));
+}
+
+function debounceSearch() {
+  const q = document.getElementById("searchInput").value.trim();
+  document.getElementById("searchClearBtn").classList.toggle("hidden", !q);
+  clearTimeout(debounceTimer);
+  if (searchAbortController) { searchAbortController.abort(); searchAbortController = null; }
+  if (!q) { renderRecentSearches(); return; }
+  if (q.length < 2) { document.getElementById("searchResults").innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">Keep typing...</div>`; return; }
+  debounceTimer = setTimeout(() => runSearch(q, false), 250);
+}
+
+function onSearchKeydown(e) {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  clearTimeout(debounceTimer);
+  const q = document.getElementById("searchInput").value.trim();
+  if (!q) return;
+  runSearch(q, true);
+}
+
+function normalizeWords(q) { return q.trim().toLowerCase().split(/\s+/).filter(Boolean); }
+
+async function runSearch(query, isFullSearch) {
+  const container = document.getElementById("searchResults");
+  container.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
+
+  if (isFullSearch) saveRecentSearch(query);
+
+  if (searchAbortController) searchAbortController.abort();
+  const controller = new AbortController();
+  searchAbortController = controller;
+
+  const limit = isFullSearch ? 50 : 15;
+  let songs = [];
+  const seen = new Set();
+
+  try {
+    const response = await supabaseClient.rpc("search_songs", { search_query: query, max_results: limit });
+    const { data, error } = response;
+    if (searchAbortController !== controller) return;
+    if (error) throw error;
+
+    songs = (data || []).filter(s => {
+      const uid = (typeof uidFor === "function") ? uidFor(s) : `${s.source}_${s.id}`;
+      if (typeof isPreviewJunk === "function" && isPreviewJunk(s)) return false;
+      if (seen.has(uid)) return false;
+      seen.add(uid);
+      return true;
+    });
+
+    renderSearchResults(songs, query, container, isFullSearch);
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    if (searchAbortController === controller) {
+      container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results.</div>`;
+    }
+  } finally {
+    if (searchAbortController === controller) searchAbortController = null;
+  }
+}
+
+function renderSearchResults(songs, query, container, isFinal) {
+  if (songs.length === 0) {
+    if (isFinal) container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No results for "${escapeHtml(query)}"</div>`;
+    return;
+  }
+  container.innerHTML = "";
+
+  const counts = {};
+  songs.forEach(s => { counts[s.artist] = (counts[s.artist] || 0) + 1; });
+  const dominantArtist = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+
+  const label = document.createElement("div");
+  label.className = "flex items-center justify-between mb-1";
+  label.innerHTML = `<h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Top results</h4>
+    ${dominantArtist ? `<button onclick="openArtistView('${escapeHtml(dominantArtist)}')" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold">${escapeHtml(dominantArtist)} <i class="fa-solid fa-arrow-right text-[9px]"></i></button>` : ""}`;
+  container.appendChild(label);
+  songs.forEach(song => container.appendChild(renderSearchRow(song, songs)));
+
+  if (isFinal && dominantArtist) {
+    const chip = document.createElement("div");
+    chip.className = "pt-2 pb-1";
+    chip.innerHTML = `<button onclick="openArtistView('${escapeHtml(dominantArtist)}')" class="w-full glass-card p-3 rounded-xl flex items-center gap-3 hover:bg-white/10 transition cursor-pointer">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-user text-emerald-400 text-xs"></i>
+      </div>
+      <div class="text-left">
+        <p class="font-bold text-xs text-white">All songs by ${escapeHtml(dominantArtist)}</p>
+        <p class="text-[10px] text-slate-400">View full discography</p>
+      </div>
+      <i class="fa-solid fa-chevron-right text-slate-500 text-xs ml-auto"></i>
+    </button>`;
+    container.appendChild(chip);
+  }
+}
+
+function renderSearchRow(song, queueContext) {
+  const card = document.createElement("div");
+  card.className = "glass-card p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:bg-white/10 transition group";
+  card.innerHTML = `
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="relative flex-shrink-0">
+        <img data-song-img src="${placeholderFor(song.title)}" class="w-11 h-11 rounded-lg object-cover bg-slate-800 fade-img">
+        <div class="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+          <i class="fa-solid fa-play text-white text-xs"></i>
+        </div>
+      </div>
+      <div class="min-w-0">
+        <h4 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h4>
+        <button data-artist class="text-[10px] text-slate-400 hover:text-emerald-400 truncate mt-0.5 text-left transition">${escapeHtml(song.artist)}</button>
+      </div>
+    </div>
+    <button data-more class="text-slate-400 hover:text-white p-2 text-sm transition flex-shrink-0"><i class="fa-solid fa-ellipsis"></i></button>
+  `;
+  card.onclick = (e) => {
+    if (e.target.closest("[data-more]") || e.target.closest("[data-artist]")) return;
+    activeQueue = queueContext;
+    currentIndex = queueContext.findIndex(s => uidFor(s) === uidFor(song));
+    playTrack(song);
+  };
+  card.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e); };
+  card.querySelector("[data-artist]").onclick = (e) => { e.stopPropagation(); openArtistView(song.artist); };
+  resolveImage(song).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
+  return card;
+}
+
+function escapeHtml(str) {
+  return (str || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+// ==================== ACTION SHEET ====================
+function openActionSheet(song, e) {
+  if (e) e.stopPropagation();
+  actionSheetTarget = song;
+  document.getElementById("asImg").src = placeholderFor(song.title);
+  resolveImage(song).then(img => { document.getElementById("asImg").src = img; });
+  document.getElementById("asTitle").innerText = song.title;
+  document.getElementById("asArtist").innerText = song.artist;
+  document.getElementById("asLikeLabel").innerText = isLiked(song) ? "Remove from favourites" : "Add to favourites";
+  document.getElementById("actionSheetOverlay").classList.remove("hidden");
+  document.getElementById("actionSheet").classList.remove("translate-y-full");
+}
+function closeActionSheet() {
+  document.getElementById("actionSheetOverlay").classList.add("hidden");
+  document.getElementById("actionSheet").classList.add("translate-y-full");
+}
+function actionPlayNext() {
+  if (!actionSheetTarget) return;
+  activeQueue.splice(currentIndex + 1, 0, actionSheetTarget);
+  updateQueueDrawer();
+  showStatus("Playing next");
+  closeActionSheet();
+}
+function actionAddToQueue() {
+  if (!actionSheetTarget) return;
+  activeQueue.push(actionSheetTarget);
+  updateQueueDrawer();
+  showStatus("Added to queue");
+  closeActionSheet();
+}
+function actionAddToPlaylist() { closeActionSheet(); openPlaylistPicker(actionSheetTarget); }
+function actionToggleLike() { if (!actionSheetTarget) return; toggleLike(actionSheetTarget); closeActionSheet(); }
+async function actionDownload() { if (!actionSheetTarget) return; closeActionSheet(); await downloadSongOffline(actionSheetTarget); }
+async function actionMoreByArtist() {
+  if (!actionSheetTarget) return;
+  closeActionSheet();
+  await openArtistView(actionSheetTarget.artist);
+}
+function actionShareWithFriends() {
+  if (!actionSheetTarget) return;
+  closeActionSheet();
+  openSharePicker("song", actionSheetTarget, `Sharing "${actionSheetTarget.title}"`);
+}
+
+// ==================== PLAYLIST PICKER ====================
+let playlistPickerBulkSongs = null;
+
+function openPlaylistPicker(song) {
+  playlistPickerBulkSongs = null;
+  actionSheetTarget = song;
+  renderPlaylistPickerList();
+  document.getElementById("playlistPickerOverlay").classList.remove("hidden");
+  document.getElementById("playlistPicker").classList.remove("translate-y-full");
+}
+
+function openPlaylistPickerBulk(songs) {
+  playlistPickerBulkSongs = songs;
+  actionSheetTarget = null;
+  renderPlaylistPickerList();
+  document.getElementById("playlistPickerOverlay").classList.remove("hidden");
+  document.getElementById("playlistPicker").classList.remove("translate-y-full");
+}
+
+function renderPlaylistPickerList() {
+  const list = document.getElementById("playlistPickerList");
+  list.innerHTML = "";
+  const names = Object.keys(userPlaylists);
+  if (names.length === 0) {
+    list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No playlists yet.</div>`;
+  }
+  names.forEach(id => {
+    const pl = userPlaylists[id];
+    const row = document.createElement("button");
+    row.className = "w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-left transition";
+    row.innerHTML = `
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-record-vinyl text-white text-xs"></i></div>
+      <span class="text-sm text-white flex-1 font-medium">${escapeHtml(pl.name)}</span>
+      <span class="text-[10px] text-slate-500">${pl.songs.length} songs</span>
+    `;
+    row.onclick = () => {
+      if (playlistPickerBulkSongs) {
+        pl.songs.unshift(...playlistPickerBulkSongs);
+        showStatus(`Added ${playlistPickerBulkSongs.length} songs to ${pl.name}`);
+      } else {
+        pl.songs.unshift(actionSheetTarget);
+        showStatus(`Added to ${pl.name}`);
+      }
+      localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+      closePlaylistPicker();
+    };
+    list.appendChild(row);
+  });
+}
+
+function closePlaylistPicker() {
+  document.getElementById("playlistPickerOverlay").classList.add("hidden");
+  document.getElementById("playlistPicker").classList.add("translate-y-full");
+}
+
+// ==================== SHARE / FRIEND PICKER ====================
+let shareTargetType = null; // 'song' | 'playlist'
+let shareTargetPayload = null;
+let knownFriends = null; // cached list of {id, username, display_name}
+let shareSearchDebounce = null;
+
+function openSharePicker(type, payload, subtitle) {
+  if (!currentUser) { showStatus("Sign in to share songs."); return; }
+  shareTargetType = type;
+  shareTargetPayload = payload;
+  document.getElementById("sharePickerSubtitle").innerText = subtitle || "Send this to someone on Lumic";
+  document.getElementById("shareSearchInput").value = "";
+  document.getElementById("sharePickerOverlay").classList.remove("hidden");
+  document.getElementById("sharePicker").classList.remove("translate-y-full");
+  loadKnownFriendsAndRender();
+}
+
+function closeSharePicker() {
+  document.getElementById("sharePickerOverlay").classList.add("hidden");
+  document.getElementById("sharePicker").classList.add("translate-y-full");
+}
+
+async function loadKnownFriendsAndRender() {
+  const list = document.getElementById("sharePickerList");
+  list.innerHTML = `<div class="space-y-2">${Array(3).fill('<div class="skeleton h-12 rounded-xl"></div>').join("")}</div>`;
+  try {
+    const { data, error } = await supabaseClient
+      .from("friend_connections")
+      .select("user_a, user_b")
+      .or(`user_a.eq.${currentUser.id},user_b.eq.${currentUser.id}`);
+    if (error) throw error;
+    const friendIds = (data || []).map(r => r.user_a === currentUser.id ? r.user_b : r.user_a);
+    if (friendIds.length === 0) { knownFriends = []; renderSharePickerFriends([]); return; }
+    const { data: profs } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", friendIds);
+    knownFriends = profs || [];
+    renderSharePickerFriends(knownFriends);
+  } catch (e) {
+    knownFriends = [];
+    renderSharePickerFriends([]);
+  }
+}
+
+function renderSharePickerFriends(friends) {
+  const list = document.getElementById("sharePickerList");
+  if (friends.length === 0) {
+    list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No friends yet — search a username above to send your first song.</div>`;
+    return;
+  }
+  list.innerHTML = `<div class="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1 px-1">Friends</div>`;
+  friends.forEach(f => list.appendChild(renderFriendRow(f)));
+}
+
+function renderFriendRow(profile) {
+  const row = document.createElement("div");
+  row.className = "friend-row";
+  const initial = (profile.display_name || profile.username || "?").charAt(0).toUpperCase();
+  const grad = gradientForSeed(profile.username || profile.id);
+  row.innerHTML = `
+    <div class="gem-badge" style="width:34px;height:34px;font-size:13px;background:${grad};">${initial}</div>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-bold text-white truncate">${escapeHtml(profile.display_name || profile.username)}</p>
+      <p class="text-[11px] text-slate-500 truncate" style="font-family:ui-monospace,Menlo,monospace;">${escapeHtml(profile.username)}</p>
+    </div>
+    <i class="fa-solid fa-paper-plane text-emerald-400 text-sm"></i>
+  `;
+  row.onclick = () => sendShareTo(profile);
+  return row;
+}
+
+function onShareSearchInput() {
+  const q = document.getElementById("shareSearchInput").value.trim();
+  clearTimeout(shareSearchDebounce);
+  if (!q) { renderSharePickerFriends(knownFriends || []); return; }
+  shareSearchDebounce = setTimeout(async () => {
+    try {
+      const { data, error } = await supabaseClient.from("profiles").select("id, username, display_name").ilike("username", `%${q}%`).neq("id", currentUser.id).limit(15);
+      if (error) throw error;
+      const list = document.getElementById("sharePickerList");
+      list.innerHTML = "";
+      if (!data || data.length === 0) { list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No one found with that username.</div>`; return; }
+      list.innerHTML = `<div class="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1 px-1">Results</div>`;
+      data.forEach(p => list.appendChild(renderFriendRow(p)));
+    } catch (e) {}
+  }, 250);
+}
+
+async function sendShareTo(profile) {
+  if (!currentUser || !shareTargetPayload) return;
+  try {
+    await supabaseClient.from("shares").insert({
+      sender_id: currentUser.id,
+      recipient_id: profile.id,
+      share_type: shareTargetType,
+      payload: shareTargetPayload,
+      status: "pending"
+    });
+    // Remember them as a friend for next time (skip if the pair already exists)
+    const [a, b] = [currentUser.id, profile.id].sort();
+    await supabaseClient.from("friend_connections").upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b", ignoreDuplicates: true }).select();
+    showStatus(`Sent to ${profile.display_name || profile.username}`);
+    closeSharePicker();
+  } catch (e) {
+    showStatus("Couldn't send right now — try again.");
+  }
+}
+
+function sharePlaylistWithFriends() {
+  const songs = getPlaylistSongs(currentPlaylistCtx);
+  if (!songs.length) { showStatus("This playlist is empty."); return; }
+  const name = getPlaylistName(currentPlaylistCtx);
+  openSharePicker("playlist", { name, songs }, `Sharing playlist "${name}"`);
+}
+
+// ==================== CREATE PLAYLIST MODAL ====================
+function openCreatePlaylistModal(fromPicker) {
+  createPlaylistFromPicker = !!fromPicker;
+  document.getElementById("playlistNameInput").value = "";
+  document.getElementById("createPlaylistModal").classList.remove("hidden");
+  setTimeout(() => document.getElementById("playlistNameInput").focus(), 100);
+}
+function closeCreatePlaylistModal(e) {
+  if (e && e.target !== document.getElementById("createPlaylistModal")) return;
+  document.getElementById("createPlaylistModal").classList.add("hidden");
+}
+function confirmCreatePlaylist() {
+  const name = document.getElementById("playlistNameInput").value.trim();
+  if (!name) return;
+  const id = "pl_" + Date.now();
+  userPlaylists[id] = { name, songs: [] };
+  if (createPlaylistFromPicker) {
+    if (playlistPickerBulkSongs) userPlaylists[id].songs.push(...playlistPickerBulkSongs);
+    else if (actionSheetTarget) userPlaylists[id].songs.push(actionSheetTarget);
+  }
+  localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+  renderUserPlaylists();
+  showStatus(`Created "${name}"`);
+  document.getElementById("createPlaylistModal").classList.add("hidden");
+  if (createPlaylistFromPicker) closePlaylistPicker();
+}
+
+function renderUserPlaylists() {
+  const container = document.getElementById("userPlaylistsList");
+  if (!container) return;
+  container.innerHTML = "";
+  const ids = Object.keys(userPlaylists);
+  if (ids.length === 0) {
+    container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">Tap + to create your first playlist.</div>`;
+    return;
+  }
+  ids.forEach(id => {
+    const pl = userPlaylists[id];
+    const row = document.createElement("div");
+    row.className = "glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition";
+    row.innerHTML = `
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-record-vinyl text-white"></i></div>
+      <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white truncate">${escapeHtml(pl.name)}</h4><p class="text-[11px] text-slate-400">${pl.songs.length} songs</p></div>
+      <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+    `;
+    row.onclick = () => openPlaylistView(id);
+    container.appendChild(row);
+  });
+}
+
+// ==================== LOCAL FILES ====================
+function importLocalFiles(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith("audio/")) return;
+    const url = URL.createObjectURL(file);
+    const name = file.name.replace(/\.[^.]+$/, "");
+    const parts = name.split(" - ");
+    const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
+    const artist = parts.length >= 2 ? parts[0].trim() : "Local File";
+    const song = { title, artist, stream_url: url, image: null, _local: true, _localName: file.name };
+    localSongs.push(song);
+  });
+  saveLocalSongsMeta();
+  renderLocalFiles();
+  if (files.length) showStatus(`Imported ${files.length} local song${files.length !== 1 ? "s" : ""}`);
+  event.target.value = "";
+}
+
+function saveLocalSongsMeta() {
+  const meta = localSongs.map(s => ({ title: s.title, artist: s.artist, _local: true, _localName: s._localName }));
+  localStorage.setItem("lumic_local_meta", JSON.stringify(meta));
+}
+
+function renderLocalFiles() {
+  const container = document.getElementById("localFilesList");
+  if (!container) return;
+  container.innerHTML = "";
+  if (localSongs.length === 0) return;
+  localSongs.forEach((song, i) => {
+    const row = document.createElement("div");
+    row.className = "glass-card p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition group";
+    row.innerHTML = `
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-600 to-blue-900 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-music text-white text-xs"></i>
+      </div>
+      <div class="min-w-0 flex-1"><h5 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h5><p class="text-[10px] text-slate-400">${escapeHtml(song.artist)}</p></div>
+      <button data-remove class="text-slate-500 hover:text-red-400 p-2 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+    `;
+    row.onclick = (e) => {
+      if (e.target.closest("[data-remove]")) return;
+      activeQueue = localSongs;
+      currentIndex = i;
+      playTrack(song);
+    };
+    row.querySelector("[data-remove]").onclick = (e) => { e.stopPropagation(); removeLocalSong(i); };
+    container.appendChild(row);
+  });
+}
+
+function removeLocalSong(index) {
+  localSongs.splice(index, 1);
+  saveLocalSongsMeta();
+  renderLocalFiles();
+}
+
+// ==================== PLAYLIST DETAIL ====================
+function getPlaylistSongs(ctxId) {
+  if (ctxId === "__favorites") return likedSongs;
+  if (ctxId === "__offline") return offlineSongsMeta;
+  if (ctxId === "__local") return localSongs;
+  if (typeof ctxId === "string" && ctxId.startsWith("preset:")) return currentPlaylistPresetSongs;
+  return (userPlaylists[ctxId] && userPlaylists[ctxId].songs) || [];
+}
+function getPlaylistName(ctxId) {
+  if (ctxId === "__favorites") return "Favourites";
+  if (ctxId === "__offline") return "Downloaded";
+  if (ctxId === "__local") return "Local Files";
+  if (typeof ctxId === "string" && ctxId.startsWith("preset:")) return currentPlaylistPresetTitle;
+  return (userPlaylists[ctxId] && userPlaylists[ctxId].name) || "Playlist";
+}
+
+function addAllCurrentPlaylistSongs() {
+  const songs = getPlaylistSongs(currentPlaylistCtx);
+  if (!songs.length) { showStatus("Nothing to add yet."); return; }
+  openPlaylistPickerBulk(songs);
+}
+
+function openPlaylistView(ctxId) {
+  currentPlaylistCtx = ctxId;
+  const songs = getPlaylistSongs(ctxId);
+  document.getElementById("playlistName").innerText = getPlaylistName(ctxId);
+  document.getElementById("playlistKind").innerText = ctxId === "__favorites" ? "Favourites" : ctxId === "__offline" ? "Offline" : "Playlist";
+  document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+  document.getElementById("playlistDownloadBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
+  document.getElementById("playlistShareBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
+
+  const collage = document.getElementById("playlistHeaderCollage");
+  collage.innerHTML = "";
+  songs.slice(0, 4).forEach(s => {
+    const img = document.createElement("img");
+    img.className = "w-full h-full object-cover";
+    img.src = placeholderFor(s.title);
+    collage.appendChild(img);
+    resolveImage(s).then(url => img.src = url);
+  });
+
+  renderPlaylistSongsList(songs);
+  switchView("playlist");
+}
+
+function renderPlaylistSongsList(songs) {
+  const list = document.getElementById("playlistSongsList");
+  list.innerHTML = "";
+  if (songs.length === 0) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Nothing here yet.</div>`; return; }
+  songs.forEach(song => list.appendChild(renderSearchRow(song, songs)));
+}
+
+function playAllInPlaylist(shuffle) {
+  const songs = getPlaylistSongs(currentPlaylistCtx);
+  if (songs.length === 0) { showStatus("This playlist is empty."); return; }
+  activeQueue = shuffle ? [...songs].sort(() => Math.random()-0.5) : [...songs];
+  currentIndex = 0;
+  playTrack(activeQueue[0]);
+  updateQueueDrawer();
+}
+
+// ==================== OFFLINE (IndexedDB) ====================
+let offlineDB = null;
+let offlineSongsMeta = [];
+
+function initOfflineDB() {
+  const req = indexedDB.open("lumicOffline", 2);
+  req.onupgradeneeded = (e) => {
+    const db = e.target.result;
+    if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "uid" });
+    if (!db.objectStoreNames.contains("lyrics")) db.createObjectStore("lyrics", { keyPath: "trackId" });
+  };
+  req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); };
+  req.onerror = () => { showStatus("Offline storage unavailable on this device."); };
+}
+
+function refreshOfflineMeta() {
+  if (!offlineDB) return;
+  const tx = offlineDB.transaction("tracks", "readonly");
+  const req = tx.objectStore("tracks").getAll();
+  req.onsuccess = () => {
+    offlineSongsMeta = (req.result || []).map(r => ({ title: r.title, artist: r.artist, image: r.image, stream_url: r.stream_url, id: r.songId, _src: r.src }));
+    document.getElementById("offlineCount").innerText = `${offlineSongsMeta.length} song${offlineSongsMeta.length === 1 ? "" : "s"} saved`;
+  };
+}
+
+async function getOfflineSrc(song) {
+  if (!offlineDB) return null;
+  if (song._local) return song.stream_url;
+  return new Promise((resolve) => {
+    const tx = offlineDB.transaction("tracks", "readonly");
+    const req = tx.objectStore("tracks").get(uidFor(song));
+    req.onsuccess = () => resolve(req.result?.blob ? URL.createObjectURL(req.result.blob) : null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function downloadSongOffline(song) {
+  if (!offlineDB) { showStatus("Offline storage unavailable."); return; }
+  if (song._local) { showStatus("Already a local file."); return; }
+  showStatus(`Saving "${song.title}" offline...`);
+  try {
+    const res = await fetch(song.stream_url);
+    const blob = await res.blob();
+    const record = { uid: uidFor(song), title: song.title, artist: song.artist, image: song.image, stream_url: song.stream_url, songId: song.id, src: song._src, blob };
+    const tx = offlineDB.transaction("tracks", "readwrite");
+    tx.objectStore("tracks").put(record);
+    tx.oncomplete = () => { refreshOfflineMeta(); showStatus(`Saved "${song.title}"`); };
+  } catch (e) { showStatus("Couldn't save this track."); }
+}
+
+async function downloadPlaylistOffline() {
+  const songs = getPlaylistSongs(currentPlaylistCtx);
+  if (!songs.length) return;
+  for (const song of songs) await downloadSongOffline(song);
+  showStatus("Playlist saved offline");
+}
+
+// ==================== LYRICS INDEXEDDB ====================
+async function saveLyricsToDB(trackId, text) {
+  if (!offlineDB) return;
+  const tx = offlineDB.transaction("lyrics", "readwrite");
+  tx.objectStore("lyrics").put({ trackId, text, savedAt: Date.now() });
+}
+
+async function getLyricsFromDB(trackId) {
+  if (!offlineDB) return null;
+  return new Promise((resolve) => {
+    const tx = offlineDB.transaction("lyrics", "readonly");
+    const req = tx.objectStore("lyrics").get(trackId);
+    req.onsuccess = () => resolve(req.result?.text || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+// ==================== GEM AVATAR ====================
+const GEM_GRADIENTS = [
+  "linear-gradient(135deg,#f43f5e,#f97316)",
+  "linear-gradient(135deg,#8b5cf6,#ec4899)",
+  "linear-gradient(135deg,#10b981,#0ea5e9)",
+  "linear-gradient(135deg,#f59e0b,#ef4444)",
+  "linear-gradient(135deg,#3b82f6,#8b5cf6)",
+  "linear-gradient(135deg,#14b8a6,#22c55e)",
+  "linear-gradient(135deg,#ec4899,#f43f5e)",
+  "linear-gradient(135deg,#6366f1,#06b6d4)",
+  "linear-gradient(135deg,#eab308,#f97316)",
+  "linear-gradient(135deg,#22c55e,#0ea5e9)"
+];
+function gradientForSeed(seed) {
+  let h = 0;
+  for (let i = 0; i < (seed || "").length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return GEM_GRADIENTS[h % GEM_GRADIENTS.length];
+}
+function renderGemBadges() {
+  if (!currentProfile) return;
+  const initial = (currentProfile.display_name || currentProfile.username || "?").charAt(0).toUpperCase();
+  const grad = gradientForSeed(currentProfile.username || currentUser.id);
+  [document.getElementById("gemBadge"), document.getElementById("profileGem")].forEach(el => {
+    if (!el) return;
+    el.innerText = initial;
+    el.style.background = grad;
+  });
+}
+
+// ==================== AUTH / DEVICE / PREMIUM ====================
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem("lumic_device_id");
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("lumic_device_id", id);
+  }
+  return id;
+}
+
+async function bootAuth() {
+  deviceId = getOrCreateDeviceId();
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) return; // not signed in — app still works for browsing where applicable
+  currentUser = session.user;
+
+  const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+  if (!profile) return;
+  currentProfile = profile;
+  renderGemBadges();
+
+  await claimDeviceSession();
+  await loadSubscription();
+  await checkReferralUnlock();
+  refreshNotifications();
+
+  sessionPollTimer && clearInterval(sessionPollTimer);
+  sessionPollTimer = setInterval(pollDeviceSession, 15000);
+  premiumCheckTimer && clearInterval(premiumCheckTimer);
+  premiumCheckTimer = setInterval(() => { if (!isPlaybackAllowed() && !activeAudio.paused) { activeAudio.pause(); showPremiumBlock(); } }, 20000);
+  setInterval(refreshNotifications, 20000);
+}
+
+// Writes/overwrites this user's single active-session row with our device id.
+// Logging in elsewhere later will overwrite it again, which is what
+// pollDeviceSession() below detects to sign this device out.
+async function claimDeviceSession() {
+  try {
+    await supabaseClient.from("sessions").upsert({
+      user_id: currentUser.id,
+      device_id: deviceId,
+      status: "active",
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" });
+  } catch (e) {}
+}
+
+async function pollDeviceSession() {
+  if (!currentUser) return;
+  try {
+    const { data } = await supabaseClient.from("sessions").select("device_id").eq("user_id", currentUser.id).maybeSingle();
+    if (data && data.device_id && data.device_id !== deviceId) {
+      showStatus("Signed out — this account was opened on another device.", 6000);
+      clearInterval(sessionPollTimer);
+      clearInterval(premiumCheckTimer);
+      activeAudio.pause();
+      setTimeout(() => logout(true), 2500);
+    }
+  } catch (e) {}
+}
+
+async function loadSubscription() {
+  try {
+    const { data } = await supabaseClient.from("premium_subscriptions").select("*").eq("user_id", currentUser.id).maybeSingle();
+    currentSubscription = data || null;
+  } catch (e) { currentSubscription = null; }
+}
+
+// Single source of truth for "is this user allowed to play music right now".
+function isPlaybackAllowed() {
+  if (!currentUser || !currentProfile) return true; // not signed in yet / guest-safe default
+  if (currentProfile.is_premium) return true; // referral or payment flag
+  const now = Date.now();
+  if (currentSubscription) {
+    if (currentSubscription.status === "active" && currentSubscription.current_period_end && new Date(currentSubscription.current_period_end).getTime() > now) return true;
+    if (currentSubscription.status === "trial" && currentSubscription.trial_ends_at && new Date(currentSubscription.trial_ends_at).getTime() > now) return true;
+    return false;
+  }
+  // No subscription row yet — fall back to the profile-level trial window.
+  if (currentProfile.trial_ends_at && new Date(currentProfile.trial_ends_at).getTime() > now) return true;
+  return false;
+}
+
+function showPremiumBlock() {
+  document.getElementById("premiumBlockBanner").classList.remove("hidden");
+}
+function closePremiumBlock() {
+  document.getElementById("premiumBlockBanner").classList.add("hidden");
+}
+
+async function checkReferralUnlock() {
+  if (!currentProfile || currentProfile.is_premium) return;
+  const { count } = await supabaseClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", currentUser.id);
+  if ((count || 0) >= REFERRALS_NEEDED) {
+    const { data, error } = await supabaseClient.from("profiles").update({ is_premium: true, premium_source: "referral" }).eq("id", currentUser.id).select().maybeSingle();
+    if (!error && data) { currentProfile = data; showStatus("Premium unlocked — thanks for the referrals!"); }
+  }
+}
+
+// ==================== PROFILE VIEW ====================
+async function renderProfileView() {
+  if (!currentUser || !currentProfile) return;
+  const name = currentProfile.display_name || (currentUser.email || "").split("@")[0] || "Listener";
+  document.getElementById("profileDisplayName").innerText = name;
+  document.getElementById("profileEmail").innerText = currentUser.email || "Signed in with Google";
+  document.getElementById("profileUidBadge").innerText = currentProfile.username;
+  document.getElementById("profileReferralShareUid").innerText = currentProfile.username;
+  document.getElementById("profileMemberSince").innerText = new Date(currentProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  renderGemBadges();
+
+  if (currentProfile.referred_by) {
+    const { data: referrer } = await supabaseClient.from("profiles").select("username").eq("id", currentProfile.referred_by).maybeSingle();
+    document.getElementById("profileReferredByLabel").innerText = referrer ? referrer.username : "—";
+  } else {
+    document.getElementById("profileReferredByLabel").innerText = "No one";
+  }
+
+  const { count } = await supabaseClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", currentUser.id);
+  const referredCount = count || 0;
+  document.getElementById("profileReferralCountLabel").innerText = `${Math.min(referredCount, REFERRALS_NEEDED)} / ${REFERRALS_NEEDED} friends joined`;
+  document.getElementById("profileReferralProgressFill").style.width = `${Math.min(100, (referredCount / REFERRALS_NEEDED) * 100)}%`;
+
+  renderProfilePremiumCard();
+}
+
+function renderProfilePremiumCard() {
+  const badge = document.getElementById("profilePremiumBadgeLabel");
+  const title = document.getElementById("profilePremiumTitle");
+  const sub = document.getElementById("profilePremiumSub");
+  const payBtn = document.getElementById("profilePayBtn");
+  const allowed = isPlaybackAllowed();
+  const isPaidOrReferred = currentProfile.is_premium || (currentSubscription && currentSubscription.status === "active");
+
+  if (isPaidOrReferred) {
+    badge.innerText = "Premium active";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-amber-300";
+    title.innerText = "You're Premium 🎉";
+    const source = currentProfile.premium_source === "referral" ? "Unlocked by referring 3 friends." :
+                   currentSubscription && currentSubscription.current_period_end ? `Premium until ${new Date(currentSubscription.current_period_end).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}.` :
+                   "Enjoy unlimited listening.";
+    sub.innerText = source;
+    payBtn.classList.add("hidden");
+  } else if (allowed) {
+    badge.innerText = "Free trial";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-emerald-400";
+    title.innerText = "Your trial is active";
+    const endsAt = currentSubscription?.trial_ends_at || currentProfile.trial_ends_at;
+    sub.innerText = endsAt ? `Trial ends ${new Date(endsAt).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}. Refer 3 friends or pay ₦${PREMIUM_PRICE_NGN}/month to keep listening after that.` : "Enjoy your trial.";
+    payBtn.classList.remove("hidden");
+  } else {
+    badge.innerText = "Trial ended";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-rose-400";
+    title.innerText = "Playback is paused";
+    sub.innerText = `Refer 3 friends or pay ₦${PREMIUM_PRICE_NGN}/month to keep listening.`;
+    payBtn.classList.remove("hidden");
+  }
+}
+
+function copyUid() {
+  if (!currentProfile) return;
+  navigator.clipboard.writeText(currentProfile.username).then(() => showStatus("Universal ID copied"));
+}
+
+async function logout(silent) {
+  await supabaseClient.auth.signOut();
+  sessionPollTimer && clearInterval(sessionPollTimer);
+  premiumCheckTimer && clearInterval(premiumCheckTimer);
+  if (!silent) window.location.href = "index.html";
+  else window.location.href = "index.html";
+}
+
+// ==================== PAYSTACK ====================
+function startPayment() {
+  if (!currentUser) { showStatus("Sign in first."); return; }
+  if (!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY.includes("REPLACE")) { showStatus("Payments aren't configured yet."); return; }
+  if (typeof PaystackPop === "undefined") { showStatus("Payment couldn't load. Check your connection and try again."); return; }
+  const reference = "LUMIC_" + currentUser.id.slice(0, 8) + "_" + Date.now();
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: currentUser.email || `${currentProfile.username.toLowerCase()}@lumic.app`,
+    amount: PREMIUM_PRICE_NGN * 100,
+    currency: "NGN",
+    ref: reference,
+    metadata: { user_id: currentUser.id, username: currentProfile.username },
+    callback: function (response) { finalizePaymentClientSide(response.reference); },
+    onClose: function () {}
+  });
+  handler.openIframe();
+}
+
+async function finalizePaymentClientSide(reference) {
+  showStatus("Confirming payment...");
+  const premiumUntil = new Date();
+  premiumUntil.setDate(premiumUntil.getDate() + 30);
+  try {
+    await supabaseClient.from("payments").insert({
+      user_id: currentUser.id, reference, amount: PREMIUM_PRICE_NGN * 100, currency: "NGN", status: "success", verified_at: new Date().toISOString()
+    });
+    const { data: sub, error } = await supabaseClient.from("premium_subscriptions").upsert({
+      user_id: currentUser.id, status: "active", current_period_end: premiumUntil.toISOString(), updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" }).select().maybeSingle();
+    if (error) throw error;
+    currentSubscription = sub;
+    const { data: prof } = await supabaseClient.from("profiles").update({ premium_source: "payment" }).eq("id", currentUser.id).select().maybeSingle();
+    if (prof) currentProfile = prof;
+    renderProfilePremiumCard();
+    showStatus("Payment successful — Premium unlocked!");
+  } catch (e) {
+    showStatus("Payment recorded but activation failed. Contact support.");
+  }
+}
+
+// ==================== SHARE REQUESTS (LIBRARY INBOX) ====================
+async function refreshNotifications() {
+  if (!currentUser) return;
+  try {
+    const { count } = await supabaseClient.from("shares").select("id", { count: "exact", head: true }).eq("recipient_id", currentUser.id).eq("status", "pending");
+    pendingRequestsCount = count || 0;
+    const badge = document.getElementById("libraryNavBadge");
+    if (pendingRequestsCount > 0) { badge.innerText = pendingRequestsCount > 9 ? "9+" : pendingRequestsCount; badge.classList.remove("hidden"); }
+    else badge.classList.add("hidden");
+  } catch (e) {}
+}
+
+async function renderRequests() {
+  const section = document.getElementById("requestsSection");
+  const list = document.getElementById("requestsList");
+  if (!currentUser) { section.classList.add("hidden"); return; }
+  try {
+    const { data, error } = await supabaseClient.from("shares").select("*").eq("recipient_id", currentUser.id).eq("status", "pending").order("created_at", { ascending: false }).limit(30);
+    if (error) throw error;
+    if (!data || data.length === 0) { section.classList.add("hidden"); return; }
+    section.classList.remove("hidden");
+    document.getElementById("requestsCountLabel").innerText = `${data.length} pending`;
+
+    const senderIds = [...new Set(data.map(r => r.sender_id))];
+    const { data: senders } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", senderIds);
+    const senderMap = {}; (senders || []).forEach(s => senderMap[s.id] = s);
+
+    list.innerHTML = "";
+    data.forEach(req => list.appendChild(renderRequestCard(req, senderMap[req.sender_id])));
+    refreshNotifications();
+  } catch (e) {
+    section.classList.add("hidden");
+  }
+}
+
+function renderRequestCard(req, sender) {
+  const card = document.createElement("div");
+  card.className = "request-card";
+  const isPlaylist = req.share_type === "playlist";
+  const payload = req.payload || {};
+  const senderName = sender ? (sender.display_name || sender.username) : "Someone";
+  const initial = (senderName || "?").charAt(0).toUpperCase();
+  const grad = gradientForSeed(sender ? sender.username : senderName);
+
+  card.innerHTML = `
+    <div class="flex items-center gap-3 mb-3">
+      <div class="gem-badge" style="width:32px;height:32px;font-size:12px;background:${grad};">${initial}</div>
+      <p class="text-xs text-slate-300"><span class="font-bold text-white">${escapeHtml(senderName)}</span> sent you ${isPlaylist ? "a playlist" : "a song"}</p>
+    </div>
+    <div class="flex items-center gap-3 mb-3 bg-black/20 rounded-xl p-2.5">
+      <div class="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center ${isPlaylist ? "bg-gradient-to-br from-violet-600 to-indigo-900" : "bg-slate-800"} overflow-hidden">
+        ${isPlaylist ? `<i class="fa-solid fa-record-vinyl text-white"></i>` : `<img src="${placeholderFor(payload.title||"")}" class="w-full h-full object-cover">`}
+      </div>
+      <div class="min-w-0 flex-1">
+        <h5 class="font-bold text-xs text-white truncate">${escapeHtml(isPlaylist ? payload.name : payload.title)}</h5>
+        <p class="text-[10px] text-slate-400 truncate">${isPlaylist ? `${(payload.songs||[]).length} songs` : escapeHtml(payload.artist || "")}</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button data-listen class="flex-1 bg-emerald-500 text-black font-bold text-xs py-2 rounded-full active:scale-95 transition">Listen</button>
+      <button data-decline class="flex-1 bg-white/10 text-slate-300 font-bold text-xs py-2 rounded-full active:scale-95 transition">Decline</button>
+    </div>
+  `;
+  card.querySelector("[data-listen]").onclick = () => respondToShare(req, "listened");
+  card.querySelector("[data-decline]").onclick = () => respondToShare(req, "declined");
+  if (!isPlaylist) {
+    const img = card.querySelector("img");
+    resolveImage(payload).then(url => { if (img) img.src = url; });
+  }
+  return card;
+}
+
+async function respondToShare(req, status) {
+  try {
+    await supabaseClient.from("shares").update({ status, responded_at: new Date().toISOString() }).eq("id", req.id);
+  } catch (e) {}
+  if (status === "listened") {
+    const payload = req.payload || {};
+    if (req.share_type === "playlist") {
+      activeQueue = payload.songs || [];
+      currentIndex = 0;
+      if (activeQueue.length) playTrack(activeQueue[0]);
+      showStatus(`Playing "${payload.name}"`);
+      currentPlaylistPresetSongs = payload.songs || [];
+      currentPlaylistPresetTitle = payload.name;
+      currentPlaylistCtx = "preset:shared_" + req.id;
+    } else {
+      activeQueue = [payload];
+      currentIndex = 0;
+      playTrack(payload);
+      showStatus(`Playing "${payload.title}"`);
+    }
+  }
+  renderRequests();
+}
+</script>
+</body>
+</html>

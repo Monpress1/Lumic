@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-black">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#00A651">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>lumic — Sound, tuned to you</title>
+<!-- Link to your PWA manifest -->
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { width: 100%; overscroll-behavior: none; }
+  body { 
+    background: #000000; 
+    font-family: 'Plus Jakarta Sans', sans-serif; 
+    -webkit-tap-highlight-color: transparent; 
+  }
+  * { box-sizing: border-box; }
+
+  /* ---- core design system ---- */
+  .brand-accent { color: #00A651; }
+  .bg-brand-accent { background: #00A651; }
+  .ring-brand-accent { --tw-ring-color: #00A651; }
+
+  .field { 
+    background: rgba(255,255,255,0.04); 
+    border: 1px solid rgba(255,255,255,0.08); 
+    color: #fff; 
+    transition: all 0.2s ease;
+  }
+  .field:focus { 
+    border-color: #00A651; 
+    background: rgba(255,255,255,0.08); 
+    box-shadow: 0 0 0 4px rgba(30,215,96,0.15);
+  }
+  .field::placeholder { color: #52525b; }
+  
+  .btn-accent { 
+    background: #00A651; 
+    color: #000000; 
+    box-shadow: 0 4px 20px rgba(30,215,96,0.25); 
+  }
+  .btn-accent:disabled { 
+    background: #27272a; 
+    color: #52525b; 
+    box-shadow: none; 
+    cursor: not-allowed;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  .fade-in { animation: fadeIn .5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  
+  .spinner { 
+    border: 3px solid rgba(255,255,255,0.1); 
+    border-top-color: #00A651; 
+    border-radius: 50%; 
+    width: 32px; height: 32px; 
+    animation: spin .8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite; 
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .spring-bounce { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .spring-bounce:active { transform: scale(0.92); }
+
+  .divider { display: flex; align-items: center; gap: 12px; color: #52525b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+  .uid-chip { font-family: ui-monospace, Menlo, monospace; letter-spacing: .12em; }
+
+  /* ---- home / hero scrim ---- */
+  .hero-scrim { 
+    position: absolute; inset: 0; 
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.95) 80%, #000000 100%); 
+  }
+  .slide-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all .3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .slide-dot.active { width: 24px; background: #00A651; }
+</style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col selection:bg-[#00A651] selection:text-black">
+
+<!-- ============ PWA ENFORCEMENT OVERLAY ============ -->
+<div id="pwa-overlay" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black px-6 text-center hidden">
+  <img src="logo.png" alt="lumic" class="w-24 h-24 rounded-3xl mb-6 shadow-[0_0_30px_rgba(30,215,96,0.2)]">
+  <h2 class="text-3xl font-extrabold text-white tracking-tight mb-3">Install lumic</h2>
+  <p class="text-[15px] text-slate-400 max-w-sm font-medium mb-10 leading-relaxed">To get the full experience and offline access, you need to install the lumic app on your device.</p>
+  
+  <button id="pwa-install-btn" class="btn-accent w-full max-w-xs font-bold text-[15px] py-4 rounded-2xl spring-bounce hidden">
+    Install App
+  </button>
+  
+  <div id="pwa-ios-instructions" class="hidden flex flex-col items-center gap-3">
+    <p class="text-sm text-slate-300 font-medium bg-white/5 py-3 px-6 rounded-xl border border-white/10">
+      1. Tap the <i class="fa-solid fa-arrow-up-from-bracket mx-1 text-[#00A651]"></i> <b>Share</b> button<br>
+      2. Scroll down and select <br><b>"Add to Home Screen"</b>
+    </p>
+  </div>
+</div>
+
+<!-- ============ SCREEN: BOOT / SESSION CHECK ============ -->
+<div id="screen-boot" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
+  <div class="w-16 h-16 rounded-[20px] bg-[#00A651] flex items-center justify-center shadow-[0_0_40px_rgba(30,215,96,0.3)]">
+    <i class="fa-solid fa-wave-square text-black text-2xl"></i>
+  </div>
+  <div class="spinner"></div>
+</div>
+
+<div class="relative w-full max-w-md mx-auto min-h-screen flex flex-col">
+
+  <!-- ============ SCREEN: HOME / SPLASH ============ -->
+  <section id="screen-home" class="hidden absolute inset-0 flex flex-col z-20 bg-black">
+    <div class="absolute inset-0 w-full h-full">
+      <img src="home.jpg" alt="lumic Hero" class="w-full h-full object-cover block">
+      <div class="hero-scrim"></div>
+    </div>
+    
+    <div class="relative z-10 flex-1 flex flex-col justify-end px-6 pb-12 fade-in">
+      <div id="homeSlider" class="mb-5">
+        <h1 id="slideHeadline" class="text-4xl font-extrabold text-white leading-tight mb-2 tracking-tight">Songs made<br>just for you</h1>
+        <p id="slideSub" class="text-base text-slate-400 font-medium">Your sound, curated in real time.</p>
+      </div>
+      <div class="flex items-center gap-2 mb-8">
+        <div class="slide-dot active" data-dot="0"></div>
+        <div class="slide-dot" data-dot="1"></div>
+        <div class="slide-dot" data-dot="2"></div>
+      </div>
+      <button onclick="goHomeToAuth()" class="btn-accent w-full font-bold text-[15px] py-4 rounded-2xl spring-bounce">
+        Get started
+      </button>
+    </div>
+  </section>
+
+  <!-- Wrapping dynamic screens in a padded container -->
+  <div class="px-6 pt-12 pb-10 flex-1 flex flex-col w-full relative z-10">
+
+  <!-- ============ SCREEN: AUTH ============ -->
+  <section id="screen-auth" class="hidden flex-1 flex flex-col fade-in">
+    <div class="flex flex-col items-center mb-10">
+      <img src="logo.png" alt="lumic" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'" class="w-20 h-20 rounded-[20px] object-cover shadow-[0_0_30px_rgba(30,215,96,0.15)] mb-6">
+      <div id="logoFallback" class="w-20 h-20 rounded-[20px] bg-[#00A651] items-center justify-center shadow-[0_0_30px_rgba(30,215,96,0.3)] mb-6" style="display:none;">
+        <i class="fa-solid fa-wave-square text-black text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight text-white">lumic</h1>
+      <p id="authTagline" class="text-slate-400 mt-2 font-medium">Create an account to save your spot.</p>
+    </div>
+
+    <button onclick="signInWithGoogle()" class="w-full bg-white text-black font-extrabold text-[15px] py-4 rounded-2xl flex items-center justify-center gap-3 spring-bounce mb-6">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 16 3 9.1 7.6 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 36.4 26.9 37 24 37c-5.2 0-9.6-3.3-11.2-8l-6.6 5.1C9 40.3 15.9 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.9 2.6-2.5 4.8-4.7 6.3l6.6 5.4C41 36 45 30.6 45 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="divider mb-6">or use email</div>
+
+    <div class="space-y-4 mb-2">
+      <input id="emailInput" type="email" inputmode="email" placeholder="Email address" class="field w-full rounded-2xl px-5 py-4 text-[15px] outline-none font-medium">
+      <input id="passwordInput" type="password" placeholder="Password" class="field w-full rounded-2xl px-5 py-4 text-[15px] outline-none font-medium">
+    </div>
+
+    <!-- REFERRAL INPUT MOVED HERE -->
+    <div id="authReferralWrap" class="mb-2 mt-4">
+      <label class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 block pl-1">Referral Code (Optional)</label>
+      <input id="authReferralInput" type="text" maxlength="20" placeholder="Friend's Universal ID" class="field w-full rounded-2xl px-5 py-4 text-[15px] outline-none font-bold uppercase uid-chip placeholder-slate-600" oninput="handleAuthReferralInput()">
+      <p id="authReferralStatus" class="text-sm font-semibold mt-2 h-5 px-2"></p>
+    </div>
+
+    <p id="authError" class="hidden text-sm text-rose-500 font-semibold px-2 mt-3"></p>
+
+    <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="btn-accent w-full font-bold text-[15px] py-4 rounded-2xl mt-6 spring-bounce">
+      Create account
+    </button>
+
+    <p class="text-center text-sm text-slate-400 mt-6 font-medium">
+      <span id="toggleAuthText">Already have an account?</span>
+      <button onclick="toggleAuthMode()" id="toggleAuthBtn" class="text-white font-bold hover:text-[#00A651] transition-colors ml-1">Log in</button>
+    </p>
+  </section>
+
+  <!-- ============ SCREEN: CHECK EMAIL ============ -->
+  <section id="screen-verify" class="hidden flex-1 flex flex-col items-center justify-center text-center fade-in">
+    <div class="w-20 h-20 rounded-full bg-[#00A651]/10 border border-[#00A651]/30 flex items-center justify-center mb-6">
+      <i class="fa-solid fa-envelope-circle-check text-[#00A651] text-3xl"></i>
+    </div>
+    <h2 class="text-2xl font-extrabold text-white mb-3">Check your inbox</h2>
+    <p class="text-[15px] text-slate-400 max-w-xs leading-relaxed mb-8">We sent a verification link to <span id="verifyEmailShown" class="text-white font-semibold"></span>. Tap it to finish setting up your account.</p>
+    <button onclick="showAuthScreen()" class="text-sm text-slate-500 hover:text-white font-bold transition-colors">Use a different email</button>
+  </section>
+
+  <!-- ============ SCREEN: UNIVERSAL ID ============ -->
+  <section id="screen-uid" class="hidden flex-1 flex flex-col fade-in">
+    <div class="mb-10">
+      <h2 class="text-3xl font-extrabold text-white tracking-tight">Claim your handle</h2>
+      <p class="text-[15px] text-slate-400 mt-2 font-medium">Your Universal ID is how friends find you on lumic.</p>
+    </div>
+    <div class="bg-white/[0.03] border border-white/10 rounded-[20px] p-6 mb-4">
+      <label class="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-3 block">Universal ID</label>
+      <input id="uidInput" type="text" maxlength="20" placeholder="e.g. NOVASOUND" class="w-full bg-transparent text-2xl font-black outline-none uid-chip uppercase text-white placeholder-slate-700" oninput="handleUidInput()">
+      <p id="uidStatus" class="text-sm font-semibold mt-4 h-5"></p>
+    </div>
+
+    <p class="text-xs text-slate-500 px-2 font-medium">3–20 characters, letters and numbers only.</p>
+    <button id="uidContinueBtn" onclick="confirmUid()" disabled class="btn-accent w-full font-bold text-[15px] py-4 rounded-2xl mt-auto spring-bounce">
+      Finish Setup
+    </button>
+  </section>
+
+  <!-- ============ SCREEN: WELCOME RECAP ============ -->
+  <section id="screen-welcome" class="hidden flex-1 flex flex-col items-center justify-center text-center fade-in">
+    <div class="w-20 h-20 rounded-full bg-[#00A651]/10 border border-[#00A651]/30 flex items-center justify-center mb-6">
+      <i class="fa-solid fa-circle-check text-[#00A651] text-3xl"></i>
+    </div>
+    <h2 class="text-3xl font-extrabold text-white mb-3 tracking-tight">You're all set</h2>
+    <p id="welcomeSub" class="text-[15px] text-slate-400 max-w-xs leading-relaxed mb-8 font-medium">Your account is ready. Share your ID to get discovered.</p>
+    <div class="bg-white/[0.03] border border-white/10 rounded-[20px] px-8 py-5 mb-10 inline-block">
+      <p id="welcomeUid" class="uid-chip text-3xl font-black text-[#00A651]"></p>
+    </div>
+    <button onclick="window.location.href='lumicpage.html'" class="bg-white text-black font-extrabold text-[15px] py-4 px-12 rounded-2xl spring-bounce w-full shadow-[0_0_30px_rgba(255,255,255,0.15)]">
+      Enter lumic
+    </button>
+  </section>
+
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const SUPABASE_URL = "https://fhogysmvpqakzoxwhxht.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // Make sure to restore your real anon key here
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const APP_REDIRECT_URL = window.location.origin + window.location.pathname;
+
+let authMode = "signup"; 
+const LS_UID = "lumic_pending_uid";
+const LS_REF = "lumic_pending_ref";
+const LS_DEV_REG = "lumic_device_registered"; // Used to prevent self-referrals
+
+const HOME_SLIDES = [
+  { headline: "Songs made<br>just for you", sub: "Your sound, curated in real time." },
+  { headline: "Unlimited Streaming", sub: "Unlimited streaming of the music you enjoy." },
+  { headline: "One ID,<br>everywhere", sub: "Your Universal ID — share it, get discovered." }
+];
+
+window.addEventListener("DOMContentLoaded", boot);
+
+async function boot() {
+  // Service Worker Registration for Offline capability
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+  }
+
+  // PWA Standalone Check
+  checkPwaStandalone();
+
+  // Capture a referral code from a shared link
+  captureReferralFromUrl();
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    const done = await routeSessionForward(session);
+    if (done) return;
+  }
+  document.getElementById("screen-boot").classList.add("hidden");
+  showHomeScreen();
+}
+
+// ==================== PWA LOGIC ====================
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('pwa-install-btn');
+  if(btn) { btn.classList.remove('hidden'); btn.classList.add('block'); }
+});
+
+function checkPwaStandalone() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  
+  // If not standalone, force PWA prompt and hide everything else
+  if (!isStandalone) {
+    document.getElementById('pwa-overlay').classList.remove('hidden');
+    
+    // Check if iOS for specific manual instructions
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      document.getElementById('pwa-ios-instructions').classList.remove('hidden');
+    }
+  }
+}
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('pwa-overlay').classList.add('hidden');
+    }
+    deferredInstallPrompt = null;
+  }
+});
+
+// ==================== ROUTING ====================
+async function routeSessionForward(session) {
+  const { data: profile } = await supabaseClient
+    .from("profiles").select("id,username").eq("id", session.user.id).maybeSingle();
+
+  if (profile) {
+    // Flag this device as having registered an account
+    localStorage.setItem(LS_DEV_REG, "true");
+    window.location.href = "lumicpage.html";
+    return true;
+  }
+
+  document.getElementById("screen-boot").classList.add("hidden");
+  showUidScreen();
+  return true;
+}
+
+// ==================== HOME / SPLASH ====================
+let slideIndex = 0, slideTimer = null;
+function showHomeScreen() {
+  hideAllScreens();
+  document.getElementById("screen-home").classList.remove("hidden");
+  slideIndex = 0;
+  renderSlide();
+  clearInterval(slideTimer);
+  slideTimer = setInterval(() => { slideIndex = (slideIndex + 1) % HOME_SLIDES.length; renderSlide(); }, 3200);
+}
+function renderSlide() {
+  const s = HOME_SLIDES[slideIndex];
+  document.getElementById("slideHeadline").innerHTML = s.headline;
+  document.getElementById("slideSub").innerText = s.sub;
+  document.querySelectorAll(".slide-dot").forEach((d, i) => d.classList.toggle("active", i === slideIndex));
+}
+function goHomeToAuth() {
+  clearInterval(slideTimer);
+  showAuthScreen();
+}
+
+// ==================== AUTH SCREEN ====================
+function hideAllScreens() {
+  ["screen-home","screen-uid","screen-auth","screen-verify","screen-welcome"].forEach(id => document.getElementById(id).classList.add("hidden"));
+}
+
+function showAuthScreen() {
+  hideAllScreens();
+  document.getElementById("screen-auth").classList.remove("hidden");
+  
+  // Pre-fill referral if passed in URL previously
+  const pendingRef = localStorage.getItem(LS_REF);
+  if (pendingRef && authMode === 'signup') {
+    document.getElementById("authReferralInput").value = pendingRef;
+    handleAuthReferralInput();
+  }
+}
+
+function toggleAuthMode() {
+  authMode = authMode === "signup" ? "login" : "signup";
+  const isSignup = authMode === "signup";
+  document.getElementById("authTagline").innerText = isSignup ? "Create an account to save your spot." : "Welcome back. Log in to continue.";
+  document.getElementById("authSubmitBtn").innerText = isSignup ? "Create account" : "Log in";
+  document.getElementById("toggleAuthText").innerText = isSignup ? "Already have an account?" : "New to lumic?";
+  document.getElementById("toggleAuthBtn").innerText = isSignup ? "Sign up" : "Create account";
+  
+  // Hide Referral block on Login
+  document.getElementById("authReferralWrap").style.display = isSignup ? "block" : "none";
+  setAuthError("");
+}
+
+function setAuthError(msg) {
+  const el = document.getElementById("authError");
+  if (!msg) { el.classList.add("hidden"); el.innerText = ""; return; }
+  el.innerText = msg;
+  el.classList.remove("hidden");
+}
+
+async function signInWithGoogle() {
+  setAuthError("");
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: APP_REDIRECT_URL }
+  });
+  if (error) setAuthError(error.message);
+}
+
+// ==================== REFERRAL INPUT (AUTH SCREEN) ====================
+let referralCheckTimer = null;
+let referralValid = null; // null = empty/neutral, true, false
+
+function handleAuthReferralInput() {
+  const input = document.getElementById("authReferralInput");
+  input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const val = input.value;
+  const statusEl = document.getElementById("authReferralStatus");
+  const btn = document.getElementById("authSubmitBtn");
+  
+  referralValid = null;
+
+  if (!val) {
+    statusEl.innerText = "";
+    localStorage.removeItem(LS_REF);
+    btn.disabled = false;
+    return;
+  }
+
+  // Device checking: Block farming from same device
+  if (localStorage.getItem(LS_DEV_REG) === "true") {
+    statusEl.innerText = "You cannot use a referral code from a registered device";
+    statusEl.className = "text-sm font-semibold mt-2 h-5 text-rose-500 px-2";
+    referralValid = false;
+    btn.disabled = true;
+    localStorage.removeItem(LS_REF);
+    return;
+  }
+
+  if (val.length < 3) {
+    statusEl.innerText = "Too short to be a valid code";
+    statusEl.className = "text-sm font-semibold mt-2 h-5 text-rose-500 px-2";
+    referralValid = false;
+    btn.disabled = true;
+    return;
+  }
+
+  statusEl.innerText = "Checking code...";
+  statusEl.className = "text-sm font-semibold mt-2 h-5 text-slate-400 px-2";
+  btn.disabled = true; // wait for validation before allowing submission
+
+  clearTimeout(referralCheckTimer);
+  referralCheckTimer = setTimeout(async () => {
+    if (document.getElementById("authReferralInput").value !== val) return;
+    
+    const { data } = await supabaseClient.from("profiles").select("id, username, display_name").eq("username", val).maybeSingle();
+    
+    if (document.getElementById("authReferralInput").value !== val) return;
+    
+    if (data) {
+      referralValid = true;
+      localStorage.setItem(LS_REF, val); // save for next screen
+      statusEl.innerText = `Referred by ${data.display_name || data.username}`;
+      statusEl.className = "text-sm font-extrabold mt-2 h-5 text-[#00A651] px-2";
+      btn.disabled = false;
+    } else {
+      referralValid = false;
+      localStorage.removeItem(LS_REF);
+      statusEl.innerText = "We couldn't find that code";
+      statusEl.className = "text-sm font-semibold mt-2 h-5 text-rose-500 px-2";
+      btn.disabled = true;
+    }
+  }, 400);
+}
+
+// Referral Capture (from shareable URL)
+function captureReferralFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref) return;
+    
+    // Only capture if they haven't already registered on this device
+    if (localStorage.getItem(LS_DEV_REG) === "true") return;
+
+    const cleaned = ref.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
+    if (cleaned.length >= 3) {
+      localStorage.setItem(LS_REF, cleaned);
+    }
+  } catch (e) {}
+}
+
+async function handleAuthSubmit() {
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value;
+  setAuthError("");
+  
+  if (!email || !password) { setAuthError("Enter your email and password."); return; }
+  if (password.length < 6) { setAuthError("Password must be at least 6 characters."); return; }
+  if (authMode === "signup" && referralValid === false) { setAuthError("Please fix or remove the invalid referral code."); return; }
+
+  const btn = document.getElementById("authSubmitBtn");
+  btn.disabled = true;
+  const originalLabel = btn.innerText;
+  btn.innerText = "Please wait...";
+
+  try {
+    if (authMode === "signup") {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: APP_REDIRECT_URL }
+      });
+      if (error) { setAuthError(error.message); return; }
+
+      if (data.session) {
+        await routeSessionForward(data.session);
+      } else {
+        document.getElementById("verifyEmailShown").innerText = email;
+        hideAllScreens();
+        document.getElementById("screen-verify").classList.remove("hidden");
+      }
+    } else {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) { setAuthError(error.message); return; }
+      await routeSessionForward(data.session);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalLabel;
+  }
+}
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN" && session) {
+    const onEntryScreen = !document.getElementById("screen-auth").classList.contains("hidden") ||
+                           !document.getElementById("screen-verify").classList.contains("hidden");
+    if (onEntryScreen) routeSessionForward(session);
+  }
+});
+
+// ==================== UNIVERSAL ID SCREEN ====================
+let uidCheckTimer = null, uidAvailable = false;
+
+function showUidScreen() {
+  hideAllScreens();
+  document.getElementById("screen-uid").classList.remove("hidden");
+  document.getElementById("uidInput").focus();
+}
+
+function handleUidInput() {
+  const input = document.getElementById("uidInput");
+  input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const val = input.value;
+  const statusEl = document.getElementById("uidStatus");
+  const btn = document.getElementById("uidContinueBtn");
+  uidAvailable = false;
+  btn.disabled = true;
+
+  if (val.length < 3) {
+    statusEl.innerText = val.length ? "Too short — 3 characters minimum" : "";
+    statusEl.className = "text-sm font-semibold mt-4 h-5 text-slate-500";
+    return;
+  }
+  
+  // Prevent matching their own referred code
+  const storedRef = localStorage.getItem(LS_REF);
+  if (storedRef && val === storedRef) {
+      statusEl.innerText = "You can't refer yourself";
+      statusEl.className = "text-sm font-semibold mt-4 h-5 text-rose-500";
+      return;
+  }
+
+  statusEl.innerText = "Checking availability...";
+  statusEl.className = "text-sm font-semibold mt-4 h-5 text-slate-400";
+
+  clearTimeout(uidCheckTimer);
+  uidCheckTimer = setTimeout(async () => {
+    const { data } = await supabaseClient.from("profiles").select("id").eq("username", val).maybeSingle();
+    if (input.value !== val) return;
+    if (data) {
+      statusEl.innerText = "That one's taken — try another";
+      statusEl.className = "text-sm font-semibold mt-4 h-5 text-rose-500";
+    } else {
+      uidAvailable = true;
+      statusEl.innerText = "Available";
+      statusEl.className = "text-sm font-extrabold mt-4 h-5 text-[#00A651]";
+      btn.disabled = false;
+    }
+  }, 400);
+}
+
+async function confirmUid() {
+  const val = document.getElementById("uidInput").value;
+  if (!uidAvailable || val.length < 3) return;
+  localStorage.setItem(LS_UID, val);
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    await finalizeOnboarding(session);
+  } else {
+    showAuthScreen(); 
+  }
+}
+
+// ==================== FINALIZE ====================
+async function finalizeOnboarding(session) {
+  hideAllScreens();
+  document.getElementById("screen-boot").classList.remove("hidden");
+  const user = session.user;
+
+  const pendingUid = localStorage.getItem(LS_UID);
+  if (!pendingUid) {
+    document.getElementById("screen-boot").classList.add("hidden");
+    showUidScreen();
+    return;
+  }
+
+  // Retrieve valid referral logic established on auth screen
+  const pendingRef = localStorage.getItem(LS_REF);
+  let referrerId = null;
+  if (pendingRef) {
+    const { data: referrer } = await supabaseClient.from("profiles").select("id").eq("username", pendingRef).maybeSingle();
+    if (referrer && referrer.id !== user.id) referrerId = referrer.id;
+  }
+
+  try {
+    const { error: profileErr } = await supabaseClient.from("profiles").insert({
+      id: user.id,
+      username: pendingUid,
+      display_name: (user.email || "").split("@")[0],
+      referred_by: referrerId
+    });
+    if (profileErr) throw profileErr;
+
+    // Record the referral row directly matching your schema requirement
+    // This gives the referrer their "1 point" via COUNT calculations
+    if (referrerId) {
+      try {
+        await supabaseClient.from("referrals").insert({ referrer_id: referrerId, referred_id: user.id });
+      } catch (e) { /* non-fatal */ }
+    }
+
+    // Flag the device so it can't refer another account later
+    localStorage.setItem(LS_DEV_REG, "true");
+
+    localStorage.removeItem(LS_UID);
+    localStorage.removeItem(LS_REF);
+
+    document.getElementById("screen-boot").classList.add("hidden");
+    document.getElementById("welcomeUid").innerText = pendingUid;
+    document.getElementById("welcomeSub").innerText = referrerId
+      ? "Your account is ready and linked to your friend's referral. Share your own ID to get discovered."
+      : "Your account is ready. Share your ID to get discovered.";
+    document.getElementById("screen-welcome").classList.remove("hidden");
+  } catch (e) {
+    document.getElementById("screen-boot").classList.add("hidden");
+    showAuthScreen();
+    setAuthError("Something went wrong finishing setup.");
+  }
+}
+</script>
+</body>
+</html>
