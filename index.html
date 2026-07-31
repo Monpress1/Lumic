@@ -309,9 +309,13 @@ document.getElementById('pwa-install-btn')?.addEventListener('click', async () =
 // ==================== ROUTING ====================
 async function routeSessionForward(session) {
   const { data: profile } = await supabaseClient
-    .from("profiles").select("id,username").eq("id", session.user.id).maybeSingle();
+    .from("profiles").select("id,username,display_name").eq("id", session.user.id).maybeSingle();
 
-  if (profile) {
+  // The auth.users trigger (handle_new_user) creates a placeholder profile
+  // row the instant someone signs up — so `profile` existing is NOT enough
+  // to mean "onboarding finished". display_name is only ever set by our own
+  // claim_profile() call, so its presence is the real completion signal.
+  if (profile && profile.display_name) {
     // Flag this device as having registered an account
     localStorage.setItem(LS_DEV_REG, "true");
     window.location.href = "lumic.html";
@@ -394,6 +398,13 @@ async function signInWithGoogle() {
 let referralCheckTimer = null;
 let referralValid = null; // null = empty/neutral, true, false
 
+// ILIKE treats "_" as a single-character wildcard and "%" as multi-character —
+// both are allowed in usernames, so escape them before using ILIKE for what
+// should be an exact, case-insensitive match.
+function escapeForIlike(str) {
+  return (str || "").replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 function handleAuthReferralInput() {
   const input = document.getElementById("authReferralInput");
   input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -436,9 +447,18 @@ function handleAuthReferralInput() {
   referralCheckTimer = setTimeout(async () => {
     if (document.getElementById("authReferralInput").value !== val) return;
     
-    const { data } = await supabaseClient.from("profiles").select("id, username, display_name").eq("username", val).maybeSingle();
+    const { data, error } = await supabaseClient.from("profiles").select("id, username, display_name").ilike("username", escapeForIlike(val)).maybeSingle();
     
     if (document.getElementById("authReferralInput").value !== val) return;
+
+    if (error) {
+      console.error("Referral lookup failed:", error);
+      referralValid = false;
+      statusEl.innerText = "Couldn't check that code — try again";
+      statusEl.className = "text-sm font-semibold mt-2 h-5 text-rose-500 px-2";
+      btn.disabled = true;
+      return;
+    }
     
     if (data) {
       referralValid = true;
@@ -558,8 +578,14 @@ function handleUidInput() {
 
   clearTimeout(uidCheckTimer);
   uidCheckTimer = setTimeout(async () => {
-    const { data } = await supabaseClient.from("profiles").select("id").eq("username", val).maybeSingle();
+    const { data, error } = await supabaseClient.from("profiles").select("id").ilike("username", escapeForIlike(val)).maybeSingle();
     if (input.value !== val) return;
+    if (error) {
+      console.error("UID availability check failed:", error);
+      statusEl.innerText = "Couldn't check that — try again";
+      statusEl.className = "text-sm font-semibold mt-4 h-5 text-rose-500";
+      return;
+    }
     if (data) {
       statusEl.innerText = "That one's taken — try another";
       statusEl.className = "text-sm font-semibold mt-4 h-5 text-rose-500";
@@ -598,48 +624,46 @@ async function finalizeOnboarding(session) {
     return;
   }
 
-  // Retrieve valid referral logic established on auth screen
   const pendingRef = localStorage.getItem(LS_REF);
-  let referrerId = null;
-  if (pendingRef) {
-    const { data: referrer } = await supabaseClient.from("profiles").select("id").eq("username", pendingRef).maybeSingle();
-    if (referrer && referrer.id !== user.id) referrerId = referrer.id;
+  const displayName = (user.email || "").split("@")[0];
+
+  // One atomic, server-side call: sets the real username, resolves the
+  // referral code, and records the referral row — all inside claim_profile()
+  // (SECURITY DEFINER), so it works regardless of RLS policies on profiles
+  // or referrals. This replaces the old profiles/referrals table inserts,
+  // which were failing because the auth.users trigger already creates a
+  // placeholder profile row before this ever runs.
+  const { data: claimedProfile, error: claimErr } = await supabaseClient.rpc("claim_profile", {
+    new_username: pendingUid,
+    ref_code: pendingRef || null,
+    new_display_name: displayName
+  });
+
+  if (claimErr) {
+    console.error("claim_profile failed:", claimErr);
+    document.getElementById("screen-boot").classList.add("hidden");
+    showUidScreen();
+    // Surface it on the UID screen's own status line rather than kicking
+    // back to the auth screen — the account already exists at this point.
+    const statusEl = document.getElementById("uidStatus");
+    statusEl.innerText = claimErr.message?.includes("taken") ? "That one's taken — try another" : "Something went wrong — try again";
+    statusEl.className = "text-sm font-semibold mt-4 h-5 text-rose-500";
+    return;
   }
 
-  try {
-    const { error: profileErr } = await supabaseClient.from("profiles").insert({
-      id: user.id,
-      username: pendingUid,
-      display_name: (user.email || "").split("@")[0],
-      referred_by: referrerId
-    });
-    if (profileErr) throw profileErr;
+  const referrerId = claimedProfile?.referred_by || null;
 
-    // Record the referral row directly matching your schema requirement
-    // This gives the referrer their "1 point" via COUNT calculations
-    if (referrerId) {
-      try {
-        await supabaseClient.from("referrals").insert({ referrer_id: referrerId, referred_id: user.id });
-      } catch (e) { /* non-fatal */ }
-    }
+  // Flag this device so it can't be used to farm another referral later
+  localStorage.setItem(LS_DEV_REG, "true");
+  localStorage.removeItem(LS_UID);
+  localStorage.removeItem(LS_REF);
 
-    // Flag the device so it can't refer another account later
-    localStorage.setItem(LS_DEV_REG, "true");
-
-    localStorage.removeItem(LS_UID);
-    localStorage.removeItem(LS_REF);
-
-    document.getElementById("screen-boot").classList.add("hidden");
-    document.getElementById("welcomeUid").innerText = pendingUid;
-    document.getElementById("welcomeSub").innerText = referrerId
-      ? "Your account is ready and linked to your friend's referral. Share your own ID to get discovered."
-      : "Your account is ready. Share your ID to get discovered.";
-    document.getElementById("screen-welcome").classList.remove("hidden");
-  } catch (e) {
-    document.getElementById("screen-boot").classList.add("hidden");
-    showAuthScreen();
-    setAuthError("Something went wrong finishing setup.");
-  }
+  document.getElementById("screen-boot").classList.add("hidden");
+  document.getElementById("welcomeUid").innerText = claimedProfile?.username || pendingUid;
+  document.getElementById("welcomeSub").innerText = referrerId
+    ? "Your account is ready and linked to your friend's referral. Share your own ID to get discovered."
+    : "Your account is ready. Share your ID to get discovered.";
+  document.getElementById("screen-welcome").classList.remove("hidden");
 }
 </script>
 </body>
