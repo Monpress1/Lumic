@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Lumic - Music Player</title>
+  <meta name="theme-color" content="#09090b">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="logo.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
@@ -860,7 +863,7 @@ const CROSSFADE_SECONDS = 5;
 
 function uidFor(song) {
   if (!song) return "";
-  if (song._local) return `local_${song.title}_${song.artist}`;
+  if (song._local) return song.id ? `local_${song.id}` : `local_${song.title}_${song.artist}`;
   if (song.id) return `${song._src || ""}_${song.id}`;
   return btoa(unescape(encodeURIComponent(`${song.title}__${song.artist}`))).slice(0, 24);
 }
@@ -877,13 +880,70 @@ window.addEventListener("DOMContentLoaded", () => {
   bootAuth();
 });
 
+// ==================== PWA / SERVICE WORKER ====================
+// Registers the offline shell. Without this the app only ever loads with a
+// live connection and Android/iOS treat it as "a Chrome tab" rather than an
+// installed app — this is also what fixes the media-notification branding,
+// once the app is actually opened from its installed Home Screen icon
+// instead of a bookmarked tab.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
 window.addEventListener("beforeunload", saveLastSession);
 document.addEventListener("visibilitychange", () => { if (document.hidden) saveLastSession(); });
 
 // ==================== VIEW SWITCHING ====================
+// Every "closeable" thing (a sub-view, the Now Playing sheet, the queue
+// drawer, action sheets/modals) pushes a history entry when it opens. The
+// single popstate handler below closes whichever of those is currently open,
+// most-specific first, so the hardware/gesture back button steps back
+// through the app instead of exiting it. Only when nothing is open do we
+// let a second back press actually leave.
+function pushNavState(label) {
+  history.pushState({ lumicNav: true, label }, "");
+}
+
+window.addEventListener("popstate", () => {
+  if (!document.getElementById("actionSheetOverlay").classList.contains("hidden")) {
+    closeActionSheet();
+    return;
+  }
+  if (!document.getElementById("playlistPickerOverlay").classList.contains("hidden")) {
+    closePlaylistPicker();
+    return;
+  }
+  const openOverlay = document.querySelector(".modal-overlay:not(.hidden)");
+  if (openOverlay) {
+    openOverlay.classList.add("hidden");
+    return;
+  }
+  if (!document.getElementById("queueDrawer").classList.contains("translate-y-full")) {
+    toggleQueueDrawer();
+    return;
+  }
+  if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
+    closeNowPlaying();
+    return;
+  }
+  const openSubView = ["playlist", "artist"].find(v => !document.getElementById(`view-${v}`).classList.contains("hidden"));
+  if (openSubView) {
+    switchView(prevView);
+    return;
+  }
+  // Nothing left to close — push a fresh state so the *next* back press is
+  // what actually exits, instead of the very first press doing it.
+  pushNavState("root");
+});
+// Seed the initial state so there's always one to pop before a real exit.
+pushNavState("root");
+
 function switchView(view) {
   const views = ["home","search","library","playlist","artist","profile"];
   if (["home","search","library"].includes(view)) prevView = view;
+  if (["playlist","artist"].includes(view)) pushNavState(view);
   views.forEach(v => document.getElementById(`view-${v}`).classList.add("hidden"));
   ["home","search","library","profile"].forEach(v => {
     const tab = document.getElementById(`tab-${v}`);
@@ -957,30 +1017,65 @@ function ilikeAllWords(query, column, name) {
   return query;
 }
 
+// Normalizes titles like "Wave", "Wave (feat. Central Cee)", "Wave ft Central
+// Cee" down to the same key so the same song showing up under both the
+// songs table and mp3pm_songs (or with a slightly different title string)
+// collapses into one entry instead of appearing 2-3 times in a row.
+function fuzzySongKey(song) {
+  const title = (song.title || "").toLowerCase()
+    .replace(/\(feat\.?[^)]*\)/g, " ")
+    .replace(/\bfeat\.?\b.*$/g, " ")
+    .replace(/\bft\.?\b.*$/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const artist = (song.artist || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return `${title}__${artist}`;
+}
+
 // Fetches songs for a list of artists in small batches so the UI can render
 // progressively instead of waiting for every artist to resolve before
-// showing anything. onBatch(songsSoFar) fires after each artist resolves.
+// showing anything. onBatch(songsSoFar) fires after each batch of artists
+// resolves. Within each batch, results are interleaved round-robin across
+// artists (song 1 from A, song 1 from B, song 1 from C, song 2 from A...)
+// instead of concatenated artist-by-artist, so a mix actually reads as a
+// mix instead of four tracks from one artist before the next one appears.
 async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
   let combined = [];
-  const seen = new Set();
+  const seenUid = new Set();
+  const seenFuzzy = new Set();
   const BATCH_SIZE = 3;
+
+  function addUnique(song) {
+    const u = uidFor(song);
+    if (seenUid.has(u)) return false;
+    const f = fuzzySongKey(song);
+    if (seenFuzzy.has(f)) return false;
+    seenUid.add(u);
+    seenFuzzy.add(f);
+    combined.push(song);
+    return true;
+  }
+
   for (let i = 0; i < artists.length; i += BATCH_SIZE) {
     const chunk = artists.slice(i, i + BATCH_SIZE);
-    const chunkResults = await Promise.all(chunk.map(async (a) => {
+    const perArtistLists = await Promise.all(chunk.map(async (a) => {
       const [mdundo, mp3] = await Promise.all([
         ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", a).limit(limitEach)
           .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
         ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", a).limit(limitEach)
           .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" })))
       ]);
-      return [...mdundo, ...mp3];
+      return [...mdundo, ...mp3].filter(s => !isPreviewJunk(s));
     }));
-    let newOnes = chunkResults.flat().filter(s => !isPreviewJunk(s));
-    newOnes = newOnes.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
-    if (newOnes.length) {
-      combined = combined.concat(newOnes);
-      onBatch && onBatch(combined.slice());
+
+    let addedAny = false;
+    const maxLen = Math.max(0, ...perArtistLists.map(l => l.length));
+    for (let row = 0; row < maxLen; row++) {
+      for (const list of perArtistLists) {
+        if (list[row] && addUnique(list[row])) addedAny = true;
+      }
     }
+    if (addedAny) onBatch && onBatch(combined.slice());
   }
   return combined;
 }
@@ -1097,11 +1192,30 @@ function playArtistAll(shuffle) {
 }
 
 // ==================== PLAYBACK CORE ====================
+// Best-effort play-count increment for the songs table's unused `popularity`
+// column. Read-then-write rather than atomic — fine for a popularity signal,
+// not something that needs to be exact. Never blocks or awaits playback.
+// If you want this exact under concurrent plays, replace with a Postgres
+// function and call it via supabaseClient.rpc() instead:
+//   create function increment_popularity(song_id bigint) returns void as $$
+//     update songs set popularity = popularity + 1 where id = song_id;
+//   $$ language sql;
+function bumpPopularity(song) {
+  if (!song || song._local || song._src !== "songs" || !song.id) return;
+  supabaseClient.from("songs").select("popularity").eq("id", song.id).maybeSingle()
+    .then(({ data }) => {
+      const next = (data?.popularity || 0) + 1;
+      return supabaseClient.from("songs").update({ popularity: next }).eq("id", song.id);
+    })
+    .catch(() => {}); // popularity tracking should never surface an error to the listener
+}
+
 function playTrack(song, opts = {}) {
   if (!isPlaybackAllowed()) { showPremiumBlock(); return; }
   currentTrack = song;
   crossfadeStarted = false;
   preloadedNext = null;
+  bumpPopularity(song);
 
   resolveImage(song).then(img => {
     document.getElementById("playerImg").src = img;
@@ -1154,8 +1268,17 @@ async function buildAutoQueue(song) {
       ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", song.artist).limit(30).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; })
     ]);
     let similar = [...(mdundo.data || []), ...(mp3.data || [])].filter(s => !isPreviewJunk(s) && uidFor(s) !== uidFor(song));
-    const seen = new Set([uidFor(song)]);
-    similar = similar.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
+    const seenUid = new Set([uidFor(song)]);
+    const seenFuzzy = new Set([fuzzySongKey(song)]);
+    similar = similar.filter(s => {
+      const u = uidFor(s);
+      if (seenUid.has(u)) return false;
+      const f = fuzzySongKey(s);
+      if (seenFuzzy.has(f)) return false;
+      seenUid.add(u);
+      seenFuzzy.add(f);
+      return true;
+    });
     if (similar.length > 0) {
       activeQueue = [song, ...similar.sort(() => Math.random() - 0.5).slice(0, 20)];
       currentIndex = 0;
@@ -1383,6 +1506,7 @@ function updateMediaSession() {
 function openNowPlaying() {
   if (!currentTrack) return;
   document.getElementById("nowPlayingScreen").classList.remove("translate-y-full");
+  pushNavState("nowPlaying");
   loadArtistInfo(currentTrack);
 }
 function closeNowPlaying() {
@@ -1671,6 +1795,11 @@ function renderRecentlyPlayed() {
 function saveLastSession() {
   if (!currentTrack) return;
   localStorage.setItem("lumic_last_track", JSON.stringify({ song: currentTrack, position: activeAudio.currentTime || 0 }));
+  // Cap the stored queue so a huge auto-built queue doesn't blow localStorage's
+  // quota — 200 tracks is far more than anyone scrolls back through anyway.
+  try {
+    localStorage.setItem("lumic_queue", JSON.stringify({ queue: activeQueue.slice(0, 200), index: currentIndex }));
+  } catch (e) {} // quota exceeded — session/track resume still works without it
 }
 function restoreLastSession() {
   try {
@@ -1691,8 +1820,27 @@ function restoreLastSession() {
     document.getElementById("playerBar").classList.remove("translate-y-full");
     updatePlayPauseIcon(false);
     updateLikeButtons();
-    activeQueue = [song];
-    currentIndex = 0;
+
+    // Restore the actual queue if we have one; only fall back to a
+    // single-song queue if nothing was saved (e.g. an older session).
+    let restoredQueue = false;
+    try {
+      const rawQueue = localStorage.getItem("lumic_queue");
+      if (rawQueue) {
+        const { queue, index } = JSON.parse(rawQueue);
+        if (Array.isArray(queue) && queue.length && queue.some(s => uidFor(s) === uidFor(song))) {
+          activeQueue = queue;
+          currentIndex = typeof index === "number" && index >= 0 && index < queue.length ? index : queue.findIndex(s => uidFor(s) === uidFor(song));
+          restoredQueue = true;
+        }
+      }
+    } catch (e) {}
+    if (!restoredQueue) {
+      activeQueue = [song];
+      currentIndex = 0;
+    }
+    updateQueueDrawer();
+
     getOfflineSrc(song).then(offlineSrc => {
       activeAudio.src = offlineSrc || song.stream_url;
       activeAudio.currentTime = position || 0;
@@ -1704,7 +1852,12 @@ function restoreLastSession() {
 setInterval(saveLastSession, 8000);
 
 // ==================== QUEUE DRAWER ====================
-function toggleQueueDrawer() { document.getElementById("queueDrawer").classList.toggle("translate-y-full"); }
+function toggleQueueDrawer() {
+  const drawer = document.getElementById("queueDrawer");
+  const opening = drawer.classList.contains("translate-y-full");
+  drawer.classList.toggle("translate-y-full");
+  if (opening) pushNavState("queue");
+}
 
 function updateQueueDrawer() {
   const container = document.getElementById("queueList");
@@ -1950,6 +2103,7 @@ function escapeHtml(str) {
 // ==================== ACTION SHEET ====================
 function openActionSheet(song, e) {
   if (e) e.stopPropagation();
+  pushNavState("actionSheet");
   actionSheetTarget = song;
   document.getElementById("asImg").src = placeholderFor(song.title);
   resolveImage(song).then(img => { document.getElementById("asImg").src = img; });
@@ -2000,6 +2154,7 @@ function openPlaylistPicker(song) {
   renderPlaylistPickerList();
   document.getElementById("playlistPickerOverlay").classList.remove("hidden");
   document.getElementById("playlistPicker").classList.remove("translate-y-full");
+  pushNavState("playlistPicker");
 }
 
 function openPlaylistPickerBulk(songs) {
@@ -2008,6 +2163,7 @@ function openPlaylistPickerBulk(songs) {
   renderPlaylistPickerList();
   document.getElementById("playlistPickerOverlay").classList.remove("hidden");
   document.getElementById("playlistPicker").classList.remove("translate-y-full");
+  pushNavState("playlistPicker");
 }
 
 function renderPlaylistPickerList() {
@@ -2164,6 +2320,7 @@ function openCreatePlaylistModal(fromPicker) {
   createPlaylistFromPicker = !!fromPicker;
   document.getElementById("playlistNameInput").value = "";
   document.getElementById("createPlaylistModal").classList.remove("hidden");
+  pushNavState("createPlaylist");
   setTimeout(() => document.getElementById("playlistNameInput").focus(), 100);
 }
 function closeCreatePlaylistModal(e) {
@@ -2210,27 +2367,56 @@ function renderUserPlaylists() {
 }
 
 // ==================== LOCAL FILES ====================
+// Imported files are stored as real Blobs in IndexedDB (see initOfflineDB),
+// keyed by a stable id. object URLs are only ever regenerated in-memory
+// from that stored blob — they're never the source of truth, so a refresh,
+// a fully closed app, or reopening days later doesn't lose the audio.
 function importLocalFiles(event) {
   const files = Array.from(event.target.files);
+  let imported = 0;
   files.forEach(file => {
     if (!file.type.startsWith("audio/")) return;
-    const url = URL.createObjectURL(file);
     const name = file.name.replace(/\.[^.]+$/, "");
     const parts = name.split(" - ");
     const title = parts.length >= 2 ? parts.slice(1).join(" - ").trim() : name;
     const artist = parts.length >= 2 ? parts[0].trim() : "Local File";
-    const song = { title, artist, stream_url: url, image: null, _local: true, _localName: file.name };
+    const id = "local_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+    const url = URL.createObjectURL(file);
+    const song = { id, title, artist, stream_url: url, image: null, _local: true, _localName: file.name };
     localSongs.push(song);
+    imported++;
+    if (offlineDB) {
+      const tx = offlineDB.transaction("localTracks", "readwrite");
+      tx.objectStore("localTracks").put({ id, title, artist, localName: file.name, blob: file, addedAt: Date.now() });
+    } else {
+      showStatus("Offline storage isn't ready yet — this import may not survive a refresh. Try again in a moment.");
+    }
   });
-  saveLocalSongsMeta();
   renderLocalFiles();
-  if (files.length) showStatus(`Imported ${files.length} local song${files.length !== 1 ? "s" : ""}`);
+  if (imported) showStatus(`Imported ${imported} local song${imported !== 1 ? "s" : ""}`);
   event.target.value = "";
 }
 
-function saveLocalSongsMeta() {
-  const meta = localSongs.map(s => ({ title: s.title, artist: s.artist, _local: true, _localName: s._localName }));
-  localStorage.setItem("lumic_local_meta", JSON.stringify(meta));
+// Rebuilds localSongs from the stored blobs. Runs once IndexedDB is ready,
+// on every fresh load — this is what makes imports permanent instead of
+// tab-session-only.
+function loadLocalTracksFromDB() {
+  if (!offlineDB) return;
+  const tx = offlineDB.transaction("localTracks", "readonly");
+  const req = tx.objectStore("localTracks").getAll();
+  req.onsuccess = () => {
+    const records = (req.result || []).sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+    localSongs = records.map(r => ({
+      id: r.id,
+      title: r.title,
+      artist: r.artist,
+      stream_url: URL.createObjectURL(r.blob),
+      image: null,
+      _local: true,
+      _localName: r.localName
+    }));
+    renderLocalFiles();
+  };
 }
 
 function renderLocalFiles() {
@@ -2260,9 +2446,13 @@ function renderLocalFiles() {
 }
 
 function removeLocalSong(index) {
+  const song = localSongs[index];
   localSongs.splice(index, 1);
-  saveLocalSongsMeta();
   renderLocalFiles();
+  if (song && offlineDB) {
+    const tx = offlineDB.transaction("localTracks", "readwrite");
+    tx.objectStore("localTracks").delete(song.id);
+  }
 }
 
 // ==================== PLAYLIST DETAIL ====================
@@ -2331,13 +2521,17 @@ let offlineDB = null;
 let offlineSongsMeta = [];
 
 function initOfflineDB() {
-  const req = indexedDB.open("lumicOffline", 2);
+  const req = indexedDB.open("lumicOffline", 3);
   req.onupgradeneeded = (e) => {
     const db = e.target.result;
     if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "uid" });
     if (!db.objectStoreNames.contains("lyrics")) db.createObjectStore("lyrics", { keyPath: "trackId" });
+    // Holds the actual audio Blob for every locally-imported file, so an
+    // import survives a refresh, a closed tab, or the app being reopened
+    // days later — not just its title/artist, but the playable audio itself.
+    if (!db.objectStoreNames.contains("localTracks")) db.createObjectStore("localTracks", { keyPath: "id" });
   };
-  req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); };
+  req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); loadLocalTracksFromDB(); };
   req.onerror = () => { showStatus("Offline storage unavailable on this device."); };
 }
 
@@ -2362,25 +2556,50 @@ async function getOfflineSrc(song) {
   });
 }
 
-async function downloadSongOffline(song) {
-  if (!offlineDB) { showStatus("Offline storage unavailable."); return; }
-  if (song._local) { showStatus("Already a local file."); return; }
-  showStatus(`Saving "${song.title}" offline...`);
+async function downloadSongOffline(song, opts = {}) {
+  if (!offlineDB) { if (!opts.silent) showStatus("Offline storage unavailable."); return; }
+  if (song._local) { if (!opts.silent) showStatus("Already a local file."); return; }
+  if (!opts.silent) showStatus(`Saving "${song.title}" offline...`);
   try {
     const res = await fetch(song.stream_url);
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
     const blob = await res.blob();
     const record = { uid: uidFor(song), title: song.title, artist: song.artist, image: song.image, stream_url: song.stream_url, songId: song.id, src: song._src, blob };
-    const tx = offlineDB.transaction("tracks", "readwrite");
-    tx.objectStore("tracks").put(record);
-    tx.oncomplete = () => { refreshOfflineMeta(); showStatus(`Saved "${song.title}"`); };
-  } catch (e) { showStatus("Couldn't save this track."); }
+    // Wrapped in a Promise so callers (like the bulk downloader below) can
+    // actually `await` completion instead of racing ahead of the write.
+    await new Promise((resolve, reject) => {
+      const tx = offlineDB.transaction("tracks", "readwrite");
+      tx.objectStore("tracks").put(record);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    refreshOfflineMeta();
+    if (!opts.silent) showStatus(`Saved "${song.title}"`);
+  } catch (e) {
+    if (!opts.silent) showStatus("Couldn't save this track.");
+    throw e;
+  }
 }
 
 async function downloadPlaylistOffline() {
-  const songs = getPlaylistSongs(currentPlaylistCtx);
-  if (!songs.length) return;
-  for (const song of songs) await downloadSongOffline(song);
-  showStatus("Playlist saved offline");
+  const songs = getPlaylistSongs(currentPlaylistCtx).filter(s => !s._local);
+  if (!songs.length) { showStatus("Nothing to download here."); return; }
+  const total = songs.length;
+  const CONCURRENCY = 4; // a handful in flight at once — fast without hammering a weak connection
+  let done = 0, failed = 0, queueIdx = 0;
+  showStatus(`Saving 0/${total}...`, 60000);
+
+  async function worker() {
+    while (queueIdx < songs.length) {
+      const song = songs[queueIdx++];
+      try { await downloadSongOffline(song, { silent: true }); }
+      catch (e) { failed++; }
+      done++;
+      showStatus(`Saving ${done}/${total}...`, 60000);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, songs.length) }, worker));
+  showStatus(failed ? `Saved ${total - failed}/${total} songs — ${failed} couldn't be reached` : `Saved all ${total} songs offline`);
 }
 
 // ==================== LYRICS INDEXEDDB ====================
