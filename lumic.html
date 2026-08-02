@@ -591,7 +591,10 @@
             <i class="fa-solid fa-play ml-1"></i>
           </button>
           <button onclick="playNextTrack()" class="text-slate-200 hover:text-white p-2 transition active:scale-90"><i class="fa-solid fa-forward-step text-2xl"></i></button>
-          <button onclick="toggleRepeat()" id="npRepeatBtn" class="text-slate-400 hover:text-white p-2 transition"><i class="fa-solid fa-repeat text-lg"></i></button>
+          <button onclick="toggleRepeat()" id="npRepeatBtn" class="relative text-slate-400 hover:text-white p-2 transition">
+            <i class="fa-solid fa-repeat text-lg"></i>
+            <span id="npRepeatOneBadge" class="hidden absolute top-0 right-0 text-[8px] font-black bg-emerald-400 text-black rounded-full w-3.5 h-3.5 items-center justify-center leading-none">1</span>
+          </button>
         </div>
 
         <!-- Crossfade indicator -->
@@ -1201,13 +1204,16 @@ function playArtistAll(shuffle) {
 //     update songs set popularity = popularity + 1 where id = song_id;
 //   $$ language sql;
 function bumpPopularity(song) {
-  if (!song || song._local || song._src !== "songs" || !song.id) return;
-  supabaseClient.from("songs").select("popularity").eq("id", song.id).maybeSingle()
+  if (!song || song._local || !song.id) return;
+  const table = song._src === "songs" ? "songs" : song._src === "mp3pm" ? "mp3pm_songs" : null;
+  if (!table) return; // unknown source — nothing to bump
+  supabaseClient.from(table).select("popularity").eq("id", song.id).maybeSingle()
     .then(({ data }) => {
       const next = (data?.popularity || 0) + 1;
-      return supabaseClient.from("songs").update({ popularity: next }).eq("id", song.id);
+      return supabaseClient.from(table).update({ popularity: next }).eq("id", song.id);
     })
-    .catch(() => {}); // popularity tracking should never surface an error to the listener
+    .then(({ error }) => { if (error) console.warn(`[lumic] popularity update blocked (${table}):`, error.message); })
+    .catch((e) => console.warn(`[lumic] popularity update failed (${table}):`, e.message)); // logged only — never surfaced to the listener
 }
 
 function playTrack(song, opts = {}) {
@@ -1304,7 +1310,6 @@ function updatePlayPauseIcon(isPlaying) {
 function playNextTrack() {
   if (activeQueue.length === 0) return;
   if (currentIndex + 1 < activeQueue.length) currentIndex++;
-  else if (repeatOn) currentIndex = 0;
   else if (shuffleOn) currentIndex = Math.floor(Math.random() * activeQueue.length);
   else { showStatus("Queue ended."); return; }
   playTrack(activeQueue[currentIndex]);
@@ -1319,10 +1324,14 @@ function playPrevTrack() {
 function toggleShuffle() {
   shuffleOn = !shuffleOn;
   document.getElementById("npShuffleBtn").className = shuffleOn ? "text-emerald-400 hover:text-white p-2 transition" : "text-slate-400 hover:text-white p-2 transition";
+  if (shuffleOn) shuffleQueueRemaining();
 }
 function toggleRepeat() {
   repeatOn = !repeatOn;
-  document.getElementById("npRepeatBtn").className = repeatOn ? "text-emerald-400 hover:text-white p-2 transition" : "text-slate-400 hover:text-white p-2 transition";
+  document.getElementById("npRepeatBtn").className = repeatOn ? "relative text-emerald-400 hover:text-white p-2 transition" : "relative text-slate-400 hover:text-white p-2 transition";
+  document.getElementById("npRepeatOneBadge").className = repeatOn
+    ? "flex absolute top-0 right-0 text-[8px] font-black bg-emerald-400 text-black rounded-full w-3.5 h-3.5 items-center justify-center leading-none"
+    : "hidden absolute top-0 right-0 text-[8px] font-black bg-emerald-400 text-black rounded-full w-3.5 h-3.5 items-center justify-center leading-none";
 }
 
 // ==================== PRELOAD + CROSSFADE ====================
@@ -1363,9 +1372,14 @@ function setupAudioListeners(audio) {
       }
     }
   });
-  audio.addEventListener("play", () => { updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); if (audio === activeAudio && "mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; });
-  audio.addEventListener("pause", () => { updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); if (audio === activeAudio && "mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; });
-  audio.addEventListener("ended", () => { if (audio !== activeAudio) return; if (!crossfadeStarted) playNextTrack(); });
+  audio.addEventListener("play", () => { if (audio !== activeAudio) return; updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; });
+  audio.addEventListener("pause", () => { if (audio !== activeAudio) return; updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; });
+  audio.addEventListener("ended", () => {
+    if (audio !== activeAudio) return;
+    if (crossfadeStarted) return;
+    if (repeatOn) { audio.currentTime = 0; audio.play().catch(() => {}); return; }
+    playNextTrack();
+  });
   audio.addEventListener("error", () => {
     if (!audio.src) return; // no real source assigned yet, ignore
     if (audio === activeAudio) {
@@ -1399,10 +1413,10 @@ function skipBrokenTrack() {
 }
 
 function peekNextTrack() {
+  if (repeatOn) return currentTrack;
   let idx = currentIndex + 1;
   if (idx >= activeQueue.length) {
-    if (repeatOn) idx = 0;
-    else if (shuffleOn) idx = Math.floor(Math.random() * activeQueue.length);
+    if (shuffleOn) idx = Math.floor(Math.random() * activeQueue.length);
     else return null;
   }
   return activeQueue[idx];
@@ -1423,12 +1437,15 @@ function startCrossfade(outgoing, remaining) {
     incoming.volume = Math.min(1, t);
     if (i >= steps) {
       clearInterval(iv);
-      outgoing.pause();
-      outgoing.volume = 1;
       activeAudio = incoming;
       inactiveAudio = outgoing;
-      if (currentIndex + 1 < activeQueue.length) currentIndex++;
-      else if (repeatOn) currentIndex = 0;
+      outgoing.pause();
+      outgoing.volume = 1;
+      if (repeatOn) {
+        // Same track loops — index/currentTrack stay put; the audio buffers
+        // already swapped to a freshly preloaded copy of this same song.
+      } else if (currentIndex + 1 < activeQueue.length) currentIndex++;
+      else if (shuffleOn) currentIndex = Math.floor(Math.random() * activeQueue.length);
       else currentIndex = (currentIndex + 1) % activeQueue.length;
       currentTrack = activeQueue[currentIndex];
       preloadedNext = null;
@@ -2012,12 +2029,14 @@ async function runSearch(query, isFullSearch) {
     if (searchAbortController !== controller) return;
     if (error) throw error;
 
-    songs = (data || []).filter(s => {
-      const uid = (typeof uidFor === "function") ? uidFor(s) : `${s.source}_${s.id}`;
-      if (typeof isPreviewJunk === "function" && isPreviewJunk(s)) return false;
-      if (seen.has(uid)) return false;
-      seen.add(uid);
-      return true;
+    songs = (data || [])
+      .map(s => ({ ...s, _src: s.source === "mp3pm" ? "mp3pm" : "songs" }))
+      .filter(s => {
+        const uid = (typeof uidFor === "function") ? uidFor(s) : `${s.source}_${s.id}`;
+        if (typeof isPreviewJunk === "function" && isPreviewJunk(s)) return false;
+        if (seen.has(uid)) return false;
+        seen.add(uid);
+        return true;
     });
 
     renderSearchResults(songs, query, container, isFullSearch);
