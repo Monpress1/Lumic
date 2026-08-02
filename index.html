@@ -308,23 +308,65 @@ document.getElementById('pwa-install-btn')?.addEventListener('click', async () =
 
 // ==================== ROUTING ====================
 async function routeSessionForward(session) {
-  const { data: profile } = await supabaseClient
-    .from("profiles").select("id,username,display_name").eq("id", session.user.id).maybeSingle();
-
-  // The auth.users trigger (handle_new_user) creates a placeholder profile
-  // row the instant someone signs up — so `profile` existing is NOT enough
-  // to mean "onboarding finished". display_name is only ever set by our own
-  // claim_profile() call, so its presence is the real completion signal.
-  if (profile && profile.display_name) {
-    // Flag this device as having registered an account
-    localStorage.setItem(LS_DEV_REG, "true");
+  // Returning device that's already finished onboarding — trust that locally
+  // instead of requiring a network round-trip just to re-confirm it. This is
+  // what actually lets the app open with zero connection: without this, an
+  // offline profile-check failure below would silently route a real
+  // returning user into onboarding instead of into the app.
+  if (localStorage.getItem(LS_DEV_REG) === "true") {
     window.location.href = "lumic.html";
     return true;
   }
 
-  document.getElementById("screen-boot").classList.add("hidden");
-  showUidScreen();
-  return true;
+  try {
+    const { data: profile, error } = await supabaseClient
+      .from("profiles").select("id,username,display_name").eq("id", session.user.id).maybeSingle();
+
+    if (error) throw error;
+
+    // The auth.users trigger (handle_new_user) creates a placeholder profile
+    // row the instant someone signs up — so `profile` existing is NOT enough
+    // to mean "onboarding finished". display_name is only ever set by our own
+    // claim_profile() call, so its presence is the real completion signal.
+    if (profile && profile.display_name) {
+      localStorage.setItem(LS_DEV_REG, "true");
+      window.location.href = "lumic.html";
+      return true;
+    }
+
+    document.getElementById("screen-boot").classList.add("hidden");
+    showUidScreen();
+    return true;
+  } catch (e) {
+    // We have a session, but no local record of this device having finished
+    // onboarding, and the network call to check just failed — most likely
+    // because we're offline. We genuinely can't tell "new user mid-signup"
+    // from "returning user, different/cleared device" without asking the
+    // server, so don't guess either way. Surface it instead of silently
+    // dumping a real returning user into onboarding.
+    console.warn("[lumic] profile check failed (offline?):", e.message || e);
+    showOfflineRoutingNotice();
+    return true;
+  }
+}
+
+// Minimal inline fallback for the one case we truly can't resolve locally —
+// reuses the existing boot screen rather than adding new persistent markup.
+function showOfflineRoutingNotice() {
+  const boot = document.getElementById("screen-boot");
+  boot.classList.remove("hidden");
+  boot.innerHTML = `
+    <div class="w-16 h-16 rounded-[20px] bg-[#00A651] flex items-center justify-center shadow-[0_0_40px_rgba(30,215,96,0.3)]">
+      <i class="fa-solid fa-wave-square text-black text-2xl"></i>
+    </div>
+    <p class="text-sm text-slate-400 font-medium text-center max-w-xs px-6 leading-relaxed">
+      You're offline and we haven't confirmed your account on this device yet.
+      Reconnect and try again.
+    </p>
+    <button onclick="window.location.reload()" class="btn-accent font-bold text-[15px] py-3 px-8 rounded-2xl spring-bounce">
+      Retry
+    </button>
+  `;
 }
 
 // ==================== HOME / SPLASH ====================
