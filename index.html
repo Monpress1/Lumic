@@ -87,24 +87,6 @@
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col selection:bg-[#00A651] selection:text-black">
 
-<!-- ============ PWA ENFORCEMENT OVERLAY ============ -->
-<div id="pwa-overlay" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black px-6 text-center hidden">
-  <img src="logo.png" alt="lumic" class="w-24 h-24 rounded-3xl mb-6 shadow-[0_0_30px_rgba(30,215,96,0.2)]">
-  <h2 class="text-3xl font-extrabold text-white tracking-tight mb-3">Install lumic</h2>
-  <p class="text-[15px] text-slate-400 max-w-sm font-medium mb-10 leading-relaxed">To get the full experience and offline access, you need to install the lumic app on your device.</p>
-  
-  <button id="pwa-install-btn" class="btn-accent w-full max-w-xs font-bold text-[15px] py-4 rounded-2xl spring-bounce hidden">
-    Install App
-  </button>
-  
-  <div id="pwa-ios-instructions" class="hidden flex flex-col items-center gap-3">
-    <p class="text-sm text-slate-300 font-medium bg-white/5 py-3 px-6 rounded-xl border border-white/10">
-      1. Tap the <i class="fa-solid fa-arrow-up-from-bracket mx-1 text-[#00A651]"></i> <b>Share</b> button<br>
-      2. Scroll down and select <br><b>"Add to Home Screen"</b>
-    </p>
-  </div>
-</div>
-
 <!-- ============ SCREEN: BOOT / SESSION CHECK ============ -->
 <div id="screen-boot" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
   <div class="w-16 h-16 rounded-[20px] bg-[#00A651] flex items-center justify-center shadow-[0_0_40px_rgba(30,215,96,0.3)]">
@@ -164,7 +146,6 @@
       <input id="passwordInput" type="password" placeholder="Password" class="field w-full rounded-2xl px-5 py-4 text-[15px] outline-none font-medium">
     </div>
 
-    <!-- REFERRAL INPUT MOVED HERE -->
     <div id="authReferralWrap" class="mb-2 mt-4">
       <label class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-2 block pl-1">Referral Code (Optional)</label>
       <input id="authReferralInput" type="text" maxlength="20" placeholder="Friend's Universal ID" class="field w-full rounded-2xl px-5 py-4 text-[15px] outline-none font-bold uppercase uid-chip placeholder-slate-600" oninput="handleAuthReferralInput()">
@@ -256,9 +237,6 @@ async function boot() {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
   }
 
-  // PWA Standalone Check
-  checkPwaStandalone();
-
   // Capture a referral code from a shared link
   captureReferralFromUrl();
 
@@ -270,41 +248,6 @@ async function boot() {
   document.getElementById("screen-boot").classList.add("hidden");
   showHomeScreen();
 }
-
-// ==================== PWA LOGIC ====================
-let deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  const btn = document.getElementById('pwa-install-btn');
-  if(btn) { btn.classList.remove('hidden'); btn.classList.add('block'); }
-});
-
-function checkPwaStandalone() {
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  
-  // If not standalone, force PWA prompt and hide everything else
-  if (!isStandalone) {
-    document.getElementById('pwa-overlay').classList.remove('hidden');
-    
-    // Check if iOS for specific manual instructions
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      document.getElementById('pwa-ios-instructions').classList.remove('hidden');
-    }
-  }
-}
-
-document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
-  if (deferredInstallPrompt) {
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    if (outcome === 'accepted') {
-      document.getElementById('pwa-overlay').classList.add('hidden');
-    }
-    deferredInstallPrompt = null;
-  }
-});
 
 // ==================== ROUTING ====================
 async function routeSessionForward(session) {
