@@ -1,73 +1,65 @@
 
-// Lumic — offline app-shell service worker.
-// Deploy this file at the SITE ROOT (same place as index.html), so it's
-// reachable at https://thelumic.vercel.app/sw.js — the app already calls
-// navigator.serviceWorker.register("sw.js") on load.
+// Bump this on every deploy so old caches get cleared out.
+const CACHE = "lumic-shell-v1";
 
-const CACHE_NAME = "lumic-shell-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.json", "/logo.png"];
+// App shell: the files that must be available with zero network so a
+// returning user can open the app offline. Add any other local static
+// assets (icons, self-hosted fonts, etc.) here — do NOT add CDN URLs here;
+// those are cached opportunistically by the fetch handler below instead.
+const SHELL = [
+  "./",
+  "index.html",
+  "lumic.html",
+  "manifest.json",
+  "logo.png",
+  "home.jpg"
+];
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(APP_SHELL).catch(() => {
-        // Some of these may not exist (e.g. no manifest.json) — don't let
-        // a single 404 fail the whole install.
-      })
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      Promise.all(
+        SHELL.map((url) =>
+          cache.add(url).catch((err) => console.warn("[sw] failed to precache", url, err))
+        )
+      )
     )
   );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
+self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return;
 
-  // Never intercept Supabase/API calls or streaming audio — those must
-  // always hit the network live.
-  const url = new URL(request.url);
-  if (url.hostname.includes("supabase.co") || url.pathname.match(/\.(mp3|m4a|aac|wav|flac)$/i)) {
-    return;
-  }
+  // Never intercept Supabase API/auth calls — those must hit the network
+  // (or fail fast) so the app's own offline-handling logic can react,
+  // rather than serving a stale cached API response.
+  if (e.request.url.includes("supabase.co")) return;
 
-  // Page loads: try the network first (so you always get the latest
-  // deploy), fall back to the cached shell so the app still opens offline.
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      const networkFetch = fetch(e.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match("/index.html").then((r) => r || caches.match("/")))
-    );
-    return;
-  }
-
-  // Everything else (CSS/JS/CDN libraries/icons): serve from cache
-  // instantly if present, and refresh the cache in the background.
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+          if (res && res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(e.request, clone));
           }
           return res;
         })
         .catch(() => cached);
-      return cached || network;
+
+      // Cache-first for the app shell (instant load, updates in background).
+      // Network-first-fallback-to-cache for everything else.
+      return cached || networkFetch;
     })
   );
 });
