@@ -827,8 +827,8 @@
     </div>
   </nav>
 
-  <audio id="audioPlayerA" referrerpolicy="no-referrer" class="hidden"></audio>
-  <audio id="audioPlayerB" referrerpolicy="no-referrer" class="hidden"></audio>
+  <audio id="audioPlayerA" referrerpolicy="no-referrer" preload="auto" class="hidden"></audio>
+  <audio id="audioPlayerB" referrerpolicy="no-referrer" preload="auto" class="hidden"></audio>
 
 <script>
 // ==================== CONFIG ====================
@@ -836,6 +836,26 @@ const SUPABASE_URL = "https://fhogysmvpqakzoxwhxht.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob2d5c212cHFha3pveHdoeGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MTg0OTcsImV4cCI6MjEwMDI5NDQ5N30.0WBV1--98XFx_WyL5TkRIsQ1sc-FkUCixv2uf0j8T9g";
 const LYRICS_FUNCTION = "https://fhogysmvpqakzoxwhxht.supabase.co/functions/v1/Lyrics";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const DOWNLOAD_PROXY_URL = "https://fhogysmvpqakzoxwhxht.supabase.co/functions/v1/Download-proxy";
+
+async function fetchViaProxy(song) {
+  const useRef = song._src === "vistanaij" || !!song.stream_ref;
+  const res = await fetch(DOWNLOAD_PROXY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({
+      stream_url: useRef ? undefined : song.stream_url,
+      stream_ref: useRef ? song.stream_ref : undefined
+    })
+  });
+  if (!res.ok) throw new Error(`Proxy failed: ${res.status}`);
+  return res.blob();
+}
 
 const PAYSTACK_PUBLIC_KEY = "pk_live_fab019f9df1b6cb89cb32bdef25c7d2c048c63c2";
 const REFERRALS_NEEDED = 3;
@@ -1936,6 +1956,8 @@ function playTrack(song, opts = {}) {
   crossfadeStarted = false;
   preloadedNext = null;
   autoDownloadTriggeredForUid = null;
+  audioRetryCount = 0;
+  clearBufferingState();
   bumpPopularity(song);
 
   resolveImage(song).then(img => {
@@ -2100,14 +2122,81 @@ function setupAudioListeners(audio) {
     if (repeatOn) { audio.currentTime = 0; audio.play().catch(() => {}); return; }
     playNextTrack();
   });
+
+  // ---- Network resilience ----
+  // "waiting"/"stalled" mean the buffer ran dry, NOT that the track is
+  // broken — the browser recovers on its own once more data arrives most
+  // of the time. Previously any `error` event skipped the track
+  // immediately, which made a 2-second network hiccup look identical to a
+  // genuinely dead stream. Now: stalls just show a subtle status and wait;
+  // only a real `error` event triggers a retry, and only after retries
+  // are exhausted does the track actually get skipped.
+  audio.addEventListener("waiting", () => handleBuffering(audio));
+  audio.addEventListener("stalled", () => handleBuffering(audio));
+  audio.addEventListener("playing", () => { if (audio === activeAudio) clearBufferingState(); });
+  audio.addEventListener("canplay", () => { if (audio === activeAudio) clearBufferingState(); });
+
   audio.addEventListener("error", () => {
     if (!audio.src) return;
     if (audio === activeAudio) {
-      skipBrokenTrack();
+      handlePlaybackError(audio);
     } else {
       preloadedNext = null;
     }
   });
+}
+
+// ==================== NETWORK RESILIENCE ====================
+let bufferingTimer = null;
+let bufferingStatusShown = false;
+let audioRetryCount = 0;
+const MAX_AUDIO_RETRIES = 3;
+
+function handleBuffering(audio) {
+  if (audio !== activeAudio) return;
+  clearTimeout(bufferingTimer);
+  // Only surface a status message if the stall lasts a moment — most
+  // waiting/stalled events resolve within a second on their own, and
+  // showing a message for every one of those would just be noise.
+  bufferingTimer = setTimeout(() => {
+    if (audio.paused) return; // user paused on purpose — not a network issue
+    bufferingStatusShown = true;
+    showStatus("Reconnecting...", 15000);
+  }, 2500);
+}
+
+function clearBufferingState() {
+  clearTimeout(bufferingTimer);
+  if (bufferingStatusShown) {
+    bufferingStatusShown = false;
+    document.getElementById("status").classList.add("hidden");
+  }
+  audioRetryCount = 0;
+}
+
+// A genuine `error` event (not just a stall) gets retried with backoff —
+// re-resolving the src each time, since a resolved vistanaij URL or an
+// offline blob URL can itself have gone stale. Only after MAX_AUDIO_RETRIES
+// consecutive failures does the track actually get skipped.
+function handlePlaybackError(audio) {
+  if (audioRetryCount < MAX_AUDIO_RETRIES) {
+    audioRetryCount++;
+    const backoffMs = audioRetryCount * 1500;
+    showStatus(`Reconnecting... (${audioRetryCount}/${MAX_AUDIO_RETRIES})`, backoffMs + 2000);
+    setTimeout(() => {
+      if (!currentTrack) return;
+      const resumeAt = audio.currentTime || 0;
+      resolvePlaybackSrc(currentTrack).then(src => {
+        if (!src) { skipBrokenTrack(); return; }
+        audio.src = src;
+        audio.currentTime = resumeAt;
+        audio.play().catch(() => {});
+      }).catch(() => skipBrokenTrack());
+    }, backoffMs);
+    return;
+  }
+  audioRetryCount = 0;
+  skipBrokenTrack();
 }
 
 // ==================== AUTO-DOWNLOAD ====================
@@ -2136,6 +2225,7 @@ function skipBrokenTrack() {
   showStatus("That track is unavailable, skipping...");
   crossfadeStarted = false;
   preloadedNext = null;
+  audioRetryCount = 0;
   document.getElementById("crossfadeIndicator").classList.add("hidden");
   if (currentIndex < activeQueue.length) activeQueue.splice(currentIndex, 1);
   if (activeQueue.length === 0) {
@@ -2187,6 +2277,7 @@ function startCrossfade(outgoing, remaining) {
       autoDownloadTriggeredForUid = null;
       preloadedNext = null;
       crossfadeStarted = false;
+      audioRetryCount = 0;
       document.getElementById("crossfadeIndicator").classList.add("hidden");
       resolveImage(currentTrack).then(img => {
         document.getElementById("playerImg").src = img;
@@ -2817,7 +2908,7 @@ async function runSearch(query, isFullSearch) {
   } catch (e) {
     if (e.name === "AbortError") return;
     if (searchAbortController === controller) {
-      container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results. Have you run lumic_migration.sql yet?</div>`;
+      container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Not found</div>`;
     }
   } finally {
     if (searchAbortController === controller) searchAbortController = null;
@@ -3467,10 +3558,7 @@ async function downloadSongOffline(song, opts = {}) {
   if (song._local) { if (!opts.silent) showStatus("Already a local file."); return; }
   if (!opts.silent) showStatus(`Saving "${song.title}" offline...`);
   try {
-    const src = song._src === "vistanaij" || song.stream_ref ? await resolveVistanaijStream(song) : song.stream_url;
-    const res = await fetch(src);
-    if (!res.ok) throw new Error("fetch failed: " + res.status);
-    const blob = await res.blob();
+    const blob = await fetchViaProxy(song);
     const record = { uid: uidFor(song), title: song.title, artist: song.artist, image: song.image, stream_url: song.stream_url, songId: song.id, src: song._src, blob };
     await new Promise((resolve, reject) => {
       const tx = offlineDB.transaction("tracks", "readwrite");
@@ -3480,10 +3568,6 @@ async function downloadSongOffline(song, opts = {}) {
     });
     refreshOfflineMeta();
     if (!opts.silent) showStatus(`Saved "${song.title}"`);
-    // Sync the download to the backend so it's visible in "Downloaded" on
-    // every device signed into this account — the audio blob itself stays
-    // local per-device, but the entry (and the option to re-download it)
-    // follows the account.
     if (currentUser) {
       supabaseClient.from("downloaded_songs").upsert({ user_id: currentUser.id, uid: uidFor(song), song }, { onConflict: "user_id,uid" })
         .then(() => {
