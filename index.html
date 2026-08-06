@@ -231,6 +231,20 @@ const HOME_SLIDES = [
 
 window.addEventListener("DOMContentLoaded", boot);
 
+// Races Supabase's getSession() against a timeout. getSession() normally
+// resolves from local storage instantly, but if the token is near expiry it
+// can attempt a network refresh first — which just hangs while offline
+// instead of failing fast. This guarantees boot() never stalls on that.
+async function getSessionWithTimeout(ms = 2000) {
+  const timeout = new Promise((resolve) => setTimeout(() => resolve({ data: { session: null } }), ms));
+  try {
+    return await Promise.race([supabaseClient.auth.getSession(), timeout]);
+  } catch (e) {
+    console.warn("[lumic] getSession failed:", e.message || e);
+    return { data: { session: null } };
+  }
+}
+
 async function boot() {
   // Service Worker Registration for Offline capability
   if ('serviceWorker' in navigator) {
@@ -240,7 +254,17 @@ async function boot() {
   // Capture a referral code from a shared link
   captureReferralFromUrl();
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { data: { session } } = await getSessionWithTimeout();
+
+  // A device that already finished onboarding should reach lumic.html even
+  // if getSession() timed out (offline + expired/near-expired token). Check
+  // this before requiring a resolved session so a bad network can't strand
+  // a returning user on the boot screen.
+  if (!session && localStorage.getItem(LS_DEV_REG) === "true") {
+    window.location.href = "lumic.html";
+    return;
+  }
+
   if (session) {
     const done = await routeSessionForward(session);
     if (done) return;
@@ -653,3 +677,4 @@ async function finalizeOnboarding(session) {
 </script>
 </body>
 </html>
+
