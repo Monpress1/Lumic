@@ -129,6 +129,42 @@
     /* Friend picker rows */
     .friend-row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:14px; cursor:pointer; transition:background .15s; }
     .friend-row:hover { background:rgba(255,255,255,0.06); }
+
+    /* ===== Toggle switch (settings) ===== */
+    .toggle-switch { position:relative; width:46px; height:26px; flex-shrink:0; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,0.12); border-radius:999px; transition:.2s; }
+    .toggle-slider::before { content:""; position:absolute; height:20px; width:20px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+    .toggle-switch input:checked + .toggle-slider { background:#10b981; }
+    .toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); }
+
+    /* ===== Remove button on list rows ===== */
+    .row-remove-btn { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#94a3b8; transition:all .15s; flex-shrink:0; }
+    .row-remove-btn:hover { background:rgba(239,68,68,0.15); color:#f87171; }
+
+    /* ===== Recommended horizontal cards ===== */
+    .rec-card { width:150px; flex-shrink:0; cursor:pointer; scroll-snap-align:start; }
+    .rec-card img { width:150px; height:150px; border-radius:14px; object-fit:cover; background:#1e293b; }
+
+    /* ===== Album horizontal cards ===== */
+    .album-card { width:140px; flex-shrink:0; cursor:pointer; scroll-snap-align:start; }
+    .album-card img { width:140px; height:140px; border-radius:12px; object-fit:cover; background:#1e293b; }
+
+    /* ===== Top 100 grid cards ===== */
+    .chart-card { position:relative; cursor:pointer; }
+    .chart-card img { width:100%; aspect-ratio:1; border-radius:12px; object-fit:cover; background:#1e293b; }
+    .chart-rank { position:absolute; top:6px; left:6px; background:rgba(0,0,0,0.75); color:#10b981; font-weight:900; font-size:11px; padding:2px 7px; border-radius:6px; }
+
+    /* ===== Hot Albums: glassmorphism rectangular rows ===== */
+    .hot-album-card { display:flex; align-items:center; gap:14px; padding:12px; border-radius:18px; cursor:pointer; background:rgba(255,255,255,0.05); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); transition:all .2s; }
+    .hot-album-card:hover { background:rgba(255,255,255,0.09); border-color:rgba(16,185,129,0.3); }
+    .hot-album-card img { width:64px; height:64px; border-radius:12px; object-fit:cover; flex-shrink:0; background:#1e293b; }
+    .hot-album-rank { width:26px; height:26px; border-radius:50%; background:rgba(16,185,129,0.15); color:#10b981; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid rgba(16,185,129,0.3); }
+
+    /* ===== Hot Albums slideshow: rectangular cards in a swipeable, auto-advancing rail ===== */
+    .hot-album-slide { width:82vw; max-width:320px; flex-shrink:0; scroll-snap-align:start; }
+    .hot-album-dot { width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,0.18); transition:all .25s; }
+    .hot-album-dot.active { width:16px; background:#10b981; }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col justify-between">
@@ -153,9 +189,40 @@
 
     <!-- VIEW: HOME -->
     <section id="view-home" class="space-y-8">
+          <!-- Hot Albums: glassmorphism rectangular slideshow, priority Nigerian artists -->
+      <div id="hotAlbumsSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">🔥 Hot Albums Nigeria</h2>
+        <div id="hotAlbumsList" class="flex gap-3 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+        <div id="hotAlbumsDots" class="flex items-center justify-center gap-1.5 mt-2"></div>
+      </div>
       <div id="recentlyPlayedSection" class="hidden">
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Recently played</h2>
         <div id="recentlyPlayedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+      </div>
+
+      <!-- Recommended for You: horizontal cards, based on recently played artists -->
+      <div id="recommendedSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Recommended for you</h2>
+        <div id="recommendedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+      </div>
+
+    
+
+      <!-- New Albums -->
+      <div id="newAlbumsSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">New albums</h2>
+        <div id="newAlbumsRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+      </div>
+
+      <!-- Top 100 Nigeria: real chart data from Last.fm, matched against our DB -->
+      <div id="top100Section" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-extrabold text-white tracking-tight">Top Nigeria</h2>
+          <button onclick="toggleTop100Expand()" id="top100ToggleBtn" class="text-slate-400 hover:text-white w-8 h-8 rounded-full bg-white/5 flex items-center justify-center transition flex-shrink-0">
+            <i id="top100ToggleIcon" class="fa-solid fa-chevron-down text-xs transition-transform"></i>
+          </button>
+        </div>
+        <div id="top100Grid" class="grid grid-cols-2 gap-3"></div>
       </div>
 
       <div>
@@ -238,47 +305,10 @@
         </div>
       </div>
 
-      <!-- Artist spotlights -->
+      <!-- Artist spotlights: now rotating, reshuffled on every home load -->
       <div>
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Artist spotlight</h2>
-        <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          <div onclick="openArtistView('Olivia Rodrigo')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-violet-500/50 group-hover:border-violet-400 transition">
-              <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Olivia</span>
-          </div>
-          <div onclick="openArtistView('Billie Eilish')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-green-500/50 group-hover:border-green-400 transition">
-              <img src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Billie</span>
-          </div>
-          <div onclick="openArtistView('Benson Boone')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-sky-500/50 group-hover:border-sky-400 transition">
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Benson</span>
-          </div>
-          <div onclick="openArtistView('Lewis Capaldi')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-rose-500/50 group-hover:border-rose-400 transition">
-              <img src="https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Lewis</span>
-          </div>
-          <div onclick="openArtistView('Burna Boy')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500/50 group-hover:border-amber-400 transition">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Burna</span>
-          </div>
-          <div onclick="openArtistView('Asake')" class="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/50 group-hover:border-emerald-400 transition">
-              <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200" class="w-full h-full object-cover">
-            </div>
-            <span class="text-[11px] text-slate-300 font-semibold">Asake</span>
-          </div>
-        </div>
+        <div id="artistSpotlightRow" class="flex gap-4 overflow-x-auto no-scrollbar pb-2 scroll-snap-x"></div>
       </div>
 
       <!-- Browse categories -->
@@ -471,6 +501,33 @@
         <button id="profilePayBtn" onclick="startPayment()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition" style="background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 20px rgba(16,185,129,0.35);">
           Pay ₦300 with Paystack
         </button>
+      </div>
+
+      <!-- Playback & storage settings -->
+      <div class="glass-card rounded-3xl p-5 mb-5 space-y-4">
+        <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-sliders text-emerald-400 mr-2"></i>Playback & storage</h3>
+
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-white">Auto-save songs I finish</p>
+            <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Downloads a song for offline playback once you've listened past 30 seconds.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoDownloadToggle" onchange="onAutoDownloadToggle()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-white">Wi-Fi only</p>
+            <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Skip auto-saving on mobile data to protect your data plan.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="wifiOnlyToggle" checked onchange="onWifiOnlyToggle()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
       <!-- Referral -->
@@ -678,6 +735,14 @@
           <div class="as-icon bg-amber-500/15"><i class="fa-solid fa-user text-amber-400"></i></div>
           <span class="text-sm text-white font-medium">More by this artist</span>
         </div>
+        <div id="asRemoveFromPlaylistItem" class="as-item hidden" onclick="actionRemoveFromPlaylist()">
+          <div class="as-icon bg-red-500/15"><i class="fa-solid fa-trash-can text-red-400"></i></div>
+          <span class="text-sm text-white font-medium">Remove from this playlist</span>
+        </div>
+        <div id="asRemoveFromQueueItem" class="as-item hidden" onclick="actionRemoveFromQueue()">
+          <div class="as-icon bg-red-500/15"><i class="fa-solid fa-list-ol text-red-400"></i></div>
+          <span class="text-sm text-white font-medium">Remove from queue</span>
+        </div>
       </div>
       <div class="h-6"></div>
     </div>
@@ -786,6 +851,20 @@ const PAYSTACK_PUBLIC_KEY = "pk_live_fab019f9df1b6cb89cb32bdef25c7d2c048c63c2";
 const REFERRALS_NEEDED = 3;
 const PREMIUM_PRICE_NGN = 300;
 
+// Last.fm — used only to source real-world Nigeria chart titles, matched
+// against our own DB before ever being shown (see loadTop100Nigeria).
+const LASTFM_API_KEY = "8377c57bc979230955dfb2985b64b6d1";
+
+// New Albums — matched against the `album` column added by
+// lumic_migration.sql. Populate `album` on your rows with these exact
+// names for a row to pull real tracks in; falls back to the artist's other
+// songs if nothing is tagged yet.
+const NEW_ALBUMS = [
+ { name: "Oriade",    artist: "davido", cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" },
+  { name: "5ive Star", artist: "Davido", cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300" }
+ 
+];
+
 const PLACEHOLDER_IMAGES = [
   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300",
   "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300",
@@ -798,6 +877,38 @@ function placeholderFor(seed) {
   for (let i = 0; i < (seed || "").length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   return PLACEHOLDER_IMAGES[h % PLACEHOLDER_IMAGES.length];
 }
+
+// ==================== IMAGE CACHE (localStorage, instant paint) ====================
+// Resolved artist/song artwork URLs are cached in localStorage so the app
+// can paint real images immediately on a slow or offline load, then
+// silently refresh from the network in the background.
+const IMG_CACHE_KEY = "lumic_img_cache_v1";
+let imgCacheMap = {};
+try { imgCacheMap = JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || "{}"); } catch (e) { imgCacheMap = {}; }
+function imgCacheKey(seed) { return (seed || "").trim().toLowerCase(); }
+function getCachedImage(seed) { return imgCacheMap[imgCacheKey(seed)] || null; }
+function setCachedImage(seed, url) {
+  if (!seed || !url) return;
+  imgCacheMap[imgCacheKey(seed)] = url;
+  clearTimeout(setCachedImage._t);
+  setCachedImage._t = setTimeout(() => {
+    try { localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(imgCacheMap)); } catch (e) {}
+  }, 400);
+}
+
+// Generic stale-while-revalidate helper: home sections render instantly
+// from this cache on load, then refresh from the network and re-cache.
+function readListCache(key) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+function writeListCache(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ data, cachedAt: Date.now() })); } catch (e) {}
+}
+
+// Priority artists — weighted so major/trending Nigerian acts surface more
+// often in Recommended For You and lead the Hot Albums rail.
+const PRIORITY_ARTISTS = ["Asake", "davido", "wizkid", "Zlatan", "Burna Boy", "Tems", "Ayra Starr", "Seyi Vibez", "Odumodu Blvck"];
+const HOT_ALBUM_PRIORITY = ["Asake", "davido", "Seyi Vibez", "Tems", "Ayra Starr", "Odumodu Blvck"];
 
 // Curated playlists
 const PLAYLIST_PRESETS = {
@@ -823,6 +934,30 @@ const PLAYLIST_PRESETS = {
   fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"]
 };
 
+// Only used if a live DB fetch for spotlight artists fails outright (e.g.
+// offline) — the real pool is pulled from your actual catalog every load,
+// see fetchSpotlightArtistPool().
+const ARTIST_SPOTLIGHT_FALLBACK = [
+  { name: "Burna Boy", ring: "border-amber-500/50 group-hover:border-amber-400" },
+  { name: "Asake", ring: "border-emerald-500/50 group-hover:border-emerald-400" },
+  { name: "Wizkid", ring: "border-fuchsia-500/50 group-hover:border-fuchsia-400" },
+  { name: "Tems", ring: "border-indigo-500/50 group-hover:border-indigo-400" },
+  { name: "Rema", ring: "border-orange-500/50 group-hover:border-orange-400" },
+  { name: "Ayra Starr", ring: "border-pink-500/50 group-hover:border-pink-400" }
+];
+const SPOTLIGHT_RING_STYLES = [
+  "border-violet-500/50 group-hover:border-violet-400",
+  "border-green-500/50 group-hover:border-green-400",
+  "border-sky-500/50 group-hover:border-sky-400",
+  "border-rose-500/50 group-hover:border-rose-400",
+  "border-amber-500/50 group-hover:border-amber-400",
+  "border-emerald-500/50 group-hover:border-emerald-400",
+  "border-fuchsia-500/50 group-hover:border-fuchsia-400",
+  "border-indigo-500/50 group-hover:border-indigo-400",
+  "border-orange-500/50 group-hover:border-orange-400",
+  "border-pink-500/50 group-hover:border-pink-400"
+];
+
 // ==================== STATE ====================
 let activeQueue = [];
 let currentIndex = -1;
@@ -830,6 +965,7 @@ let currentTrack = null;
 let debounceTimer = null;
 let searchAbortController = null;
 let actionSheetTarget = null;
+let actionSheetQueueIndex = null; // set when action sheet opened from the queue drawer
 let shuffleOn = false;
 let repeatOn = false;
 let prevView = "home";
@@ -841,11 +977,15 @@ let createPlaylistFromPicker = false;
 let lyricsLines = [];
 let lyricsCurrentLine = -1;
 let localSongs = [];
+let autoDownloadTriggeredForUid = null; // guards against double-triggering per track
+let top100Expanded = false;
 
 let likedSongs = JSON.parse(localStorage.getItem("lumic_likes") || "[]");
 let recentSongs = JSON.parse(localStorage.getItem("lumic_recent") || "[]");
 let recentSearches = JSON.parse(localStorage.getItem("lumic_searches") || "[]");
 let userPlaylists = JSON.parse(localStorage.getItem("lumic_playlists") || "{}");
+let autoDownloadEnabled = localStorage.getItem("lumic_auto_download") === "1";
+let wifiOnlyDownloads = localStorage.getItem("lumic_wifi_only") !== "0"; // defaults to true
 
 // ==== Auth / profile / premium / device state ====
 let currentUser = null;
@@ -877,18 +1017,20 @@ window.addEventListener("DOMContentLoaded", () => {
   renderRecentlyPlayed();
   renderUserPlaylists();
   renderLocalFiles();
+  renderArtistSpotlight();
+  renderRecommended();
+  loadHotAlbums();
+  loadNewAlbums();
+  loadTop100Nigeria();
   restoreLastSession();
   initOfflineDB();
   setupMediaSession();
+  applyCachedPremiumStatus();
   bootAuth();
+  initSettingsToggles();
 });
 
 // ==================== PWA / SERVICE WORKER ====================
-// Registers the offline shell. Without this the app only ever loads with a
-// live connection and Android/iOS treat it as "a Chrome tab" rather than an
-// installed app — this is also what fixes the media-notification branding,
-// once the app is actually opened from its installed Home Screen icon
-// instead of a bookmarked tab.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -899,12 +1041,6 @@ window.addEventListener("beforeunload", saveLastSession);
 document.addEventListener("visibilitychange", () => { if (document.hidden) saveLastSession(); });
 
 // ==================== VIEW SWITCHING ====================
-// Every "closeable" thing (a sub-view, the Now Playing sheet, the queue
-// drawer, action sheets/modals) pushes a history entry when it opens. The
-// single popstate handler below closes whichever of those is currently open,
-// most-specific first, so the hardware/gesture back button steps back
-// through the app instead of exiting it. Only when nothing is open do we
-// let a second back press actually leave.
 function pushNavState(label) {
   history.pushState({ lumicNav: true, label }, "");
 }
@@ -936,11 +1072,8 @@ window.addEventListener("popstate", () => {
     switchView(prevView);
     return;
   }
-  // Nothing left to close — push a fresh state so the *next* back press is
-  // what actually exits, instead of the very first press doing it.
   pushNavState("root");
 });
-// Seed the initial state so there's always one to pop before a real exit.
 pushNavState("root");
 
 function switchView(view) {
@@ -956,13 +1089,13 @@ function switchView(view) {
   const tab = document.getElementById(`tab-${view}`);
   if (tab) tab.className = "flex flex-col items-center gap-1 text-emerald-400 font-bold transition relative";
 
-  // show/hide filter header
   const hdr = document.getElementById("mainHeader");
   if (view === "home") hdr.classList.remove("hidden");
   else hdr.classList.add("hidden");
 
   if (view === "profile") renderProfileView();
   if (view === "library") renderRequests();
+  if (view === "home") { renderArtistSpotlight(); renderRecommended(); } // New Albums / Top 100 stay loaded from initial page load — no need to re-fetch on every tab switch
 }
 
 let activeCategory = "all";
@@ -992,6 +1125,577 @@ function showStatus(msg, duration = 3000) {
   status._t = setTimeout(() => status.classList.add("hidden"), duration);
 }
 
+// ==================== ARTIST SPOTLIGHT (live, rotating from real catalog) ====================
+// Pulls a real pool of distinct artist names straight from the DB (not a
+// fixed hardcoded list), shuffles it, and shows a different 6 every time
+// Home loads. Falls back to a small static list only if the DB fetch fails
+// outright (e.g. fully offline).
+let spotlightArtistPoolCache = null; // cached per page-load so repeated Home visits don't re-query every time
+
+async function fetchSpotlightArtistPool() {
+  if (spotlightArtistPoolCache && spotlightArtistPoolCache.length >= 10) return spotlightArtistPoolCache;
+  try {
+    const [songsRes, mp3Res, museekRes] = await Promise.all([
+      supabaseClient.from("songs").select("artist").order("popularity", { ascending: false }).limit(120),
+      supabaseClient.from("mp3pm_songs").select("artist").order("popularity", { ascending: false }).limit(120),
+      supabaseClient.from("museek_tracks").select("artist").limit(80).catch(() => ({ data: [] }))
+    ]);
+    const all = [...(songsRes.data || []), ...(mp3Res.data || []), ...(museekRes.data || [])];
+    const names = new Set();
+    all.forEach(r => {
+      if (!r.artist) return;
+      // Only take the primary artist if the field itself has a feature in it
+      const primary = splitFeaturedArtists(r.artist).primary;
+      if (primary) names.add(primary);
+    });
+    const pool = [...names];
+    if (pool.length >= 6) { spotlightArtistPoolCache = pool; return pool; }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function renderArtistSpotlight() {
+  const row = document.getElementById("artistSpotlightRow");
+  if (!row) return;
+  row.innerHTML = Array(6).fill('<div class="flex-shrink-0"><div class="skeleton" style="width:80px;height:80px;border-radius:50%;"></div></div>').join("");
+
+  const pool = await fetchSpotlightArtistPool();
+  const names = pool && pool.length >= 6
+    ? [...pool].sort(() => Math.random() - 0.5).slice(0, 6)
+    : ARTIST_SPOTLIGHT_FALLBACK.map(a => a.name).sort(() => Math.random() - 0.5).slice(0, 6);
+
+  row.innerHTML = "";
+  names.forEach((name, i) => {
+    const ring = SPOTLIGHT_RING_STYLES[i % SPOTLIGHT_RING_STYLES.length];
+    const el = document.createElement("div");
+    el.className = "flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group scroll-snap-item";
+    el.innerHTML = `
+      <div class="w-20 h-20 rounded-full overflow-hidden border-2 ${ring} transition bg-slate-800">
+        <img data-artist-img src="${placeholderFor(name)}" class="w-full h-full object-cover">
+      </div>
+      <span class="text-[11px] text-slate-300 font-semibold">${escapeHtml(name.split(" ")[0])}</span>
+    `;
+    el.onclick = () => openArtistView(name);
+    row.appendChild(el);
+    resolveImage({ artist: name }).then(img => { const imgEl = el.querySelector("[data-artist-img]"); if (imgEl) imgEl.src = img; });
+  });
+}
+
+// ==================== FEATURE (ft./feat.) PARSING ====================
+// Splits an artist-field string like "Davido ft Wizkid" or "Davido feat.
+// Wizkid & Tems" into { primary: "Davido", featured: ["Wizkid","Tems"] }.
+function splitFeaturedArtists(str) {
+  if (!str) return { primary: "", featured: [] };
+  const s = str.trim();
+  const parts = s.split(/\s+(?:ft\.?|feat\.?|featuring)\s+/i);
+  const primary = (parts[0] || "").trim();
+  let featured = [];
+  if (parts.length > 1) {
+    featured = parts.slice(1).join(" ").split(/,|&|\bx\b/i).map(x => x.trim()).filter(Boolean);
+  }
+  return { primary, featured };
+}
+
+// Pulls featured-artist names out of BOTH the artist field ("Davido ft
+// Wizkid") and a parenthetical in the title ("Wave (feat. Central Cee)"),
+// since different sources put it in different places.
+function extractFeaturedArtists(song) {
+  const fromArtist = splitFeaturedArtists(song.artist || "").featured;
+  let fromTitle = [];
+  const titleMatch = (song.title || "").match(/\(([^)]*)\)/);
+  if (titleMatch && /ft\.?|feat\.?|featuring/i.test(titleMatch[1])) {
+    const cleaned = titleMatch[1].replace(/^.*?(?:ft\.?|feat\.?|featuring)\s*/i, "");
+    fromTitle = cleaned.split(/,|&|\bx\b/i).map(x => x.trim()).filter(Boolean);
+  }
+  const all = [...fromArtist, ...fromTitle];
+  const seen = new Set();
+  return all.filter(a => { const k = a.toLowerCase(); if (!a || seen.has(k)) return false; seen.add(k); return true; });
+}
+
+// ==================== RECOMMENDED FOR YOU (horizontal cards) ====================
+// Built from: (1) primary artists behind what's in recent-play history, (2)
+// any artists featured on those tracks (ft./feat.), and (3) a reverse
+// lookup for artists who feature the ones you've been playing — so the
+// pool grows past the same 1-2 repeating names. Fetches for every
+// candidate artist run in parallel (not one-by-one) so this loads fast,
+// and the last good result is cached in localStorage for an instant
+// repaint on the next visit or a slow connection.
+const RECOMMENDED_CACHE_KEY = "lumic_cache_recommended_v1";
+
+async function renderRecommended() {
+  const section = document.getElementById("recommendedSection");
+  const row = document.getElementById("recommendedRow");
+  if (!section || !row) return;
+
+  const cached = readListCache(RECOMMENDED_CACHE_KEY);
+  if (cached && cached.data && cached.data.length) {
+    section.classList.remove("hidden");
+    renderRecommendedRow(cached.data, row);
+  }
+
+  const primaryArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))];
+  const featuredArtists = [];
+  recentSongs.slice(0, 12).forEach(s => featuredArtists.push(...extractFeaturedArtists(s)));
+
+  // Reverse lookup (parallel): who ELSE features the artists you've been
+  // playing — this is what actually surfaces new, related artists instead
+  // of looping the same recent-play names.
+  const reverseTargets = primaryArtists.slice(0, 4);
+  const collabLists = await Promise.all(reverseTargets.map(a =>
+    supabaseClient.from("songs").select("artist").ilike("artist", `%ft%${a}%`).limit(5)
+      .then(r => (r.data || []).map(x => splitFeaturedArtists(x.artist).primary))
+      .catch(() => [])
+  ));
+
+  let candidateArtists = [...new Set([...primaryArtists, ...featuredArtists])];
+  collabLists.forEach(list => candidateArtists.push(...list));
+  if (candidateArtists.length === 0) candidateArtists = [...PRIORITY_ARTISTS];
+
+  // Weight toward trending/priority artists (Davido, Wizkid, Asake,
+  // Zlatan...) by doubling their odds of being picked, without letting
+  // them crowd out everything else.
+  const weighted = [...candidateArtists, ...candidateArtists.filter(a => PRIORITY_ARTISTS.some(p => p.toLowerCase() === (a || "").toLowerCase()))];
+  candidateArtists = [...new Set(weighted)].sort(() => Math.random() - 0.5).slice(0, 8);
+
+  if (candidateArtists.length === 0) { if (!cached) section.classList.add("hidden"); return; }
+  section.classList.remove("hidden");
+  if (!cached || !cached.data.length) {
+    row.innerHTML = `<div class="flex gap-4">${Array(4).fill('<div class="rec-card"><div class="skeleton" style="width:150px;height:150px;border-radius:14px;"></div></div>').join("")}</div>`;
+  }
+
+  const alreadyPlayedUids = new Set(recentSongs.map(uidFor));
+  // All candidate artists fetched together — this is what makes the
+  // section fast, versus awaiting one artist at a time.
+  const perArtist = await Promise.all(candidateArtists.map(a => fetchAcrossAllTables(a, 4)));
+  const picks = [];
+  perArtist.forEach(tracks => tracks.forEach(t => { if (!alreadyPlayedUids.has(uidFor(t))) picks.push(t); }));
+
+  const seen = new Set();
+  let unique = picks.filter(t => { const u = uidFor(t); if (seen.has(u)) return false; seen.add(u); return true; });
+  unique = unique.sort(() => Math.random() - 0.5).slice(0, 15);
+
+  if (unique.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
+  renderRecommendedRow(unique, row);
+  writeListCache(RECOMMENDED_CACHE_KEY, unique);
+}
+
+function renderRecommendedRow(list, row) {
+  row.innerHTML = "";
+  list.forEach(track => {
+    const card = document.createElement("div");
+    card.className = "rec-card";
+    const cachedImg = getCachedImage(track.artist) || placeholderFor(track.title);
+    card.innerHTML = `
+      <img data-song-img src="${cachedImg}" alt="${escapeHtml(track.title)}">
+      <h4 class="text-xs font-bold text-white truncate mt-2">${escapeHtml(track.title)}</h4>
+      <p class="text-[11px] text-slate-400 truncate">${escapeHtml(track.artist)}</p>
+    `;
+    card.onclick = () => { activeQueue = list; currentIndex = list.findIndex(t => uidFor(t) === uidFor(track)); playTrack(track); };
+    row.appendChild(card);
+    resolveImage(track).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
+  });
+}
+
+// Fetches a small number of tracks for one artist across all 3 tables
+// (songs, mp3pm_songs, museek_tracks) — the same 3-table method used by
+// search. Used by Recommended For You and can be reused anywhere a
+// cross-table artist lookup is needed.
+async function fetchAcrossAllTables(artistName, limitEach = 3) {
+  const [songsRes, mp3Res, museekRes] = await Promise.all([
+    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(limitEach)
+      .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
+    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(limitEach)
+      .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" }))),
+    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(limitEach)
+      .then(r => (r.data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })))
+      .catch(() => []) // table may not exist on some deployments — fail soft
+  ]);
+  return [...songsRes, ...mp3Res, ...museekRes].filter(s => !isPreviewJunk(s));
+}
+
+// ==================== HOT ALBUMS (glassmorphism rectangular rail) ====================
+// Curated priority list: Davido leads (Oriade), then Asake, Seyi Vibez,
+// Tems, Ayra Starr, Odumodu Blvck — matched against real museek_tracks
+// album data when available, capped at 5. Cached for instant paint.
+const HOT_ALBUMS_CACHE_KEY = "lumic_cache_hotalbums_v1";
+
+async function loadHotAlbums() {
+  const section = document.getElementById("hotAlbumsSection");
+  const list = document.getElementById("hotAlbumsList");
+  if (!section || !list) return;
+
+  const cached = readListCache(HOT_ALBUMS_CACHE_KEY);
+  if (cached && cached.data && cached.data.length) {
+    section.classList.remove("hidden");
+    renderHotAlbumsList(cached.data, list);
+  } else {
+    section.classList.remove("hidden");
+    list.innerHTML = Array(5).fill('<div class="hot-album-card"><div class="skeleton" style="width:64px;height:64px;border-radius:12px;"></div><div class="flex-1"><div class="skeleton" style="height:12px;width:60%;border-radius:6px;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:35%;border-radius:6px;"></div></div></div>').join("");
+  }
+
+  try {
+    const { data: rawTracks, error } = await supabaseClient
+      .from("museek_tracks")
+      .select("album, artist, cover_url")
+      .not("album", "is", null)
+      .neq("album", "");
+    if (error || !rawTracks || rawTracks.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
+
+    const albumsMap = new Map();
+    rawTracks.forEach(track => {
+      if (!track.album) return;
+      const key = track.album.trim().toLowerCase();
+      if (!albumsMap.has(key)) {
+        albumsMap.set(key, { name: track.album.trim(), artist: track.artist || "Various Artists", cover: track.cover_url || placeholderFor(track.album) });
+      } else {
+        const existing = albumsMap.get(key);
+        if ((!existing.cover || existing.cover.includes("unsplash")) && track.cover_url) existing.cover = track.cover_url;
+      }
+    });
+
+    let albums = Array.from(albumsMap.values());
+
+    // Priority-sort: albums by the curated hot-artist list come first, in
+    // that exact order (Davido, Asake, Seyi Vibez, Tems, Ayra Starr,
+    // Odumodu Blvck); everything else follows behind them.
+    albums.sort((a, b) => {
+      const ai = HOT_ALBUM_PRIORITY.findIndex(p => p.toLowerCase() === (a.artist || "").toLowerCase());
+      const bi = HOT_ALBUM_PRIORITY.findIndex(p => p.toLowerCase() === (b.artist || "").toLowerCase());
+      const av = ai === -1 ? 999 : ai, bv = bi === -1 ? 999 : bi;
+      return av - bv;
+    });
+
+    const top = albums.slice(0, 5);
+    if (top.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
+    renderHotAlbumsList(top, list);
+    writeListCache(HOT_ALBUMS_CACHE_KEY, top);
+  } catch (e) {
+    if (!cached || !cached.data.length) section.classList.add("hidden");
+  }
+}
+
+let hotAlbumsAutoTimer = null;
+let hotAlbumsResumeTimer = null;
+
+function renderHotAlbumsList(albums, list) {
+  list.innerHTML = "";
+  albums.forEach((album, i) => {
+    const card = document.createElement("div");
+    card.className = "hot-album-card hot-album-slide";
+    card.innerHTML = `
+      <div class="hot-album-rank">${i + 1}</div>
+      <img src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.name)}">
+      <div class="min-w-0 flex-1">
+        <h4 class="text-sm font-bold text-white truncate">${escapeHtml(album.name)}</h4>
+        <p class="text-[11px] text-slate-400 truncate">${escapeHtml(album.artist)} · Album</p>
+      </div>
+      <i class="fa-solid fa-chevron-right text-slate-500 text-xs flex-shrink-0"></i>
+    `;
+    card.onclick = () => openAlbumView(album);
+    list.appendChild(card);
+  });
+  renderHotAlbumsDots(albums.length, 0);
+  setupHotAlbumsAutoSlide(list, albums.length);
+}
+
+function renderHotAlbumsDots(count, activeIdx) {
+  const dots = document.getElementById("hotAlbumsDots");
+  if (!dots) return;
+  if (count <= 1) { dots.innerHTML = ""; return; }
+  dots.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement("div");
+    d.className = "hot-album-dot" + (i === activeIdx ? " active" : "");
+    dots.appendChild(d);
+  }
+}
+
+// Auto-advances the Hot Albums rail every few seconds, looping back to the
+// start. Swiping/touching/scrolling it manually pauses the auto-advance
+// for a bit so it never fights the user's own swipe.
+function setupHotAlbumsAutoSlide(list, count) {
+  clearInterval(hotAlbumsAutoTimer);
+  clearTimeout(hotAlbumsResumeTimer);
+  if (count <= 1) return;
+
+  let idx = 0;
+  const updateActiveFromScroll = () => {
+    const cardWidth = list.firstElementChild ? list.firstElementChild.getBoundingClientRect().width + 12 : 1;
+    idx = Math.round(list.scrollLeft / cardWidth);
+    renderHotAlbumsDots(count, Math.min(idx, count - 1));
+  };
+
+  const advance = () => {
+    const cards = list.querySelectorAll(".hot-album-slide");
+    if (!cards.length) return;
+    idx = (idx + 1) % cards.length;
+    const target = cards[idx];
+    list.scrollTo({ left: target.offsetLeft - list.offsetLeft, behavior: "smooth" });
+    renderHotAlbumsDots(count, idx);
+  };
+
+  function pauseThenResume() {
+    clearInterval(hotAlbumsAutoTimer);
+    clearTimeout(hotAlbumsResumeTimer);
+    hotAlbumsResumeTimer = setTimeout(() => {
+      hotAlbumsAutoTimer = setInterval(advance, 3500);
+    }, 4500);
+  }
+
+  list.addEventListener("scroll", () => { updateActiveFromScroll(); }, { passive: true });
+  list.addEventListener("touchstart", pauseThenResume, { passive: true });
+  list.addEventListener("pointerdown", pauseThenResume);
+
+  hotAlbumsAutoTimer = setInterval(advance, 3500);
+}
+
+// ==================== NEW ALBUMS ====================
+const NEW_ALBUMS_CACHE_KEY = "lumic_cache_newalbums_v1";
+
+async function loadNewAlbums() {
+  const section = document.getElementById("newAlbumsSection");
+  const row = document.getElementById("newAlbumsRow");
+  if (!section || !row) return;
+
+  const cached = readListCache(NEW_ALBUMS_CACHE_KEY);
+  section.classList.remove("hidden");
+  if (cached && cached.data && cached.data.length) {
+    renderNewAlbumsRow(cached.data, row);
+  } else {
+    row.innerHTML = Array(4)
+      .fill('<div class="album-card"><div class="skeleton" style="width:140px;height:140px;border-radius:12px;"></div></div>')
+      .join("");
+  }
+
+  try {
+    const { data: rawTracks, error } = await supabaseClient
+      .from("museek_tracks")
+      .select("album, artist, cover_url")
+      .not("album", "is", null)
+      .neq("album", "")
+      .order("created_at", { ascending: false });
+
+    if (error || !rawTracks || rawTracks.length === 0) {
+      if (!cached || !cached.data.length) row.innerHTML = `<p class="text-xs text-slate-400 p-2">No albums available yet.</p>`;
+      return;
+    }
+
+    const albumsMap = new Map();
+
+    for (const track of rawTracks) {
+      if (!track.album) continue;
+      const key = track.album.trim().toLowerCase();
+
+      if (!albumsMap.has(key)) {
+        albumsMap.set(key, {
+          name: track.album.trim(),
+          artist: track.artist || "Various Artists",
+          cover: track.cover_url || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300"
+        });
+      } else {
+        // If the existing entry is missing a cover_url but this track has one, update it
+        const existing = albumsMap.get(key);
+        if ((!existing.cover || existing.cover.includes("unsplash")) && track.cover_url) {
+          existing.cover = track.cover_url;
+        }
+      }
+    }
+
+    const fetchedAlbums = Array.from(albumsMap.values());
+    renderNewAlbumsRow(fetchedAlbums, row);
+    writeListCache(NEW_ALBUMS_CACHE_KEY, fetchedAlbums);
+  } catch (err) {
+    console.error("Failed to load albums from DB:", err);
+    if (!cached || !cached.data.length) row.innerHTML = `<p class="text-xs text-slate-400 p-2">Failed to load albums.</p>`;
+  }
+}
+
+function renderNewAlbumsRow(fetchedAlbums, row) {
+  row.innerHTML = "";
+  fetchedAlbums.forEach((album) => {
+    const card = document.createElement("div");
+    card.className = "album-card cursor-pointer";
+    card.innerHTML = `
+      <img src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.name)}" class="w-[140px] h-[140px] object-cover rounded-xl">
+      <h4 class="text-xs font-bold text-white truncate mt-2">${escapeHtml(album.name)}</h4>
+      <p class="text-[11px] text-slate-400 truncate">${escapeHtml(album.artist)}</p>
+    `;
+    card.onclick = () => openAlbumView(album);
+    row.appendChild(card);
+  });
+}
+
+
+let currentAlbumTracks = [];
+
+async function openAlbumView(album) {
+  prevView = ["home", "search", "library"].includes(prevView) ? prevView : "home";
+  currentPlaylistCtx = "preset:album_" + album.name;
+
+  document.getElementById("playlistName").innerText = album.name;
+  document.getElementById("playlistKind").innerText = "Album";
+  document.getElementById("playlistMeta").innerText = "Loading...";
+  document.getElementById("playlistDownloadBtn").classList.remove("hidden");
+  document.getElementById("playlistShareBtn").classList.remove("hidden");
+  document.getElementById("playlistHeaderCollage").innerHTML = "";
+  document.getElementById("playlistSongsList").innerHTML = `<div class="space-y-2">${Array(5).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
+
+  switchView("playlist");
+
+  let tracks = [];
+
+  try {
+    // 1. Try fetching via RPC function first
+    const { data: rpcData, error: rpcErr } = await supabaseClient.rpc("songs_by_album", { album_name: album.name });
+    if (!rpcErr && rpcData && rpcData.length > 0) {
+      tracks = rpcData;
+    } else {
+      // 2. Direct fallback query to museek_tracks using case-insensitive matching
+      const { data: directData, error: directErr } = await supabaseClient
+        .from("museek_tracks")
+        .select("*")
+        .ilike("album", album.name);
+
+      if (!directErr && directData) {
+        tracks = directData;
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching album tracks:", e);
+  }
+
+  // Standardize stream source property for playback
+  tracks = tracks.map(t => ({ ...t, _src: t.source || "museek" }));
+
+  currentAlbumTracks = tracks;
+  currentPlaylistPresetSongs = tracks;
+  currentPlaylistPresetTitle = album.name;
+
+  if (tracks.length === 0) {
+    document.getElementById("playlistMeta").innerText = `0 songs · ${album.artist}`;
+    document.getElementById("playlistSongsList").innerHTML = `
+      <div class="text-center py-12 text-slate-400">
+        <p class="text-sm font-medium">No songs added to this album yet.</p>
+      </div>
+    `;
+    return;
+  }
+
+  document.getElementById("playlistMeta").innerText = `${tracks.length} song${tracks.length === 1 ? "" : "s"} · ${album.artist}`;
+  renderPlaylistSongsList(tracks, { removable: false });
+}
+
+// ==================== TOP 100 NIGERIA (Last.fm chart -> matched against our DB) ====================
+// Pulls Nigeria's real trending list from Last.fm (title + artist only —
+// Last.fm is never used for streaming or images), then walks down that
+// list checking each title against songs/mp3pm_songs/museek_tracks. Only
+// tracks that actually exist in our catalog get shown; anything with no
+// match is silently skipped. Only the first 4 are visible until the
+// dropdown chevron is tapped.
+const TOP100_CACHE_KEY = "lumic_cache_top100_v1";
+
+async function loadTop100Nigeria() {
+  const section = document.getElementById("top100Section");
+  const grid = document.getElementById("top100Grid");
+  if (!section || !grid) return;
+
+  const cached = readListCache(TOP100_CACHE_KEY);
+  section.classList.remove("hidden");
+  if (cached && cached.data && cached.data.length) {
+    currentTop100 = cached.data;
+    renderTop100Grid(cached.data, grid);
+  } else {
+    grid.innerHTML = Array(4).fill('<div class="skeleton" style="aspect-ratio:1;border-radius:12px;"></div>').join("");
+  }
+
+  let chartEntries = [];
+  try {
+    const url = `https://ws.audioscrobbler.com/2.0/?method=geo.gettoptracks&country=nigeria&api_key=${LASTFM_API_KEY}&format=json&limit=100`;
+    const res = await fetch(url);
+    const data = await res.json();
+    chartEntries = (data && data.tracks && data.tracks.track) || [];
+  } catch (e) {
+    if (!cached || !cached.data.length) { grid.innerHTML = ""; section.classList.add("hidden"); }
+    return;
+  }
+
+  const matched = [];
+  const seenUid = new Set();
+  // Sequential on purpose — we stop once we have enough matches instead of
+  // firing 100 queries at once.
+  for (const entry of chartEntries) {
+    if (matched.length >= 20) break;
+    const title = entry.name;
+    const artist = entry.artist && entry.artist.name;
+    if (!title || !artist) continue;
+    const hit = await findBestDbMatch(title, artist);
+    if (hit && !seenUid.has(uidFor(hit))) {
+      seenUid.add(uidFor(hit));
+      matched.push(hit);
+    }
+  }
+
+  if (matched.length === 0) {
+    if (!cached || !cached.data.length) { grid.innerHTML = ""; section.classList.add("hidden"); }
+    return;
+  }
+
+  currentTop100 = matched;
+  renderTop100Grid(matched, grid);
+  writeListCache(TOP100_CACHE_KEY, matched);
+}
+let currentTop100 = [];
+
+function renderTop100Grid(matched, grid) {
+  grid.innerHTML = "";
+  matched.forEach((track, i) => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    if (i >= 4 && !top100Expanded) card.classList.add("hidden");
+    const cachedImg = getCachedImage(track.artist) || placeholderFor(track.title);
+    card.innerHTML = `
+      <span class="chart-rank">#${i + 1}</span>
+      <img data-song-img src="${cachedImg}" alt="${escapeHtml(track.title)}">
+      <h4 class="text-xs font-bold text-white truncate mt-2">${escapeHtml(track.title)}</h4>
+      <p class="text-[11px] text-slate-400 truncate">${escapeHtml(track.artist)}</p>
+    `;
+    card.onclick = () => { activeQueue = matched; currentIndex = i; playTrack(track); };
+    grid.appendChild(card);
+    resolveImage(track).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
+  });
+  const toggleBtn = document.getElementById("top100ToggleBtn");
+  if (toggleBtn) toggleBtn.classList.toggle("hidden", matched.length <= 4);
+}
+
+// Toggles the Top Nigeria grid between "first 4 only" and "show all" —
+// only the chevron button triggers the expanded view.
+function toggleTop100Expand() {
+  top100Expanded = !top100Expanded;
+  document.querySelectorAll("#top100Grid .chart-card").forEach((el, i) => {
+    if (i >= 4) el.classList.toggle("hidden", !top100Expanded);
+  });
+  const icon = document.getElementById("top100ToggleIcon");
+  if (icon) icon.style.transform = top100Expanded ? "rotate(180deg)" : "rotate(0deg)";
+}
+
+// Finds the closest match in our DB for a Last.fm {title, artist} pair —
+// artist ILIKE plus a fuzzy title comparison (same normalization as
+// fuzzySongKey: strips "feat"/"ft"/parens) so "Wave (Official Audio)" still
+// matches Last.fm's clean "Wave".
+async function findBestDbMatch(title, artist) {
+  const candidates = await fetchAcrossAllTables(artist, 8);
+  if (candidates.length === 0) return null;
+  const targetKey = fuzzySongKey({ title, artist });
+  const exact = candidates.find(c => fuzzySongKey(c) === targetKey);
+  if (exact) return exact;
+  // Loose fallback: same artist + title starts with the chart title's
+  // first significant word (catches minor punctuation/case differences).
+  const targetWord = (title || "").toLowerCase().split(/\s+/)[0];
+  return candidates.find(c => (c.title || "").toLowerCase().includes(targetWord)) || null;
+}
+
 // ==================== IMAGE RESOLUTION ====================
 async function resolveImage(song) {
   if (song._local) return song.image || placeholderFor(song.title);
@@ -999,11 +1703,27 @@ async function resolveImage(song) {
   const artist = (song.artist || "").trim();
   if (!artist) return placeholderFor(song.title || "x");
   if (artistImageCache[artist] !== undefined) return artistImageCache[artist] || placeholderFor(artist);
+
+  const cached = getCachedImage(artist);
+  if (cached) {
+    artistImageCache[artist] = cached;
+    // Quietly refresh in the background so the cache stays fresh without
+    // blocking this (already instant) return.
+    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&limit=1`)
+      .then(r => r.json())
+      .then(data => {
+        const art = data.results && data.results[0] ? data.results[0].artworkUrl100.replace("100x100","400x400") : null;
+        if (art) { artistImageCache[artist] = art; setCachedImage(artist, art); }
+      }).catch(() => {});
+    return cached;
+  }
+
   try {
     const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&limit=1`);
     const data = await res.json();
     const art = data.results && data.results[0] ? data.results[0].artworkUrl100.replace("100x100","400x400") : null;
     artistImageCache[artist] = art;
+    if (art) setCachedImage(artist, art);
     return art || placeholderFor(artist);
   } catch (e) {
     artistImageCache[artist] = null;
@@ -1020,10 +1740,6 @@ function ilikeAllWords(query, column, name) {
   return query;
 }
 
-// Normalizes titles like "Wave", "Wave (feat. Central Cee)", "Wave ft Central
-// Cee" down to the same key so the same song showing up under both the
-// songs table and mp3pm_songs (or with a slightly different title string)
-// collapses into one entry instead of appearing 2-3 times in a row.
 function fuzzySongKey(song) {
   const title = (song.title || "").toLowerCase()
     .replace(/\(feat\.?[^)]*\)/g, " ")
@@ -1035,13 +1751,6 @@ function fuzzySongKey(song) {
   return `${title}__${artist}`;
 }
 
-// Fetches songs for a list of artists in small batches so the UI can render
-// progressively instead of waiting for every artist to resolve before
-// showing anything. onBatch(songsSoFar) fires after each batch of artists
-// resolves. Within each batch, results are interleaved round-robin across
-// artists (song 1 from A, song 1 from B, song 1 from C, song 2 from A...)
-// instead of concatenated artist-by-artist, so a mix actually reads as a
-// mix instead of four tracks from one artist before the next one appears.
 async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
   let combined = [];
   const seenUid = new Set();
@@ -1083,8 +1792,6 @@ async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
   return combined;
 }
 
-// Kept for callers that just want the final list (playback, etc.) — same
-// progressive fetch under the hood, just without a per-batch callback.
 async function fetchByArtists(artists, limitEach = 12) {
   return fetchByArtistsProgressive(artists, limitEach, null);
 }
@@ -1102,9 +1809,6 @@ async function playCuratedPlaylist(presetKey) {
   showStatus(`Playing ${activeQueue.length} songs`);
 }
 
-// Opens a curated mix as a browsable track list. Renders songs little-by-
-// little as each batch of artists resolves, instead of blocking on the
-// whole mix before showing anything.
 let currentPlaylistPresetSongs = [];
 let currentPlaylistPresetTitle = "";
 
@@ -1127,10 +1831,10 @@ async function openCuratedPlaylistView(presetKey, title) {
   const artists = PLAYLIST_PRESETS[presetKey] || [];
   let collageBuilt = false;
   const songs = await fetchByArtistsProgressive(artists, 20, (songsSoFar) => {
-    if (currentPlaylistCtx !== ctxKey) return; // user navigated away meanwhile
+    if (currentPlaylistCtx !== ctxKey) return;
     currentPlaylistPresetSongs = songsSoFar;
-    document.getElementById("playlistMeta").innerText = `${songsSoFar.length} song${songsSoFar.length === 1 ? "" : "s"}${songsSoFar.length ? "" : ""}`;
-    renderPlaylistSongsList(songsSoFar);
+    document.getElementById("playlistMeta").innerText = `${songsSoFar.length} song${songsSoFar.length === 1 ? "" : "s"}`;
+    renderPlaylistSongsList(songsSoFar, { removable: false });
     if (!collageBuilt && songsSoFar.length) {
       collageBuilt = true;
       const collage = document.getElementById("playlistHeaderCollage");
@@ -1164,11 +1868,14 @@ async function openArtistView(artistName) {
     document.getElementById("artistHeaderImg").src = img;
   });
 
-  const [mdundo, mp3] = await Promise.all([
+  const [mdundo, mp3, museek] = await Promise.all([
     ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="songs"); return r; }),
-    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; })
+    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; }),
+    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(300)
+      .then(r => { r.data?.forEach(s => { s._src="vistanaij"; s.image = s.cover_url; }); return r; })
+      .catch(() => ({ data: [] }))
   ]);
-  let songs = [...(mdundo.data || []), ...(mp3.data || [])].filter(s => !isPreviewJunk(s));
+  let songs = [...(mdundo.data || []), ...(mp3.data || []), ...(museek.data || [])].filter(s => !isPreviewJunk(s));
   const seen = new Set();
   songs = songs.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
 
@@ -1195,25 +1902,43 @@ function playArtistAll(shuffle) {
 }
 
 // ==================== PLAYBACK CORE ====================
-// Best-effort play-count increment for the songs table's unused `popularity`
-// column. Read-then-write rather than atomic — fine for a popularity signal,
-// not something that needs to be exact. Never blocks or awaits playback.
-// If you want this exact under concurrent plays, replace with a Postgres
-// function and call it via supabaseClient.rpc() instead:
-//   create function increment_popularity(song_id bigint) returns void as $$
-//     update songs set popularity = popularity + 1 where id = song_id;
-//   $$ language sql;
 function bumpPopularity(song) {
   if (!song || song._local || !song.id) return;
   const table = song._src === "songs" ? "songs" : song._src === "mp3pm" ? "mp3pm_songs" : null;
-  if (!table) return; // unknown source — nothing to bump
+  if (!table) return;
   supabaseClient.from(table).select("popularity").eq("id", song.id).maybeSingle()
     .then(({ data }) => {
       const next = (data?.popularity || 0) + 1;
       return supabaseClient.from(table).update({ popularity: next }).eq("id", song.id);
     })
     .then(({ error }) => { if (error) console.warn(`[lumic] popularity update blocked (${table}):`, error.message); })
-    .catch((e) => console.warn(`[lumic] popularity update failed (${table}):`, e.message)); // logged only — never surfaced to the listener
+    .catch((e) => console.warn(`[lumic] popularity update failed (${table}):`, e.message));
+}
+
+// Resolves a museek_tracks (vistanaij) row's stream_ref into a real,
+// playable audio URL via the provider's resolve endpoint. All other
+// sources (songs, mp3pm_songs) already carry a direct stream_url and skip
+// this entirely.
+async function resolveVistanaijStream(song) {
+  const cleanRef = (song.stream_ref || "").trim();
+  if (!cleanRef) throw new Error("Missing stream_ref");
+  const url = `https://vistanaij.com/wp-json/gbt3k/v1/resolve?ref=${encodeURIComponent(cleanRef)}&action=stream`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  if (!data || !data.url) throw new Error("Provider returned no url");
+  return data.url;
+}
+
+// Returns a ready-to-play src for any track, regardless of source table.
+// Offline cache takes priority; museek/vistanaij tracks get resolved live.
+async function resolvePlaybackSrc(song) {
+  const offlineSrc = await getOfflineSrc(song);
+  if (offlineSrc) return offlineSrc;
+  if (song._src === "vistanaij" || song.stream_ref) {
+    return await resolveVistanaijStream(song);
+  }
+  return song.stream_url;
 }
 
 function playTrack(song, opts = {}) {
@@ -1221,6 +1946,7 @@ function playTrack(song, opts = {}) {
   currentTrack = song;
   crossfadeStarted = false;
   preloadedNext = null;
+  autoDownloadTriggeredForUid = null;
   bumpPopularity(song);
 
   resolveImage(song).then(img => {
@@ -1240,12 +1966,15 @@ function playTrack(song, opts = {}) {
   document.getElementById("playerPlayingDot").classList.remove("hidden");
   document.getElementById("crossfadeIndicator").classList.add("hidden");
 
-  getOfflineSrc(song).then(offlineSrc => {
-    const src = offlineSrc || song.stream_url;
+  resolvePlaybackSrc(song).then(src => {
+    if (!src) { showStatus("This track is unavailable."); return; }
     activeAudio.src = src;
     activeAudio.volume = 1;
     activeAudio.currentTime = opts.startAt || 0;
     activeAudio.play().catch(() => {});
+  }).catch(() => {
+    showStatus("Couldn't resolve this stream — skipping.");
+    skipBrokenTrack();
   });
 
   document.getElementById("playerBar").classList.remove("translate-y-full");
@@ -1254,13 +1983,11 @@ function playTrack(song, opts = {}) {
   addToRecent(song);
   updateMediaSession();
 
-  // Always reset lyrics + artist info for the new track, cancelling any in-flight request
   loadLyrics(song);
   if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
     loadArtistInfo(song);
   }
 
-  // Auto-build queue from same artist if queue is just this one song
   if (activeQueue.length <= 1) {
     buildAutoQueue(song);
   }
@@ -1349,14 +2076,20 @@ function setupAudioListeners(audio) {
         document.getElementById("npCurrentTime").innerText = formatTime(audio.currentTime);
         document.getElementById("npDurationTime").innerText = formatTime(audio.duration);
       }
+
+      // Auto-download: fires once per track, 30s in, only if enabled and
+      // (if wifi-only is on) only when the connection looks like wifi.
+      maybeAutoDownloadCurrentTrack(audio.currentTime);
+
       const remaining = audio.duration - audio.currentTime;
       if (remaining < 15 && remaining > 0 && !preloadedNext && activeQueue.length) {
         preloadedNext = peekNextTrack();
         if (preloadedNext) {
-          getOfflineSrc(preloadedNext).then(offlineSrc => {
-            inactiveAudio.src = offlineSrc || preloadedNext.stream_url;
+          resolvePlaybackSrc(preloadedNext).then(src => {
+            if (!src) return;
+            inactiveAudio.src = src;
             inactiveAudio.load();
-          });
+          }).catch(() => { preloadedNext = null; });
         }
       }
       if (remaining <= CROSSFADE_SECONDS && remaining > 0 && preloadedNext && !crossfadeStarted) {
@@ -1364,9 +2097,7 @@ function setupAudioListeners(audio) {
         document.getElementById("crossfadeIndicator").classList.remove("hidden");
         startCrossfade(audio, remaining);
       }
-      // Sync lyrics scroll (offset-corrected by any manual alignment tap)
       syncLyricsScroll(audio.currentTime, audio.duration);
-      // Update media session position
       if (navigator.mediaSession && navigator.mediaSession.setPositionState) {
         try { navigator.mediaSession.setPositionState({ duration: audio.duration, position: audio.currentTime, playbackRate: 1 }); } catch(e) {}
       }
@@ -1381,19 +2112,50 @@ function setupAudioListeners(audio) {
     playNextTrack();
   });
   audio.addEventListener("error", () => {
-    if (!audio.src) return; // no real source assigned yet, ignore
+    if (!audio.src) return;
     if (audio === activeAudio) {
       skipBrokenTrack();
     } else {
-      // A preloaded "next" track failed - drop it so crossfade doesn't try to use it.
-      // It'll simply be attempted (and skipped if still broken) when its turn comes.
       preloadedNext = null;
     }
   });
 }
 
-// Removes the currently-playing track from the queue and advances, so a
-// broken/expired stream link doesn't stop playback altogether.
+// ==================== AUTO-DOWNLOAD ====================
+// Fires once per track, at the 30-second mark, if the toggle is on. If
+// wifi-only is also on, checks navigator.connection when available; when
+// the Network Information API isn't supported (Safari/iOS), we fall back
+// to allowing the save rather than silently never saving anything.
+function maybeAutoDownloadCurrentTrack(currentTime) {
+  if (!autoDownloadEnabled || !currentTrack || currentTrack._local) return;
+  if (currentTime < 30) return;
+  const uid = uidFor(currentTrack);
+  if (autoDownloadTriggeredForUid === uid) return;
+  autoDownloadTriggeredForUid = uid;
+
+  if (wifiOnlyDownloads && navigator.connection && navigator.connection.type) {
+    const t = navigator.connection.type;
+    if (t !== "wifi" && t !== "ethernet") return; // on cellular, skip silently
+  }
+  downloadSongOffline(currentTrack, { silent: true }).catch(() => {});
+}
+
+function initSettingsToggles() {
+  const autoBox = document.getElementById("autoDownloadToggle");
+  const wifiBox = document.getElementById("wifiOnlyToggle");
+  if (autoBox) autoBox.checked = autoDownloadEnabled;
+  if (wifiBox) wifiBox.checked = wifiOnlyDownloads;
+}
+function onAutoDownloadToggle() {
+  autoDownloadEnabled = document.getElementById("autoDownloadToggle").checked;
+  localStorage.setItem("lumic_auto_download", autoDownloadEnabled ? "1" : "0");
+  showStatus(autoDownloadEnabled ? "Auto-save turned on" : "Auto-save turned off");
+}
+function onWifiOnlyToggle() {
+  wifiOnlyDownloads = document.getElementById("wifiOnlyToggle").checked;
+  localStorage.setItem("lumic_wifi_only", wifiOnlyDownloads ? "1" : "0");
+}
+
 function skipBrokenTrack() {
   if (activeQueue.length === 0 || currentIndex < 0) return;
   showStatus("That track is unavailable, skipping...");
@@ -1442,12 +2204,12 @@ function startCrossfade(outgoing, remaining) {
       outgoing.pause();
       outgoing.volume = 1;
       if (repeatOn) {
-        // Same track loops — index/currentTrack stay put; the audio buffers
-        // already swapped to a freshly preloaded copy of this same song.
+        // Same track loops
       } else if (currentIndex + 1 < activeQueue.length) currentIndex++;
       else if (shuffleOn) currentIndex = Math.floor(Math.random() * activeQueue.length);
       else currentIndex = (currentIndex + 1) % activeQueue.length;
       currentTrack = activeQueue[currentIndex];
+      autoDownloadTriggeredForUid = null;
       preloadedNext = null;
       crossfadeStarted = false;
       document.getElementById("crossfadeIndicator").classList.add("hidden");
@@ -1533,7 +2295,7 @@ function closeNowPlaying() {
 // ==================== LYRICS (Supabase Function + IndexedDB cache + Scroll sync) ====================
 let currentLyricsTrackId = null;
 let lyricsAbortController = null;
-let lyricsSyncOffset = 0; // manual correction (in lines) learned from user taps, reset per song
+let lyricsSyncOffset = 0;
 
 async function loadLyrics(song, forceRefresh = false) {
   const scrollEl = document.getElementById("lyricsScroll");
@@ -1812,11 +2574,9 @@ function renderRecentlyPlayed() {
 function saveLastSession() {
   if (!currentTrack) return;
   localStorage.setItem("lumic_last_track", JSON.stringify({ song: currentTrack, position: activeAudio.currentTime || 0 }));
-  // Cap the stored queue so a huge auto-built queue doesn't blow localStorage's
-  // quota — 200 tracks is far more than anyone scrolls back through anyway.
   try {
     localStorage.setItem("lumic_queue", JSON.stringify({ queue: activeQueue.slice(0, 200), index: currentIndex }));
-  } catch (e) {} // quota exceeded — session/track resume still works without it
+  } catch (e) {}
 }
 function restoreLastSession() {
   try {
@@ -1838,8 +2598,6 @@ function restoreLastSession() {
     updatePlayPauseIcon(false);
     updateLikeButtons();
 
-    // Restore the actual queue if we have one; only fall back to a
-    // single-song queue if nothing was saved (e.g. an older session).
     let restoredQueue = false;
     try {
       const rawQueue = localStorage.getItem("lumic_queue");
@@ -1858,10 +2616,11 @@ function restoreLastSession() {
     }
     updateQueueDrawer();
 
-    getOfflineSrc(song).then(offlineSrc => {
-      activeAudio.src = offlineSrc || song.stream_url;
+    resolvePlaybackSrc(song).then(src => {
+      if (!src) return;
+      activeAudio.src = src;
       activeAudio.currentTime = position || 0;
-    });
+    }).catch(() => {});
     updateMediaSession();
     showStatus("Resumed your last session");
   } catch (e) {}
@@ -1900,10 +2659,10 @@ function updateQueueDrawer() {
         <div class="min-w-0"><h5 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h5><p class="text-[10px] text-slate-400 truncate mt-0.5">${escapeHtml(song.artist)}</p></div>
       </div>
       <button data-more class="text-slate-500 hover:text-white p-2 text-xs transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-ellipsis"></i></button>
-      <button data-remove class="text-slate-500 hover:text-red-400 p-2 text-xs transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+      <button data-remove class="row-remove-btn"><i class="fa-solid fa-xmark text-xs"></i></button>
     `;
     item.querySelector("[data-song-img]").closest(".flex-1").onclick = () => jumpToQueueIndex(idx);
-    item.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e); };
+    item.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e, { queueIndex: idx }); };
     item.querySelector("[data-remove]").onclick = (e) => { e.stopPropagation(); removeFromQueue(idx); };
     container.appendChild(item);
     resolveImage(song).then(img => { const el = item.querySelector("[data-song-img]"); if (el) el.src = img; });
@@ -1914,10 +2673,13 @@ function updateQueueDrawer() {
   }
 }
 
+// Removes a track from the queue by index. Shared by the inline "x" button
+// and the "Remove from queue" action sheet entry.
 function removeFromQueue(index) {
   activeQueue.splice(index, 1);
   if (index <= currentIndex) currentIndex--;
   updateQueueDrawer();
+  showStatus("Removed from queue");
 }
 function jumpToQueueIndex(index) { currentIndex = index; playTrack(activeQueue[currentIndex]); }
 
@@ -1937,8 +2699,6 @@ function clearQueueRemaining() {
 }
 
 // ==================== SEARCH ====================
-// NOTE: the search RPC path below (search_songs) is untouched per request —
-// only artist/curated-mix loading was made progressive.
 function onSearchFocus() {
   const query = document.getElementById("searchInput").value.trim();
   if (!query) renderRecentSearches();
@@ -2009,6 +2769,34 @@ function onSearchKeydown(e) {
 
 function normalizeWords(q) { return q.trim().toLowerCase().split(/\s+/).filter(Boolean); }
 
+// Looks up albums (from museek_tracks) whose artist matches the search
+// query, grouped with a song count — used to show album cards above the
+// regular song rows when someone searches an artist that has an album.
+async function fetchAlbumMatches(query) {
+  if (!query || query.trim().length < 2) return [];
+  try {
+    const { data, error } = await supabaseClient
+      .from("museek_tracks")
+      .select("album, artist, cover_url")
+      .ilike("artist", `%${query}%`)
+      .not("album", "is", null)
+      .neq("album", "");
+    if (error || !data) return [];
+    const map = new Map();
+    data.forEach(t => {
+      if (!t.album) return;
+      const key = t.album.trim().toLowerCase();
+      if (!map.has(key)) map.set(key, { name: t.album.trim(), artist: t.artist || "Various Artists", cover: t.cover_url || placeholderFor(t.album), count: 1 });
+      else map.get(key).count++;
+    });
+    return Array.from(map.values());
+  } catch (e) { return []; }
+}
+
+// Uses the search_songs Postgres RPC (see lumic_migration.sql), which
+// unions songs, mp3pm_songs, and museek_tracks in one round trip. Runs
+// alongside an album lookup so artist searches surface any matching
+// albums first.
 async function runSearch(query, isFullSearch) {
   const container = document.getElementById("searchResults");
   container.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
@@ -2024,49 +2812,64 @@ async function runSearch(query, isFullSearch) {
   const seen = new Set();
 
   try {
-    const response = await supabaseClient.rpc("search_songs", { search_query: query, max_results: limit });
+    const [response, albumMatches] = await Promise.all([
+      supabaseClient.rpc("search_songs", { search_query: query, max_results: limit }),
+      fetchAlbumMatches(query)
+    ]);
     const { data, error } = response;
     if (searchAbortController !== controller) return;
     if (error) throw error;
 
     songs = (data || [])
-      .map(s => ({ ...s, _src: s.source === "mp3pm" ? "mp3pm" : "songs" }))
+      .map(s => ({ ...s, _src: s.source }))
       .filter(s => {
-        const uid = (typeof uidFor === "function") ? uidFor(s) : `${s.source}_${s.id}`;
-        if (typeof isPreviewJunk === "function" && isPreviewJunk(s)) return false;
+        const uid = uidFor(s);
+        if (isPreviewJunk(s)) return false;
         if (seen.has(uid)) return false;
         seen.add(uid);
         return true;
     });
 
-    renderSearchResults(songs, query, container, isFullSearch);
+    renderSearchResults(songs, query, container, isFullSearch, albumMatches);
   } catch (e) {
     if (e.name === "AbortError") return;
     if (searchAbortController === controller) {
-      container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results.</div>`;
+      container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results. Have you run lumic_migration.sql yet?</div>`;
     }
   } finally {
     if (searchAbortController === controller) searchAbortController = null;
   }
 }
 
-function renderSearchResults(songs, query, container, isFinal) {
-  if (songs.length === 0) {
+function renderSearchResults(songs, query, container, isFinal, albums = []) {
+  if (songs.length === 0 && albums.length === 0) {
     if (isFinal) container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No results for "${escapeHtml(query)}"</div>`;
     return;
   }
   container.innerHTML = "";
 
+  // Albums (distinct styling, song count) always lead the results when an
+  // artist search matches one or more museek_tracks albums.
+  if (albums.length) {
+    const albumLabel = document.createElement("h4");
+    albumLabel.className = "text-xs font-bold uppercase tracking-widest text-slate-500 mb-1";
+    albumLabel.innerText = "Albums";
+    container.appendChild(albumLabel);
+    albums.forEach(album => container.appendChild(renderAlbumSearchRow(album)));
+  }
+
   const counts = {};
   songs.forEach(s => { counts[s.artist] = (counts[s.artist] || 0) + 1; });
   const dominantArtist = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
 
-  const label = document.createElement("div");
-  label.className = "flex items-center justify-between mb-1";
-  label.innerHTML = `<h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Top results</h4>
-    ${dominantArtist ? `<button onclick="openArtistView('${escapeHtml(dominantArtist)}')" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold">${escapeHtml(dominantArtist)} <i class="fa-solid fa-arrow-right text-[9px]"></i></button>` : ""}`;
-  container.appendChild(label);
-  songs.forEach(song => container.appendChild(renderSearchRow(song, songs)));
+  if (songs.length) {
+    const label = document.createElement("div");
+    label.className = `flex items-center justify-between mb-1 ${albums.length ? "mt-4" : ""}`;
+    label.innerHTML = `<h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">${albums.length ? "Songs" : "Top results"}</h4>
+      ${dominantArtist ? `<button onclick="openArtistView('${escapeHtml(dominantArtist)}')" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold">${escapeHtml(dominantArtist)} <i class="fa-solid fa-arrow-right text-[9px]"></i></button>` : ""}`;
+    container.appendChild(label);
+    songs.forEach(song => container.appendChild(renderSearchRow(song, songs)));
+  }
 
   if (isFinal && dominantArtist) {
     const chip = document.createElement("div");
@@ -2085,7 +2888,30 @@ function renderSearchResults(songs, query, container, isFinal) {
   }
 }
 
-function renderSearchRow(song, queueContext) {
+// Renders an album result row — visually distinct from a song row (glass
+// rectangular card, "Album" badge, track count) so albums never look like
+// regular songs in search results.
+function renderAlbumSearchRow(album) {
+  const card = document.createElement("div");
+  card.className = "hot-album-card";
+  card.style.borderColor = "rgba(139,92,246,0.25)";
+  card.innerHTML = `
+    <img src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.name)}">
+    <div class="min-w-0 flex-1">
+      <span class="text-[9px] font-black uppercase tracking-widest text-violet-300 bg-violet-500/15 px-1.5 py-0.5 rounded">Album</span>
+      <h4 class="text-sm font-bold text-white truncate mt-1">${escapeHtml(album.name)}</h4>
+      <p class="text-[11px] text-slate-400 truncate">${escapeHtml(album.artist)} · ${album.count} song${album.count === 1 ? "" : "s"}</p>
+    </div>
+    <i class="fa-solid fa-chevron-right text-slate-500 text-xs flex-shrink-0"></i>
+  `;
+  card.onclick = () => openAlbumView(album);
+  return card;
+}
+
+// Renders a row for a song. When opts.removable is true (used inside a
+// playlist view), a remove button is shown that strips the song from that
+// specific playlist via removeSongFromPlaylist().
+function renderSearchRow(song, queueContext, opts = {}) {
   const card = document.createElement("div");
   card.className = "glass-card p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:bg-white/10 transition group";
   card.innerHTML = `
@@ -2101,16 +2927,23 @@ function renderSearchRow(song, queueContext) {
         <button data-artist class="text-[10px] text-slate-400 hover:text-emerald-400 truncate mt-0.5 text-left transition">${escapeHtml(song.artist)}</button>
       </div>
     </div>
+    ${opts.removable ? `<button data-remove class="row-remove-btn"><i class="fa-solid fa-trash-can text-xs"></i></button>` : ""}
     <button data-more class="text-slate-400 hover:text-white p-2 text-sm transition flex-shrink-0"><i class="fa-solid fa-ellipsis"></i></button>
   `;
   card.onclick = (e) => {
-    if (e.target.closest("[data-more]") || e.target.closest("[data-artist]")) return;
+    if (e.target.closest("[data-more]") || e.target.closest("[data-artist]") || e.target.closest("[data-remove]")) return;
     activeQueue = queueContext;
     currentIndex = queueContext.findIndex(s => uidFor(s) === uidFor(song));
     playTrack(song);
   };
-  card.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e); };
+  card.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e, { playlistId: opts.playlistId }); };
   card.querySelector("[data-artist]").onclick = (e) => { e.stopPropagation(); openArtistView(song.artist); };
+  if (opts.removable) {
+    card.querySelector("[data-remove]").onclick = (e) => {
+      e.stopPropagation();
+      removeSongFromPlaylist(opts.playlistId, song);
+    };
+  }
   resolveImage(song).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
   return card;
 }
@@ -2120,18 +2953,32 @@ function escapeHtml(str) {
 }
 
 // ==================== ACTION SHEET ====================
-function openActionSheet(song, e) {
+// opts.playlistId: when the sheet was opened from a playlist's track list,
+// shows "Remove from this playlist".
+// opts.queueIndex: when opened from the queue drawer, shows "Remove from
+// queue" and targets that exact index (so removal is correct even with
+// duplicate songs in the queue).
+function openActionSheet(song, e, opts = {}) {
   if (e) e.stopPropagation();
   pushNavState("actionSheet");
   actionSheetTarget = song;
+  actionSheetQueueIndex = typeof opts.queueIndex === "number" ? opts.queueIndex : null;
+  actionSheetPlaylistId = opts.playlistId || null;
+
   document.getElementById("asImg").src = placeholderFor(song.title);
   resolveImage(song).then(img => { document.getElementById("asImg").src = img; });
   document.getElementById("asTitle").innerText = song.title;
   document.getElementById("asArtist").innerText = song.artist;
   document.getElementById("asLikeLabel").innerText = isLiked(song) ? "Remove from favourites" : "Add to favourites";
+
+  document.getElementById("asRemoveFromPlaylistItem").classList.toggle("hidden", !actionSheetPlaylistId);
+  document.getElementById("asRemoveFromQueueItem").classList.toggle("hidden", actionSheetQueueIndex === null);
+
   document.getElementById("actionSheetOverlay").classList.remove("hidden");
   document.getElementById("actionSheet").classList.remove("translate-y-full");
 }
+let actionSheetPlaylistId = null;
+
 function closeActionSheet() {
   document.getElementById("actionSheetOverlay").classList.add("hidden");
   document.getElementById("actionSheet").classList.add("translate-y-full");
@@ -2162,6 +3009,16 @@ function actionShareWithFriends() {
   if (!actionSheetTarget) return;
   closeActionSheet();
   openSharePicker("song", actionSheetTarget, `Sharing "${actionSheetTarget.title}"`);
+}
+function actionRemoveFromPlaylist() {
+  if (!actionSheetTarget || !actionSheetPlaylistId) return;
+  removeSongFromPlaylist(actionSheetPlaylistId, actionSheetTarget);
+  closeActionSheet();
+}
+function actionRemoveFromQueue() {
+  if (actionSheetQueueIndex === null) return;
+  removeFromQueue(actionSheetQueueIndex);
+  closeActionSheet();
 }
 
 // ==================== PLAYLIST PICKER ====================
@@ -2222,9 +3079,9 @@ function closePlaylistPicker() {
 }
 
 // ==================== SHARE / FRIEND PICKER ====================
-let shareTargetType = null; // 'song' | 'playlist'
+let shareTargetType = null;
 let shareTargetPayload = null;
-let knownFriends = null; // cached list of {id, username, display_name}
+let knownFriends = null;
 let shareSearchDebounce = null;
 
 function openSharePicker(type, payload, subtitle) {
@@ -2317,7 +3174,6 @@ async function sendShareTo(profile) {
       payload: shareTargetPayload,
       status: "pending"
     });
-    // Remember them as a friend for next time (skip if the pair already exists)
     const [a, b] = [currentUser.id, profile.id].sort();
     await supabaseClient.from("friend_connections").upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b", ignoreDuplicates: true }).select();
     showStatus(`Sent to ${profile.display_name || profile.username}`);
@@ -2386,10 +3242,6 @@ function renderUserPlaylists() {
 }
 
 // ==================== LOCAL FILES ====================
-// Imported files are stored as real Blobs in IndexedDB (see initOfflineDB),
-// keyed by a stable id. object URLs are only ever regenerated in-memory
-// from that stored blob — they're never the source of truth, so a refresh,
-// a fully closed app, or reopening days later doesn't lose the audio.
 function importLocalFiles(event) {
   const files = Array.from(event.target.files);
   let imported = 0;
@@ -2416,9 +3268,6 @@ function importLocalFiles(event) {
   event.target.value = "";
 }
 
-// Rebuilds localSongs from the stored blobs. Runs once IndexedDB is ready,
-// on every fresh load — this is what makes imports permanent instead of
-// tab-session-only.
 function loadLocalTracksFromDB() {
   if (!offlineDB) return;
   const tx = offlineDB.transaction("localTracks", "readonly");
@@ -2451,7 +3300,7 @@ function renderLocalFiles() {
         <i class="fa-solid fa-music text-white text-xs"></i>
       </div>
       <div class="min-w-0 flex-1"><h5 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h5><p class="text-[10px] text-slate-400">${escapeHtml(song.artist)}</p></div>
-      <button data-remove class="text-slate-500 hover:text-red-400 p-2 opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+      <button data-remove class="row-remove-btn"><i class="fa-solid fa-xmark text-xs"></i></button>
     `;
     row.onclick = (e) => {
       if (e.target.closest("[data-remove]")) return;
@@ -2490,6 +3339,23 @@ function getPlaylistName(ctxId) {
   return (userPlaylists[ctxId] && userPlaylists[ctxId].name) || "Playlist";
 }
 
+// Removes a song from a *user-created* playlist (favourites/offline/local
+// have their own dedicated removal flows already). This is the actual
+// "remove from playlist" feature — usable both from the inline trash icon
+// in the playlist view and from the action sheet.
+function removeSongFromPlaylist(playlistId, song) {
+  const pl = userPlaylists[playlistId];
+  if (!pl) return;
+  pl.songs = pl.songs.filter(s => uidFor(s) !== uidFor(song));
+  localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+  showStatus(`Removed from ${pl.name}`);
+  if (currentPlaylistCtx === playlistId) {
+    document.getElementById("playlistMeta").innerText = `${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}`;
+    renderPlaylistSongsList(pl.songs, { removable: true, playlistId });
+  }
+  renderUserPlaylists();
+}
+
 function addAllCurrentPlaylistSongs() {
   const songs = getPlaylistSongs(currentPlaylistCtx);
   if (!songs.length) { showStatus("Nothing to add yet."); return; }
@@ -2515,15 +3381,18 @@ function openPlaylistView(ctxId) {
     resolveImage(s).then(url => img.src = url);
   });
 
-  renderPlaylistSongsList(songs);
+  // Only user-created playlists (not favourites/offline/local, which have
+  // their own removal flows) get the remove-from-playlist button.
+  const isUserPlaylist = !["__favorites", "__offline", "__local"].includes(ctxId) && !String(ctxId).startsWith("preset:");
+  renderPlaylistSongsList(songs, { removable: isUserPlaylist, playlistId: ctxId });
   switchView("playlist");
 }
 
-function renderPlaylistSongsList(songs) {
+function renderPlaylistSongsList(songs, opts = {}) {
   const list = document.getElementById("playlistSongsList");
   list.innerHTML = "";
   if (songs.length === 0) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Nothing here yet.</div>`; return; }
-  songs.forEach(song => list.appendChild(renderSearchRow(song, songs)));
+  songs.forEach(song => list.appendChild(renderSearchRow(song, songs, opts)));
 }
 
 function playAllInPlaylist(shuffle) {
@@ -2545,9 +3414,6 @@ function initOfflineDB() {
     const db = e.target.result;
     if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "uid" });
     if (!db.objectStoreNames.contains("lyrics")) db.createObjectStore("lyrics", { keyPath: "trackId" });
-    // Holds the actual audio Blob for every locally-imported file, so an
-    // import survives a refresh, a closed tab, or the app being reopened
-    // days later — not just its title/artist, but the playable audio itself.
     if (!db.objectStoreNames.contains("localTracks")) db.createObjectStore("localTracks", { keyPath: "id" });
   };
   req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); loadLocalTracksFromDB(); };
@@ -2575,17 +3441,19 @@ async function getOfflineSrc(song) {
   });
 }
 
+// Downloads a song for offline playback. For museek/vistanaij tracks, the
+// stream URL is resolved first since the raw stream_ref isn't a fetchable
+// audio URL on its own.
 async function downloadSongOffline(song, opts = {}) {
   if (!offlineDB) { if (!opts.silent) showStatus("Offline storage unavailable."); return; }
   if (song._local) { if (!opts.silent) showStatus("Already a local file."); return; }
   if (!opts.silent) showStatus(`Saving "${song.title}" offline...`);
   try {
-    const res = await fetch(song.stream_url);
+    const src = song._src === "vistanaij" || song.stream_ref ? await resolveVistanaijStream(song) : song.stream_url;
+    const res = await fetch(src);
     if (!res.ok) throw new Error("fetch failed: " + res.status);
     const blob = await res.blob();
     const record = { uid: uidFor(song), title: song.title, artist: song.artist, image: song.image, stream_url: song.stream_url, songId: song.id, src: song._src, blob };
-    // Wrapped in a Promise so callers (like the bulk downloader below) can
-    // actually `await` completion instead of racing ahead of the write.
     await new Promise((resolve, reject) => {
       const tx = offlineDB.transaction("tracks", "readwrite");
       tx.objectStore("tracks").put(record);
@@ -2604,7 +3472,7 @@ async function downloadPlaylistOffline() {
   const songs = getPlaylistSongs(currentPlaylistCtx).filter(s => !s._local);
   if (!songs.length) { showStatus("Nothing to download here."); return; }
   const total = songs.length;
-  const CONCURRENCY = 4; // a handful in flight at once — fast without hammering a weak connection
+  const CONCURRENCY = 4;
   let done = 0, failed = 0, queueIdx = 0;
   showStatus(`Saving 0/${total}...`, 60000);
 
@@ -2677,10 +3545,38 @@ function getOrCreateDeviceId() {
   return id;
 }
 
+// Applies whatever premium status was last cached to localStorage, before
+// any network call resolves. This means isPlaybackAllowed() has a sane
+// answer instantly on load instead of defaulting to "blocked" while
+// waiting on a slow connection.
+const PREMIUM_CACHE_KEY = "lumic_premium_cache";
+let cachedPremiumStatus = null;
+
+function applyCachedPremiumStatus() {
+  try {
+    const raw = localStorage.getItem(PREMIUM_CACHE_KEY);
+    if (raw) cachedPremiumStatus = JSON.parse(raw);
+  } catch (e) { cachedPremiumStatus = null; }
+}
+
+function savePremiumCache() {
+  try {
+    cachedPremiumStatus = {
+      is_premium: !!(currentProfile && currentProfile.is_premium),
+      trial_ends_at: currentProfile ? currentProfile.trial_ends_at : null,
+      subscription_status: currentSubscription ? currentSubscription.status : null,
+      subscription_trial_ends_at: currentSubscription ? currentSubscription.trial_ends_at : null,
+      current_period_end: currentSubscription ? currentSubscription.current_period_end : null,
+      cached_at: Date.now()
+    };
+    localStorage.setItem(PREMIUM_CACHE_KEY, JSON.stringify(cachedPremiumStatus));
+  } catch (e) {}
+}
+
 async function bootAuth() {
   deviceId = getOrCreateDeviceId();
   const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) return; // not signed in — app still works for browsing where applicable
+  if (!session) return;
   currentUser = session.user;
 
   const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
@@ -2690,6 +3586,7 @@ async function bootAuth() {
 
   await claimDeviceSession();
   await loadSubscription();
+  savePremiumCache(); // fresh DB answer now cached for next load / poor network
   await checkReferralUnlock();
   refreshNotifications();
 
@@ -2698,11 +3595,9 @@ async function bootAuth() {
   premiumCheckTimer && clearInterval(premiumCheckTimer);
   premiumCheckTimer = setInterval(() => { if (!isPlaybackAllowed() && !activeAudio.paused) { activeAudio.pause(); showPremiumBlock(); } }, 20000);
   setInterval(refreshNotifications, 20000);
+  setInterval(savePremiumCache, 60000); // keep the cache fresh in the background
 }
 
-// Writes/overwrites this user's single active-session row with our device id.
-// Logging in elsewhere later will overwrite it again, which is what
-// pollDeviceSession() below detects to sign this device out.
 async function claimDeviceSession() {
   try {
     await supabaseClient.from("sessions").upsert({
@@ -2735,19 +3630,35 @@ async function loadSubscription() {
   } catch (e) { currentSubscription = null; }
 }
 
-// Single source of truth for "is this user allowed to play music right now".
+// Single source of truth for "is this user allowed to play music right
+// now". Prefers live currentProfile/currentSubscription once bootAuth has
+// resolved; falls back to the localStorage cache before that (or if the
+// person is offline / on a slow connection), rather than defaulting to a
+// hard block.
 function isPlaybackAllowed() {
-  if (!currentUser || !currentProfile) return true; // not signed in yet / guest-safe default
-  if (currentProfile.is_premium) return true; // referral or payment flag
+  if (!currentUser && !cachedPremiumStatus) return true; // guest / no info yet — don't block
   const now = Date.now();
-  if (currentSubscription) {
-    if (currentSubscription.status === "active" && currentSubscription.current_period_end && new Date(currentSubscription.current_period_end).getTime() > now) return true;
-    if (currentSubscription.status === "trial" && currentSubscription.trial_ends_at && new Date(currentSubscription.trial_ends_at).getTime() > now) return true;
+
+  if (currentProfile) {
+    if (currentProfile.is_premium) return true;
+    if (currentSubscription) {
+      if (currentSubscription.status === "active" && currentSubscription.current_period_end && new Date(currentSubscription.current_period_end).getTime() > now) return true;
+      if (currentSubscription.status === "trial" && currentSubscription.trial_ends_at && new Date(currentSubscription.trial_ends_at).getTime() > now) return true;
+      return false;
+    }
+    if (currentProfile.trial_ends_at && new Date(currentProfile.trial_ends_at).getTime() > now) return true;
     return false;
   }
-  // No subscription row yet — fall back to the profile-level trial window.
-  if (currentProfile.trial_ends_at && new Date(currentProfile.trial_ends_at).getTime() > now) return true;
-  return false;
+
+  // Live profile hasn't loaded yet (slow/offline) — trust the cache.
+  if (cachedPremiumStatus) {
+    if (cachedPremiumStatus.is_premium) return true;
+    if (cachedPremiumStatus.current_period_end && new Date(cachedPremiumStatus.current_period_end).getTime() > now) return true;
+    if (cachedPremiumStatus.subscription_trial_ends_at && new Date(cachedPremiumStatus.subscription_trial_ends_at).getTime() > now) return true;
+    if (cachedPremiumStatus.trial_ends_at && new Date(cachedPremiumStatus.trial_ends_at).getTime() > now) return true;
+    return false;
+  }
+  return true;
 }
 
 function showPremiumBlock() {
@@ -2762,7 +3673,7 @@ async function checkReferralUnlock() {
   const { count } = await supabaseClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", currentUser.id);
   if ((count || 0) >= REFERRALS_NEEDED) {
     const { data, error } = await supabaseClient.from("profiles").update({ is_premium: true, premium_source: "referral" }).eq("id", currentUser.id).select().maybeSingle();
-    if (!error && data) { currentProfile = data; showStatus("Premium unlocked — thanks for the referrals!"); }
+    if (!error && data) { currentProfile = data; savePremiumCache(); showStatus("Premium unlocked — thanks for the referrals!"); }
   }
 }
 
@@ -2776,6 +3687,7 @@ async function renderProfileView() {
   document.getElementById("profileReferralShareUid").innerText = currentProfile.username;
   document.getElementById("profileMemberSince").innerText = new Date(currentProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   renderGemBadges();
+  initSettingsToggles();
 
   if (currentProfile.referred_by) {
     const { data: referrer } = await supabaseClient.from("profiles").select("username").eq("id", currentProfile.referred_by).maybeSingle();
@@ -2872,6 +3784,7 @@ async function finalizePaymentClientSide(reference) {
     currentSubscription = sub;
     const { data: prof } = await supabaseClient.from("profiles").update({ premium_source: "payment" }).eq("id", currentUser.id).select().maybeSingle();
     if (prof) currentProfile = prof;
+    savePremiumCache();
     renderProfilePremiumCard();
     showStatus("Payment successful — Premium unlocked!");
   } catch (e) {
