@@ -189,12 +189,6 @@
 
     <!-- VIEW: HOME -->
     <section id="view-home" class="space-y-8">
-          <!-- Hot Albums: glassmorphism rectangular slideshow, priority Nigerian artists -->
-      <div id="hotAlbumsSection" class="hidden">
-        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">🔥 Hot Albums Nigeria</h2>
-        <div id="hotAlbumsList" class="flex gap-3 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
-        <div id="hotAlbumsDots" class="flex items-center justify-center gap-1.5 mt-2"></div>
-      </div>
       <div id="recentlyPlayedSection" class="hidden">
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Recently played</h2>
         <div id="recentlyPlayedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
@@ -206,7 +200,12 @@
         <div id="recommendedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
       </div>
 
-    
+      <!-- Hot Albums: glassmorphism rectangular slideshow, priority Nigerian artists -->
+      <div id="hotAlbumsSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">🔥 Hot Albums Nigeria</h2>
+        <div id="hotAlbumsList" class="flex gap-3 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+        <div id="hotAlbumsDots" class="flex items-center justify-center gap-1.5 mt-2"></div>
+      </div>
 
       <!-- New Albums -->
       <div id="newAlbumsSection" class="hidden">
@@ -514,17 +513,6 @@
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="autoDownloadToggle" onchange="onAutoDownloadToggle()">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-sm font-semibold text-white">Wi-Fi only</p>
-            <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Skip auto-saving on mobile data to protect your data plan.</p>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="wifiOnlyToggle" checked onchange="onWifiOnlyToggle()">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -860,9 +848,8 @@ const LASTFM_API_KEY = "8377c57bc979230955dfb2985b64b6d1";
 // names for a row to pull real tracks in; falls back to the artist's other
 // songs if nothing is tagged yet.
 const NEW_ALBUMS = [
- { name: "Oriade",    artist: "davido", cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" },
-  { name: "5ive Star", artist: "Davido", cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300" }
- 
+  { name: "5ive Star", artist: "Davido", cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300" },
+  { name: "Oriade",    artist: "davido", cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" }
 ];
 
 const PLACEHOLDER_IMAGES = [
@@ -907,8 +894,8 @@ function writeListCache(key, data) {
 
 // Priority artists — weighted so major/trending Nigerian acts surface more
 // often in Recommended For You and lead the Hot Albums rail.
-const PRIORITY_ARTISTS = ["Asake", "davido", "wizkid", "Zlatan", "Burna Boy", "Tems", "Ayra Starr", "Seyi Vibez", "Odumodu Blvck"];
-const HOT_ALBUM_PRIORITY = ["Asake", "davido", "Seyi Vibez", "Tems", "Ayra Starr", "Odumodu Blvck"];
+const PRIORITY_ARTISTS = ["Davido", "Wizkid", "Asake", "Zlatan", "Burna Boy", "Tems", "Ayra Starr", "Seyi Vibez", "Odumodu Blvck"];
+const HOT_ALBUM_PRIORITY = ["Davido", "Asake", "Seyi Vibez", "Tems", "Ayra Starr", "Odumodu Blvck"];
 
 // Curated playlists
 const PLAYLIST_PRESETS = {
@@ -985,7 +972,7 @@ let recentSongs = JSON.parse(localStorage.getItem("lumic_recent") || "[]");
 let recentSearches = JSON.parse(localStorage.getItem("lumic_searches") || "[]");
 let userPlaylists = JSON.parse(localStorage.getItem("lumic_playlists") || "{}");
 let autoDownloadEnabled = localStorage.getItem("lumic_auto_download") === "1";
-let wifiOnlyDownloads = localStorage.getItem("lumic_wifi_only") !== "0"; // defaults to true
+let backendDownloadedMeta = []; // metadata of songs downloaded on ANY of this account's devices
 
 // ==== Auth / profile / premium / device state ====
 let currentUser = null;
@@ -2122,38 +2109,24 @@ function setupAudioListeners(audio) {
 }
 
 // ==================== AUTO-DOWNLOAD ====================
-// Fires once per track, at the 30-second mark, if the toggle is on. If
-// wifi-only is also on, checks navigator.connection when available; when
-// the Network Information API isn't supported (Safari/iOS), we fall back
-// to allowing the save rather than silently never saving anything.
+// Fires once per track, at the 30-second mark, if the toggle is on.
 function maybeAutoDownloadCurrentTrack(currentTime) {
   if (!autoDownloadEnabled || !currentTrack || currentTrack._local) return;
   if (currentTime < 30) return;
   const uid = uidFor(currentTrack);
   if (autoDownloadTriggeredForUid === uid) return;
   autoDownloadTriggeredForUid = uid;
-
-  if (wifiOnlyDownloads && navigator.connection && navigator.connection.type) {
-    const t = navigator.connection.type;
-    if (t !== "wifi" && t !== "ethernet") return; // on cellular, skip silently
-  }
   downloadSongOffline(currentTrack, { silent: true }).catch(() => {});
 }
 
 function initSettingsToggles() {
   const autoBox = document.getElementById("autoDownloadToggle");
-  const wifiBox = document.getElementById("wifiOnlyToggle");
   if (autoBox) autoBox.checked = autoDownloadEnabled;
-  if (wifiBox) wifiBox.checked = wifiOnlyDownloads;
 }
 function onAutoDownloadToggle() {
   autoDownloadEnabled = document.getElementById("autoDownloadToggle").checked;
   localStorage.setItem("lumic_auto_download", autoDownloadEnabled ? "1" : "0");
   showStatus(autoDownloadEnabled ? "Auto-save turned on" : "Auto-save turned off");
-}
-function onWifiOnlyToggle() {
-  wifiOnlyDownloads = document.getElementById("wifiOnlyToggle").checked;
-  localStorage.setItem("lumic_wifi_only", wifiOnlyDownloads ? "1" : "0");
 }
 
 function skipBrokenTrack() {
@@ -2505,6 +2478,14 @@ function toggleLike(song, e) {
     if (e && e.currentTarget) spawnHeartBurst(e.currentTarget);
   } else {
     showStatus("Removed from Favourites");
+  }
+  // Push to the backend so Favourites follow the account across devices.
+  if (currentUser) {
+    if (wasLiked) {
+      supabaseClient.from("liked_songs").delete().eq("user_id", currentUser.id).eq("uid", uidFor(song)).then(() => {}).catch(() => {});
+    } else {
+      supabaseClient.from("liked_songs").upsert({ user_id: currentUser.id, uid: uidFor(song), song }, { onConflict: "user_id,uid" }).then(() => {}).catch(() => {});
+    }
   }
 }
 function spawnHeartBurst(wrapEl) {
@@ -3067,6 +3048,7 @@ function renderPlaylistPickerList() {
         showStatus(`Added to ${pl.name}`);
       }
       localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+      pushPlaylistToBackend(id, pl);
       closePlaylistPicker();
     };
     list.appendChild(row);
@@ -3212,6 +3194,7 @@ function confirmCreatePlaylist() {
     else if (actionSheetTarget) userPlaylists[id].songs.push(actionSheetTarget);
   }
   localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+  pushPlaylistToBackend(id, userPlaylists[id]);
   renderUserPlaylists();
   showStatus(`Created "${name}"`);
   document.getElementById("createPlaylistModal").classList.add("hidden");
@@ -3326,10 +3309,22 @@ function removeLocalSong(index) {
 // ==================== PLAYLIST DETAIL ====================
 function getPlaylistSongs(ctxId) {
   if (ctxId === "__favorites") return likedSongs;
-  if (ctxId === "__offline") return offlineSongsMeta;
+  if (ctxId === "__offline") return getMergedDownloadedList();
   if (ctxId === "__local") return localSongs;
   if (typeof ctxId === "string" && ctxId.startsWith("preset:")) return currentPlaylistPresetSongs;
   return (userPlaylists[ctxId] && userPlaylists[ctxId].songs) || [];
+}
+
+// Union of songs actually downloaded on THIS device (playable offline
+// right now) and everything the account has downloaded on any device
+// (synced from the backend). Tapping one that isn't cached locally yet
+// just streams normally until "Save offline" is tapped again on this
+// device — see downloadSongOffline / resolvePlaybackSrc.
+function getMergedDownloadedList() {
+  const seen = new Set(offlineSongsMeta.map(uidFor));
+  const merged = [...offlineSongsMeta];
+  backendDownloadedMeta.forEach(s => { if (!seen.has(uidFor(s))) { merged.push(s); seen.add(uidFor(s)); } });
+  return merged;
 }
 function getPlaylistName(ctxId) {
   if (ctxId === "__favorites") return "Favourites";
@@ -3348,12 +3343,27 @@ function removeSongFromPlaylist(playlistId, song) {
   if (!pl) return;
   pl.songs = pl.songs.filter(s => uidFor(s) !== uidFor(song));
   localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+  pushPlaylistToBackend(playlistId, pl);
   showStatus(`Removed from ${pl.name}`);
   if (currentPlaylistCtx === playlistId) {
     document.getElementById("playlistMeta").innerText = `${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}`;
     renderPlaylistSongsList(pl.songs, { removable: true, playlistId });
   }
   renderUserPlaylists();
+}
+
+// Pushes one playlist's current name+songs up to the backend so it's the
+// same on every device signed into this account. Fire-and-forget — local
+// storage + the UI have already been updated by the caller.
+function pushPlaylistToBackend(playlistId, pl) {
+  if (!currentUser || !pl) return;
+  supabaseClient.from("user_playlists").upsert({
+    id: playlistId,
+    user_id: currentUser.id,
+    name: pl.name,
+    songs: pl.songs,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "id" }).then(() => {}).catch(() => {});
 }
 
 function addAllCurrentPlaylistSongs() {
@@ -3426,8 +3436,14 @@ function refreshOfflineMeta() {
   const req = tx.objectStore("tracks").getAll();
   req.onsuccess = () => {
     offlineSongsMeta = (req.result || []).map(r => ({ title: r.title, artist: r.artist, image: r.image, stream_url: r.stream_url, id: r.songId, _src: r.src }));
-    document.getElementById("offlineCount").innerText = `${offlineSongsMeta.length} song${offlineSongsMeta.length === 1 ? "" : "s"} saved`;
+    updateOfflineCountDisplay();
   };
+}
+
+function updateOfflineCountDisplay() {
+  const count = getMergedDownloadedList().length;
+  const el = document.getElementById("offlineCount");
+  if (el) el.innerText = `${count} song${count === 1 ? "" : "s"} saved`;
 }
 
 async function getOfflineSrc(song) {
@@ -3462,6 +3478,17 @@ async function downloadSongOffline(song, opts = {}) {
     });
     refreshOfflineMeta();
     if (!opts.silent) showStatus(`Saved "${song.title}"`);
+    // Sync the download to the backend so it's visible in "Downloaded" on
+    // every device signed into this account — the audio blob itself stays
+    // local per-device, but the entry (and the option to re-download it)
+    // follows the account.
+    if (currentUser) {
+      supabaseClient.from("downloaded_songs").upsert({ user_id: currentUser.id, uid: uidFor(song), song }, { onConflict: "user_id,uid" })
+        .then(() => {
+          if (!backendDownloadedMeta.some(s => uidFor(s) === uidFor(song))) backendDownloadedMeta.push(song);
+          updateOfflineCountDisplay();
+        }).catch(() => {});
+    }
   } catch (e) {
     if (!opts.silent) showStatus("Couldn't save this track.");
     throw e;
@@ -3589,6 +3616,7 @@ async function bootAuth() {
   savePremiumCache(); // fresh DB answer now cached for next load / poor network
   await checkReferralUnlock();
   refreshNotifications();
+  syncAccountLibraryFromBackend(); // liked songs, playlists & downloads follow the account across devices
 
   sessionPollTimer && clearInterval(sessionPollTimer);
   sessionPollTimer = setInterval(pollDeviceSession, 15000);
@@ -3628,6 +3656,89 @@ async function loadSubscription() {
     const { data } = await supabaseClient.from("premium_subscriptions").select("*").eq("user_id", currentUser.id).maybeSingle();
     currentSubscription = data || null;
   } catch (e) { currentSubscription = null; }
+}
+
+// ==================== ACCOUNT LIBRARY SYNC (liked songs, playlists, downloads) ====================
+// Runs once per login. Local data (already painted instantly from
+// localStorage/IndexedDB) is merged with whatever's on the backend for
+// this account: anything only on the backend gets pulled down, anything
+// only local gets pushed up. From then on every like/playlist edit/
+// download pushes to the backend immediately (see toggleLike,
+// pushPlaylistToBackend, downloadSongOffline) so a fresh device catches up
+// automatically the next time it signs in.
+async function syncAccountLibraryFromBackend() {
+  if (!currentUser) return;
+  await Promise.all([
+    syncLikedSongsFromBackend(),
+    syncPlaylistsFromBackend(),
+    syncDownloadedFromBackend()
+  ]);
+}
+
+async function syncLikedSongsFromBackend() {
+  try {
+    const { data, error } = await supabaseClient.from("liked_songs").select("song, uid").eq("user_id", currentUser.id);
+    if (error || !data) return;
+    const backendUids = new Set(data.map(r => r.uid));
+    const localUids = new Set(likedSongs.map(uidFor));
+
+    // Pull down anything the backend has that this device doesn't.
+    data.forEach(r => { if (!localUids.has(r.uid)) likedSongs.push(r.song); });
+    saveLikes();
+    updateLikeButtons();
+
+    // Push up anything local that the backend doesn't have yet.
+    const toPush = likedSongs.filter(s => !backendUids.has(uidFor(s)));
+    if (toPush.length) {
+      await supabaseClient.from("liked_songs").upsert(
+        toPush.map(s => ({ user_id: currentUser.id, uid: uidFor(s), song: s })),
+        { onConflict: "user_id,uid" }
+      );
+    }
+  } catch (e) {}
+}
+
+async function syncPlaylistsFromBackend() {
+  try {
+    const { data, error } = await supabaseClient.from("user_playlists").select("id, name, songs").eq("user_id", currentUser.id);
+    if (error || !data) return;
+    const backendIds = new Set(data.map(r => r.id));
+
+    // Pull down playlists that exist on the account but not this device.
+    data.forEach(r => {
+      if (!userPlaylists[r.id]) userPlaylists[r.id] = { name: r.name, songs: r.songs || [] };
+    });
+    localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+    renderUserPlaylists();
+
+    // Push up any playlists created locally before this sync ran.
+    const toPush = Object.keys(userPlaylists).filter(id => !backendIds.has(id));
+    if (toPush.length) {
+      await supabaseClient.from("user_playlists").upsert(
+        toPush.map(id => ({ id, user_id: currentUser.id, name: userPlaylists[id].name, songs: userPlaylists[id].songs, updated_at: new Date().toISOString() })),
+        { onConflict: "id" }
+      );
+    }
+  } catch (e) {}
+}
+
+async function syncDownloadedFromBackend() {
+  try {
+    const { data, error } = await supabaseClient.from("downloaded_songs").select("song, uid").eq("user_id", currentUser.id);
+    if (error || !data) return;
+    backendDownloadedMeta = data.map(r => r.song);
+    updateOfflineCountDisplay();
+
+    // Push up anything downloaded locally (e.g. as a guest) before login.
+    const backendUids = new Set(data.map(r => r.uid));
+    const localOnly = offlineSongsMeta.filter(s => !backendUids.has(uidFor(s)));
+    if (localOnly.length) {
+      await supabaseClient.from("downloaded_songs").upsert(
+        localOnly.map(s => ({ user_id: currentUser.id, uid: uidFor(s), song: s })),
+        { onConflict: "user_id,uid" }
+      );
+    }
+  } catch (e) {}
 }
 
 // Single source of truth for "is this user allowed to play music right
