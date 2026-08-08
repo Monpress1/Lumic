@@ -35,6 +35,13 @@
     #lyricsScroll { scroll-behavior:smooth; overflow-y:auto; max-height:340px; padding:8px 0; }
     #lyricsScroll::-webkit-scrollbar { display:none; }
 
+    /* Fullscreen lyrics zoom */
+    .lyric-line-full { transition:all 0.4s ease; padding:10px 0; color:rgba(255,255,255,0.28); font-size:26px; font-weight:800; line-height:1.35; cursor:pointer; }
+    .lyric-line-full.active { color:#fff; transform:scale(1.02); }
+    .lyric-line-full.past { color:rgba(255,255,255,0.4); }
+    #lyricsFullscreenScroll { scroll-behavior:smooth; }
+    #lyricsFullscreenScroll::-webkit-scrollbar { display:none; }
+
     /* Progress bar custom style */
     input[type=range] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; }
     input[type=range]::-webkit-slider-runnable-track { background:rgba(255,255,255,0.12); height:4px; border-radius:2px; }
@@ -165,6 +172,12 @@
     .hot-album-slide { width:82vw; max-width:320px; flex-shrink:0; scroll-snap-align:start; }
     .hot-album-dot { width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,0.18); transition:all .25s; }
     .hot-album-dot.active { width:16px; background:#10b981; }
+
+    /* ===== Status toast ===== */
+    #status:not(.hidden) #statusInner { animation: toastIn .35s cubic-bezier(.2,.9,.3,1.3) both; }
+    #status.hide #statusInner { animation: toastOut .22s ease forwards; }
+    @keyframes toastIn { from { opacity:0; transform: translateY(-14px) scale(.95); } to { opacity:1; transform: translateY(0) scale(1); } }
+    @keyframes toastOut { from { opacity:1; transform: translateY(0) scale(1); } to { opacity:0; transform: translateY(-10px) scale(.96); } }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col justify-between">
@@ -185,11 +198,27 @@
       </div>
     </header>
 
-    <div id="status" class="hidden text-center text-xs font-semibold py-2 px-4 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-4 transition-all sticky top-14 z-20"></div>
+    <div id="status" class="hidden fixed left-1/2 top-4 z-[120] -translate-x-1/2 max-w-[92%] px-2">
+      <div id="statusInner" class="flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl border" style="background:rgba(20,20,26,0.94); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-color:rgba(255,255,255,0.08);">
+        <i id="statusIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm flex-shrink-0"></i>
+        <span id="statusText" class="text-xs font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis"></span>
+      </div>
+    </div>
 
     <!-- VIEW: HOME -->
     <section id="view-home" class="space-y-8">
-        
+
+        <div id="moodFilterSection" class="hidden space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-extrabold text-white tracking-tight">Pick a mood</h2>
+            <button onclick="filterCategory('all')" class="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full transition hover:bg-white/10">
+              <i class="fa-solid fa-xmark"></i> Clear
+            </button>
+          </div>
+          <div id="moodCardsGrid" class="grid grid-cols-2 gap-3"></div>
+        </div>
+
+        <div id="homeMainContent">
         <div id="hotAlbumsSection" class="hidden">
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">🔥 Hot Albums Nigeria</h2>
         <div id="hotAlbumsList" class="flex gap-3 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
@@ -356,7 +385,16 @@
             <div><h4 class="font-bold text-sm text-white">Global Pop</h4><p class="text-[10px] text-slate-400 mt-0.5">Chart toppers worldwide</p></div>
             <i class="fa-solid fa-star text-purple-300 text-lg"></i>
           </div>
+          <div onclick="openCuratedPlaylistView('upbeat_energy','Upbeat & Energetic')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Upbeat & Energetic</h4><p class="text-[10px] text-slate-400 mt-0.5">Feel-good bangers</p></div>
+            <i class="fa-solid fa-bolt text-amber-400 text-lg"></i>
+          </div>
+          <div onclick="openCuratedPlaylistView('workout_bangers','Workout Bangers')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+            <div><h4 class="font-bold text-sm text-white">Workout Bangers</h4><p class="text-[10px] text-slate-400 mt-0.5">Gym-ready energy</p></div>
+            <i class="fa-solid fa-dumbbell text-emerald-400 text-lg"></i>
+          </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -465,6 +503,7 @@
         <button onclick="addAllCurrentPlaylistSongs()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-square-plus text-sm"></i></button>
         <button onclick="sharePlaylistWithFriends()" id="playlistShareBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-share-nodes text-sm"></i></button>
         <button onclick="downloadPlaylistOffline()" id="playlistDownloadBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-download text-sm"></i></button>
+        <button onclick="openSortMenu()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-arrow-down-wide-short text-sm"></i></button>
       </div>
       <div id="playlistSongsList" class="space-y-2"></div>
     </section>
@@ -598,6 +637,7 @@
           <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Now Playing</p>
         </div>
         <div class="flex items-center gap-1">
+          <button onclick="openSleepTimerModal()" id="sleepTimerBtn" class="p-2 text-slate-300 hover:text-white transition"><i class="fa-solid fa-moon text-base"></i></button>
           <button onclick="toggleQueueDrawer()" class="p-2 text-slate-300 hover:text-white relative">
             <i class="fa-solid fa-list-ul text-base"></i>
             <span id="queueBadge" class="absolute top-0 right-0 w-4 h-4 rounded-full bg-emerald-500 text-black text-[8px] font-black flex items-center justify-center hidden">0</span>
@@ -653,10 +693,16 @@
         <div class="mb-8">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-black uppercase tracking-widest text-slate-400"><i class="fa-solid fa-music mr-2 text-emerald-400"></i>Lyrics</h3>
-            <button id="syncLyricsBtn" onclick="syncLyricsForCurrentTrack()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 px-2.5 py-1 rounded-full transition">
-              <i id="syncLyricsIcon" class="fa-solid fa-arrows-rotate text-[10px]"></i>
-              <span id="syncLyricsLabel">Sync lyrics</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button onclick="openLyricsFullscreen()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 px-2.5 py-1 rounded-full transition">
+                <i class="fa-solid fa-up-right-and-down-left-from-center text-[10px]"></i>
+                <span>Expand</span>
+              </button>
+              <button id="syncLyricsBtn" onclick="syncLyricsForCurrentTrack()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 px-2.5 py-1 rounded-full transition">
+                <i id="syncLyricsIcon" class="fa-solid fa-arrows-rotate text-[10px]"></i>
+                <span id="syncLyricsLabel">Sync lyrics</span>
+              </button>
+            </div>
           </div>
           <div class="glass-card rounded-2xl p-4" style="background:rgba(16,185,129,0.03); border:1px solid rgba(16,185,129,0.08);">
             <div id="lyricsScroll" class="no-scrollbar">
@@ -680,6 +726,19 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- LYRICS FULLSCREEN (Spotify-style zoom) -->
+  <div id="lyricsFullscreenScreen" class="fixed inset-0 z-[62] transform translate-y-full transition-transform duration-300 flex flex-col max-w-2xl mx-auto" style="background:#09090b;">
+    <div class="p-4 flex items-center justify-between border-b border-white/5">
+      <button onclick="closeLyricsFullscreen()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-chevron-down text-lg"></i></button>
+      <div class="text-center min-w-0 px-2">
+        <p id="lyricsFullscreenTitle" class="text-sm font-bold text-white truncate">---</p>
+        <p id="lyricsFullscreenArtist" class="text-[11px] text-slate-400 truncate">---</p>
+      </div>
+      <button onclick="syncLyricsForCurrentTrack()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-rotate text-sm"></i></button>
+    </div>
+    <div id="lyricsFullscreenScroll" class="flex-1 overflow-y-auto no-scrollbar px-6 py-10"></div>
   </div>
 
   <!-- ACTION SHEET -->
@@ -713,6 +772,10 @@
           <div class="as-icon bg-fuchsia-500/15"><i class="fa-solid fa-share-nodes text-fuchsia-400"></i></div>
           <span class="text-sm text-white font-medium">Share with friends</span>
         </div>
+        <div class="as-item" onclick="actionShareToStory()">
+          <div class="as-icon bg-indigo-500/15"><i class="fa-solid fa-share-from-square text-indigo-400"></i></div>
+          <span class="text-sm text-white font-medium">Share to your story</span>
+        </div>
         <div class="as-item" onclick="actionToggleLike()">
           <div class="as-icon bg-pink-500/15"><i class="fa-solid fa-heart text-pink-400"></i></div>
           <span id="asLikeLabel" class="text-sm text-white font-medium">Add to favourites</span>
@@ -728,6 +791,14 @@
         <div id="asRemoveFromPlaylistItem" class="as-item hidden" onclick="actionRemoveFromPlaylist()">
           <div class="as-icon bg-red-500/15"><i class="fa-solid fa-trash-can text-red-400"></i></div>
           <span class="text-sm text-white font-medium">Remove from this playlist</span>
+        </div>
+        <div id="asMoveToTopItem" class="as-item hidden" onclick="actionMoveQueueItem('top')">
+          <div class="as-icon bg-teal-500/15"><i class="fa-solid fa-arrow-up-to-line text-teal-400"></i></div>
+          <span class="text-sm text-white font-medium">Move to top of queue</span>
+        </div>
+        <div id="asMoveToBottomItem" class="as-item hidden" onclick="actionMoveQueueItem('bottom')">
+          <div class="as-icon bg-teal-500/15"><i class="fa-solid fa-arrow-down-to-line text-teal-400"></i></div>
+          <span class="text-sm text-white font-medium">Move to bottom of queue</span>
         </div>
         <div id="asRemoveFromQueueItem" class="as-item hidden" onclick="actionRemoveFromQueue()">
           <div class="as-icon bg-red-500/15"><i class="fa-solid fa-list-ol text-red-400"></i></div>
@@ -796,6 +867,49 @@
       <div class="flex gap-3">
         <button onclick="closeCreatePlaylistModal()" class="flex-1 py-3 rounded-2xl bg-white/10 text-slate-300 font-semibold text-sm hover:bg-white/20 transition">Cancel</button>
         <button onclick="confirmCreatePlaylist()" class="flex-1 py-3 rounded-2xl bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLEEP TIMER -->
+  <div id="sleepTimerModal" class="modal-overlay hidden" onclick="closeSleepTimerModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 class="font-black text-lg text-white mb-1">Sleep timer</h3>
+      <p id="sleepTimerStatusLabel" class="text-xs text-slate-400 mb-5">Pause playback automatically</p>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <button onclick="setSleepTimer(5)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">5 min</button>
+        <button onclick="setSleepTimer(15)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">15 min</button>
+        <button onclick="setSleepTimer(30)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">30 min</button>
+        <button onclick="setSleepTimer(45)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">45 min</button>
+        <button onclick="setSleepTimer(60)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">60 min</button>
+        <button onclick="setSleepTimer(90)" class="py-3 rounded-2xl bg-white/10 text-white font-bold text-sm hover:bg-white/20 transition">90 min</button>
+      </div>
+      <button onclick="setSleepTimer(0)" class="w-full py-3 rounded-2xl bg-rose-500/15 text-rose-300 font-bold text-sm hover:bg-rose-500/25 transition mb-2">Turn off</button>
+      <button onclick="closeSleepTimerModal()" class="w-full py-3 rounded-2xl bg-white/5 text-slate-400 font-semibold text-sm hover:bg-white/10 transition">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SORT BY -->
+  <div id="sortMenuModal" class="modal-overlay hidden" onclick="closeSortMenu(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 class="font-black text-lg text-white mb-4">Sort by</h3>
+      <div class="space-y-1">
+        <div class="as-item" onclick="applySort('default')">
+          <div class="as-icon bg-emerald-500/15"><i class="fa-solid fa-clock text-emerald-400"></i></div>
+          <span class="text-sm text-white font-medium">Date added</span>
+        </div>
+        <div class="as-item" onclick="applySort('az')">
+          <div class="as-icon bg-sky-500/15"><i class="fa-solid fa-arrow-down-a-z text-sky-400"></i></div>
+          <span class="text-sm text-white font-medium">Title A–Z</span>
+        </div>
+        <div class="as-item" onclick="applySort('artist')">
+          <div class="as-icon bg-violet-500/15"><i class="fa-solid fa-user text-violet-400"></i></div>
+          <span class="text-sm text-white font-medium">Artist A–Z</span>
+        </div>
+        <div class="as-item" onclick="applySort('plays')">
+          <div class="as-icon bg-pink-500/15"><i class="fa-solid fa-fire text-pink-400"></i></div>
+          <span class="text-sm text-white font-medium">Most played</span>
+        </div>
       </div>
     </div>
   </div>
@@ -983,7 +1097,7 @@ function weightedShuffleByPriority(items, priorityList, getKey) {
 
 // Curated playlists
 const PLAYLIST_PRESETS = {
-  hot_hits_naija: ["asake","davido","bnxn","rema","seyi vibez","wizkid","burna boy","fireboy"],
+  hot_hits_naija: ["asake","davido","bnxn","rema","seyi vibez","wizkid","burna boy","fireboy","ayra starr","kizz daniel"],
   street_vibes: ["seyi vibez","portable","shallipopi","zinoleesky","naira marley","bella shmurda"],
   afro_top_100: ["burna boy","wizkid","tems","ayra starr","kizz daniel","rema","omah lay","victony"],
   asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn"],
@@ -993,16 +1107,18 @@ const PLAYLIST_PRESETS = {
   soul_indie: ["benson boone","lewis capaldi","charlie puth","john legend","sam smith","ed sheeran"],
   indie_sad: ["lewis capaldi","benson boone","james arthur","niall horan","lauv","conan gray"],
   pop_hits: ["taylor swift","ariana grande","dua lipa","the weeknd","post malone","harry styles"],
-  feel_good: ["pharrell williams","justin timberlake","charlie puth","bruno mars","dua lipa"],
+  feel_good: ["pharrell williams","justin timberlake","charlie puth","bruno mars","dua lipa","ckay","joeboy"],
   chill_vibes: ["johnny drille","chike","simi","asa","brymo","tems","ric hassani","praiz"],
-  party_turnup: ["kelvin momo","kabza de small","uncle waffles","shallipopi","asake"],
+  party_turnup: ["kelvin momo","kabza de small","uncle waffles","shallipopi","asake","davido"],
   amapiano_grooves: ["kabza de small","uncle waffles","tyler icu","dj maphorisa","musa keys","focalistic"],
   hiphop_naija: ["odumodublvck","blaqbonez","ladipoe","vector","ycee","phyno"],
   rnb_soul: ["chike","praiz","johnny drille","ric hassani","simi","tems"],
   gospel_praise: ["nathaniel bassey","sinach","mercy chinwo","frank edwards","dunsin oyekan"],
   throwback_2010s: ["davido","wizkid","psquare","flavour","9ice","iyanya","tiwa savage"],
   female_naija: ["tiwa savage","tems","ayra starr","simi","yemi alade","niniola"],
-  fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"]
+  fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"],
+  upbeat_energy: ["asake","davido","ckay","rema","kizz daniel","dua lipa","bruno mars","burna boy"],
+  workout_bangers: ["burna boy","asake","rema","dj neptune","olamide","zlatan","ayra starr","davido"]
 };
 
 // Only used if a live DB fetch for spotlight artists fails outright (e.g.
@@ -1080,6 +1196,22 @@ const CROSSFADE_SECONDS = 5;
 // gets auto-resumed by the watchdog below.
 let userInitiatedPause = false;
 
+// Sleep timer state
+let sleepTimerHandle = null;
+let sleepTimerEndsAt = null;
+
+// Sort-by state — tracks the "raw" (unsorted) list currently shown in
+// the playlist view, plus the render options it needs, so switching sort
+// modes can re-render instantly without re-fetching anything.
+let currentPlaylistSongsRaw = [];
+let currentPlaylistRenderOpts = {};
+let currentSortMode = "default";
+
+// Local per-device play counts, used only for the "Most played" sort —
+// frontend-only, no backend tracking involved.
+let playCounts = {};
+try { playCounts = JSON.parse(localStorage.getItem("lumic_play_counts") || "{}"); } catch (e) { playCounts = {}; }
+
 function uidFor(song) {
   if (!song) return "";
   if (song._local) return song.id ? `local_${song.id}` : `local_${song.title}_${song.artist}`;
@@ -1088,6 +1220,7 @@ function uidFor(song) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  ensureLocalFreeTrialStart();
   setupAudioListeners(audioA);
   setupAudioListeners(audioB);
   renderRecentlyPlayed();
@@ -1095,6 +1228,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderLocalFiles();
   renderArtistSpotlight();
   renderRecommended();
+  renderMoodCardsGrid();
   loadHotAlbums();
   loadNewAlbums();
   loadTop100Nigeria();
@@ -1137,6 +1271,10 @@ window.addEventListener("popstate", () => {
   }
   if (!document.getElementById("queueDrawer").classList.contains("translate-y-full")) {
     toggleQueueDrawer();
+    return;
+  }
+  if (!document.getElementById("lyricsFullscreenScreen").classList.contains("translate-y-full")) {
+    closeLyricsFullscreen();
     return;
   }
   if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
@@ -1183,22 +1321,73 @@ function filterCategory(cat) {
     if (c === activeCategory) chip.className = "px-4 py-1.5 rounded-full bg-emerald-500 text-black font-semibold text-xs transition flex-shrink-0";
     else chip.className = "px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0";
   });
+
+  const moodSection = document.getElementById("moodFilterSection");
+  const mainContent = document.getElementById("homeMainContent");
+  if (activeCategory === "mood") {
+    if (moodSection) moodSection.classList.remove("hidden");
+    if (mainContent) mainContent.classList.add("hidden");
+    return;
+  }
+  if (moodSection) moodSection.classList.add("hidden");
+  if (mainContent) mainContent.classList.remove("hidden");
+
   const categoryMap = {
     music: "pop_hits",
-    afro: "afro_top_100",
-    mood: "feel_good"
+    afro: "afro_top_100"
   };
   if (activeCategory === "all") return;
   const preset = categoryMap[activeCategory];
   if (preset) playCuratedPlaylist(preset);
 }
 
-function showStatus(msg, duration = 3000) {
+// Mood picker — tapping the "Moods" chip shows only these cards instead of
+// instantly auto-playing one fixed mix, so the person actually picks a
+// vibe rather than always landing on the same "feel_good" playlist.
+const MOOD_CARDS = [
+  { key: "feel_good", title: "Feel Good", sub: "Happy vibes only", icon: "fa-sun", color: "text-yellow-400" },
+  { key: "heartbreak_mix", title: "Heartbreak", sub: "Cry it out anthems", icon: "fa-heart-crack", color: "text-rose-400" },
+  { key: "upbeat_energy", title: "Upbeat & Energetic", sub: "High-energy feel-good hits", icon: "fa-bolt", color: "text-amber-400" },
+  { key: "workout_bangers", title: "Workout Bangers", sub: "Gym-ready energy", icon: "fa-dumbbell", color: "text-emerald-400" },
+  { key: "indie_sad", title: "Sad Indie", sub: "Late night feelings", icon: "fa-moon", color: "text-indigo-400" },
+  { key: "chill_vibes", title: "Chill & Acoustic", sub: "Relax & unwind", icon: "fa-cloud-moon", color: "text-slate-400" },
+  { key: "party_turnup", title: "Party & Amapiano", sub: "High energy basslines", icon: "fa-fire", color: "text-amber-400" },
+  { key: "rnb_soul", title: "R&B & Soul", sub: "Smooth vocals", icon: "fa-record-vinyl", color: "text-rose-400" }
+];
+
+function renderMoodCardsGrid() {
+  const grid = document.getElementById("moodCardsGrid");
+  if (!grid) return;
+  grid.innerHTML = MOOD_CARDS.map(m => `
+    <div onclick="openCuratedPlaylistView('${m.key}','${escapeHtml(m.title)}')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+      <div><h4 class="font-bold text-sm text-white">${escapeHtml(m.title)}</h4><p class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(m.sub)}</p></div>
+      <i class="fa-solid ${m.icon} ${m.color} text-lg"></i>
+    </div>
+  `).join("");
+}
+
+const STATUS_ICONS = { success: "fa-circle-check", error: "fa-circle-exclamation", info: "fa-circle-info" };
+const STATUS_COLORS = { success: "text-emerald-400", error: "text-rose-400", info: "text-sky-400" };
+
+function showStatus(msg, duration = 3000, type) {
+  if (!type) {
+    const lower = (msg || "").toLowerCase();
+    if (/(couldn't|failed|unavailable|error|blocked)/.test(lower)) type = "error";
+    else if (/(saved|added|created|playing|sent|copied|unlocked|synced|shuffled|resumed|removed|reconnecting)/.test(lower)) type = "success";
+    else type = "info";
+  }
   const status = document.getElementById("status");
-  status.innerText = msg;
-  status.classList.remove("hidden");
+  const icon = document.getElementById("statusIcon");
+  const text = document.getElementById("statusText");
+  text.innerText = msg;
+  icon.className = `fa-solid ${STATUS_ICONS[type]} ${STATUS_COLORS[type]} text-sm flex-shrink-0`;
+  status.classList.remove("hidden", "hide");
   clearTimeout(status._t);
-  status._t = setTimeout(() => status.classList.add("hidden"), duration);
+  clearTimeout(status._hideT);
+  status._t = setTimeout(() => {
+    status.classList.add("hide");
+    status._hideT = setTimeout(() => status.classList.add("hidden"), 220);
+  }, duration);
 }
 
 // ==================== ARTIST SPOTLIGHT (live, rotating from real catalog) ====================
@@ -1333,7 +1522,7 @@ async function renderRecommended() {
   // Zlatan...) by doubling their odds of being picked, without letting
   // them crowd out everything else.
   const weighted = [...candidateArtists, ...candidateArtists.filter(a => PRIORITY_ARTISTS.some(p => p.toLowerCase() === (a || "").toLowerCase()))];
-  candidateArtists = [...new Set(weighted)].sort(() => Math.random() - 0.5).slice(0, 8);
+  candidateArtists = [...new Set(weighted)].sort(() => Math.random() - 0.5).slice(0, 10);
 
   if (candidateArtists.length === 0) { if (!cached) section.classList.add("hidden"); return; }
   section.classList.remove("hidden");
@@ -1350,7 +1539,16 @@ async function renderRecommended() {
 
   const seen = new Set();
   let unique = picks.filter(t => { const u = uidFor(t); if (seen.has(u)) return false; seen.add(u); return true; });
-  unique = unique.sort(() => Math.random() - 0.5).slice(0, 15);
+  unique = unique.sort(() => Math.random() - 0.5);
+
+  // Hard cap of 2 tracks per artist in the final row — without this, a
+  // couple of prolific artists can end up filling most of the 15 slots.
+  const perArtistCount = {};
+  unique = unique.filter(t => {
+    const key = (t.artist || "").toLowerCase();
+    perArtistCount[key] = (perArtistCount[key] || 0) + 1;
+    return perArtistCount[key] <= 2;
+  }).slice(0, 15);
 
   if (unique.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
   renderRecommendedRow(unique, row);
@@ -1664,6 +1862,7 @@ async function openAlbumView(album) {
   }
 
   document.getElementById("playlistMeta").innerText = `${tracks.length} song${tracks.length === 1 ? "" : "s"} · ${album.artist}`;
+  setCurrentPlaylistSongs(tracks, { removable: false });
   renderPlaylistSongsList(tracks, { removable: false });
 }
 
@@ -1938,6 +2137,7 @@ async function openCuratedPlaylistView(presetKey, title) {
   if (currentPlaylistCtx !== ctxKey) return;
   currentPlaylistPresetSongs = songs;
   document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+  setCurrentPlaylistSongs(songs, { removable: false });
   if (songs.length === 0) {
     document.getElementById("playlistSongsList").innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Couldn't find tracks for this mix right now.</div>`;
   }
@@ -2051,6 +2251,9 @@ function playTrack(song, opts = {}) {
   userInitiatedPause = false;
   clearBufferingState();
   bumpPopularity(song);
+  const puid = uidFor(song);
+  playCounts[puid] = (playCounts[puid] || 0) + 1;
+  try { localStorage.setItem("lumic_play_counts", JSON.stringify(playCounts)); } catch (e) {}
 
   resolveImage(song).then(img => {
     document.getElementById("playerImg").src = img;
@@ -2121,6 +2324,45 @@ async function buildAutoQueue(song) {
       updateQueueDrawer();
     }
   } catch(e) {}
+}
+
+// ==================== SLEEP TIMER ====================
+function openSleepTimerModal() {
+  const label = document.getElementById("sleepTimerStatusLabel");
+  if (sleepTimerEndsAt) {
+    const minsLeft = Math.max(1, Math.ceil((sleepTimerEndsAt - Date.now()) / 60000));
+    label.innerText = `Currently set — playback pauses in ${minsLeft} min.`;
+  } else {
+    label.innerText = "Pause playback automatically";
+  }
+  document.getElementById("sleepTimerModal").classList.remove("hidden");
+  pushNavState("sleepTimer");
+}
+function closeSleepTimerModal(e) {
+  if (e && e.target !== document.getElementById("sleepTimerModal")) return;
+  document.getElementById("sleepTimerModal").classList.add("hidden");
+}
+function setSleepTimer(minutes) {
+  clearTimeout(sleepTimerHandle);
+  const btn = document.getElementById("sleepTimerBtn");
+  if (!minutes) {
+    sleepTimerEndsAt = null;
+    if (btn) btn.className = "p-2 text-slate-300 hover:text-white transition";
+    showStatus("Sleep timer turned off");
+    closeSleepTimerModal();
+    return;
+  }
+  sleepTimerEndsAt = Date.now() + minutes * 60000;
+  sleepTimerHandle = setTimeout(() => {
+    userInitiatedPause = true;
+    activeAudio.pause();
+    sleepTimerEndsAt = null;
+    if (btn) btn.className = "p-2 text-slate-300 hover:text-white transition";
+    showStatus("Sleep timer ended — playback paused", 4000);
+  }, minutes * 60000);
+  if (btn) btn.className = "p-2 text-emerald-400 hover:text-emerald-300 transition";
+  showStatus(`Sleep timer set for ${minutes} min`);
+  closeSleepTimerModal();
 }
 
 function togglePlayPause() {
@@ -2595,17 +2837,41 @@ function setSyncButtonState(state) {
   }
 }
 
+let lyricsLineWeights = []; // cumulative progress-fraction per line, weighted by line length
+
 function renderLyricsLines(text) {
   const scroll = document.getElementById("lyricsScroll");
+  const fullScroll = document.getElementById("lyricsFullscreenScroll");
   lyricsLines = text.split("\n").filter(l => l.trim().length > 0);
+
+  // Weight each line by character length (with a floor so short ad-libs
+  // aren't crushed to near-zero) instead of dividing the song evenly
+  // across all lines. This is still an estimate — we don't have real
+  // per-line timestamps (LRC data) from the lyrics source — but it tracks
+  // actual singing pace noticeably better than a flat uniform split.
+  const weights = lyricsLines.map(l => Math.max(l.trim().length, 8));
+  const totalWeight = weights.reduce((a, b) => a + b, 0) || 1;
+  let cum = 0;
+  lyricsLineWeights = weights.map(w => { cum += w; return cum / totalWeight; });
+
   scroll.innerHTML = "";
+  if (fullScroll) fullScroll.innerHTML = "";
   lyricsLines.forEach((line, i) => {
     const div = document.createElement("div");
     div.className = "lyric-line";
-    div.id = `lyric-line-${i}`;
+    div.dataset.lineIndex = i;
     div.innerText = line;
     div.onclick = () => alignLyricLine(i);
     scroll.appendChild(div);
+
+    if (fullScroll) {
+      const bigDiv = document.createElement("div");
+      bigDiv.className = "lyric-line-full";
+      bigDiv.dataset.lineIndex = i;
+      bigDiv.innerText = line;
+      bigDiv.onclick = () => alignLyricLine(i);
+      fullScroll.appendChild(bigDiv);
+    }
   });
   lyricsCurrentLine = -1;
   lyricsSyncOffset = 0;
@@ -2613,7 +2879,7 @@ function renderLyricsLines(text) {
 
 function alignLyricLine(i) {
   if (!lyricsLines.length || !activeAudio.duration) return;
-  const rawEstimate = Math.floor((activeAudio.currentTime / activeAudio.duration) * lyricsLines.length);
+  const rawEstimate = estimateLineFromProgress(activeAudio.currentTime / activeAudio.duration);
   lyricsSyncOffset += i - rawEstimate;
 
   lyricsCurrentLine = i;
@@ -2621,33 +2887,63 @@ function alignLyricLine(i) {
   showStatus("Lyrics synced to playback");
 }
 
+function estimateLineFromProgress(progress) {
+  if (!lyricsLineWeights.length) return 0;
+  let idx = lyricsLineWeights.findIndex(w => w >= progress);
+  if (idx === -1) idx = lyricsLineWeights.length - 1;
+  return idx;
+}
+
 const GLOW_WINDOW = 4;
 function applyLyricsWindow(centerLine) {
   const windowEnd = centerLine + GLOW_WINDOW - 1;
-  lyricsLines.forEach((_, idx) => {
-    const el = document.getElementById(`lyric-line-${idx}`);
-    if (!el) return;
-    if (idx < centerLine) el.className = "lyric-line past";
-    else if (idx <= windowEnd) el.className = "lyric-line active";
-    else el.className = "lyric-line";
+  document.querySelectorAll("[data-line-index]").forEach(el => {
+    const idx = parseInt(el.dataset.lineIndex, 10);
+    const isFull = el.classList.contains("lyric-line-full");
+    const base = isFull ? "lyric-line-full" : "lyric-line";
+    if (idx < centerLine) el.className = `${base} past`;
+    else if (idx <= windowEnd) el.className = `${base} active`;
+    else el.className = base;
   });
-  const activeLine = document.getElementById(`lyric-line-${centerLine}`);
+  const activeLine = document.querySelector(`#lyricsScroll [data-line-index="${centerLine}"]`);
   if (activeLine) {
     const scroll = document.getElementById("lyricsScroll");
     const lineTop = activeLine.offsetTop;
     const scrollTarget = lineTop - scroll.clientHeight / 2 + activeLine.clientHeight / 2;
     scroll.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
   }
+  const activeLineFull = document.querySelector(`#lyricsFullscreenScroll [data-line-index="${centerLine}"]`);
+  if (activeLineFull) {
+    const scrollFull = document.getElementById("lyricsFullscreenScroll");
+    if (scrollFull) {
+      const lineTop = activeLineFull.offsetTop;
+      const scrollTarget = lineTop - scrollFull.clientHeight / 2 + activeLineFull.clientHeight / 2;
+      scrollFull.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
+    }
+  }
 }
 
 function syncLyricsScroll(currentTime, duration) {
   if (!lyricsLines.length || !duration) return;
   const progress = currentTime / duration;
-  let estimatedLine = Math.floor(progress * lyricsLines.length) + lyricsSyncOffset;
+  let estimatedLine = estimateLineFromProgress(progress) + lyricsSyncOffset;
   estimatedLine = Math.max(0, Math.min(lyricsLines.length - 1, estimatedLine));
   if (estimatedLine === lyricsCurrentLine) return;
   lyricsCurrentLine = estimatedLine;
   applyLyricsWindow(estimatedLine);
+}
+
+// ==================== LYRICS FULLSCREEN (Spotify-style zoom) ====================
+function openLyricsFullscreen() {
+  if (!lyricsLines.length) { showStatus("No lyrics to expand yet."); return; }
+  document.getElementById("lyricsFullscreenTitle").innerText = currentTrack ? currentTrack.title : "";
+  document.getElementById("lyricsFullscreenArtist").innerText = currentTrack ? currentTrack.artist : "";
+  document.getElementById("lyricsFullscreenScreen").classList.remove("translate-y-full");
+  pushNavState("lyricsFullscreen");
+  if (lyricsCurrentLine >= 0) applyLyricsWindow(lyricsCurrentLine);
+}
+function closeLyricsFullscreen() {
+  document.getElementById("lyricsFullscreenScreen").classList.add("translate-y-full");
 }
 
 // ==================== ARTIST INFO (magazine style) ====================
@@ -3254,6 +3550,8 @@ function openActionSheet(song, e, opts = {}) {
 
   document.getElementById("asRemoveFromPlaylistItem").classList.toggle("hidden", !actionSheetPlaylistId);
   document.getElementById("asRemoveFromQueueItem").classList.toggle("hidden", actionSheetQueueIndex === null);
+  document.getElementById("asMoveToTopItem").classList.toggle("hidden", actionSheetQueueIndex === null || actionSheetQueueIndex <= currentIndex + 1);
+  document.getElementById("asMoveToBottomItem").classList.toggle("hidden", actionSheetQueueIndex === null || actionSheetQueueIndex >= activeQueue.length - 1);
 
   document.getElementById("actionSheetOverlay").classList.remove("hidden");
   document.getElementById("actionSheet").classList.remove("translate-y-full");
@@ -3290,6 +3588,31 @@ function actionShareWithFriends() {
   if (!actionSheetTarget) return;
   closeActionSheet();
   openSharePicker("song", actionSheetTarget, `Sharing "${actionSheetTarget.title}"`);
+}
+async function actionShareToStory() {
+  if (!actionSheetTarget) return;
+  closeActionSheet();
+  const song = actionSheetTarget;
+  const text = `🎵 Listening to "${song.title}" by ${song.artist} on Lumic`;
+  if (navigator.share) {
+    try { await navigator.share({ title: song.title, text, url: window.location.origin }); }
+    catch (e) { /* person cancelled the native share sheet — not an error */ }
+  } else {
+    try { await navigator.clipboard.writeText(text); showStatus("Copied — paste it into your story!"); }
+    catch (e) { showStatus("Couldn't share right now."); }
+  }
+}
+// Moves a queue entry straight to the top or bottom of "up next" — the
+// reliable mobile-friendly alternative to raw drag-and-drop, which is
+// inconsistent across mobile browsers (especially iOS Safari).
+function actionMoveQueueItem(where) {
+  if (actionSheetQueueIndex === null) return;
+  const [moved] = activeQueue.splice(actionSheetQueueIndex, 1);
+  if (where === "top") activeQueue.splice(currentIndex + 1, 0, moved);
+  else activeQueue.push(moved);
+  updateQueueDrawer();
+  showStatus(where === "top" ? "Moved to top of queue" : "Moved to bottom of queue");
+  closeActionSheet();
 }
 function actionRemoveFromPlaylist() {
   if (!actionSheetTarget || !actionSheetPlaylistId) return;
@@ -3694,8 +4017,40 @@ function openPlaylistView(ctxId) {
   // Only user-created playlists (not favourites/offline/local, which have
   // their own removal flows) get the remove-from-playlist button.
   const isUserPlaylist = !["__favorites", "__offline", "__local"].includes(ctxId) && !String(ctxId).startsWith("preset:");
+  setCurrentPlaylistSongs(songs, { removable: isUserPlaylist, playlistId: ctxId });
   renderPlaylistSongsList(songs, { removable: isUserPlaylist, playlistId: ctxId });
   switchView("playlist");
+}
+
+// ==================== SORT BY ====================
+const SORT_LABELS = { default: "Date added", az: "Title A–Z", artist: "Artist A–Z", plays: "Most played" };
+
+function setCurrentPlaylistSongs(songs, opts) {
+  currentPlaylistSongsRaw = songs || [];
+  currentPlaylistRenderOpts = opts || {};
+  currentSortMode = "default";
+}
+
+function openSortMenu() {
+  if (!currentPlaylistSongsRaw.length) { showStatus("Nothing to sort yet."); return; }
+  document.getElementById("sortMenuModal").classList.remove("hidden");
+  pushNavState("sortMenu");
+}
+function closeSortMenu(e) {
+  if (e && e.target !== document.getElementById("sortMenuModal")) return;
+  document.getElementById("sortMenuModal").classList.add("hidden");
+}
+function applySort(mode) {
+  currentSortMode = mode;
+  let sorted = [...currentPlaylistSongsRaw];
+  if (mode === "az") sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  else if (mode === "artist") sorted.sort((a, b) => (a.artist || "").localeCompare(b.artist || ""));
+  else if (mode === "plays") sorted.sort((a, b) => (playCounts[uidFor(b)] || 0) - (playCounts[uidFor(a)] || 0));
+  // "default" (date added) is already the original insertion order — no
+  // re-sort needed there.
+  renderPlaylistSongsList(sorted, currentPlaylistRenderOpts);
+  closeSortMenu();
+  showStatus(`Sorted by ${SORT_LABELS[mode]}`);
 }
 
 function renderPlaylistSongsList(songs, opts = {}) {
@@ -4034,12 +4389,37 @@ async function syncDownloadedFromBackend() {
   } catch (e) {}
 }
 
+// ==================== LOCAL FREE TRIAL (frontend-only, no backend change) ====================
+// Gives every device 30 days of unlocked playback from its first-ever
+// visit, entirely client-side. This is NOT real access control — anyone
+// who clears site storage or edits the JS can bypass it — but it needs no
+// backend/DB changes at all, which is what was asked for here.
+const LOCAL_FREE_TRIAL_KEY = "lumic_local_free_trial_start";
+const LOCAL_FREE_TRIAL_DAYS = 30;
+function ensureLocalFreeTrialStart() {
+  let start = localStorage.getItem(LOCAL_FREE_TRIAL_KEY);
+  if (!start) {
+    start = Date.now().toString();
+    try { localStorage.setItem(LOCAL_FREE_TRIAL_KEY, start); } catch (e) {}
+  }
+  return parseInt(start, 10);
+}
+function localFreeTrialDaysLeft() {
+  const start = ensureLocalFreeTrialStart();
+  const msLeft = (start + LOCAL_FREE_TRIAL_DAYS * 86400000) - Date.now();
+  return Math.max(0, Math.ceil(msLeft / 86400000));
+}
+function isWithinLocalFreeTrial() {
+  return localFreeTrialDaysLeft() > 0;
+}
+
 // Single source of truth for "is this user allowed to play music right
 // now". Prefers live currentProfile/currentSubscription once bootAuth has
 // resolved; falls back to the localStorage cache before that (or if the
 // person is offline / on a slow connection), rather than defaulting to a
 // hard block.
 function isPlaybackAllowed() {
+  if (isWithinLocalFreeTrial()) return true;
   if (!currentUser && !cachedPremiumStatus) return true; // guest / no info yet — don't block
   const now = Date.now();
 
@@ -4124,6 +4504,13 @@ function renderProfilePremiumCard() {
                    currentSubscription && currentSubscription.current_period_end ? `Premium until ${new Date(currentSubscription.current_period_end).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}.` :
                    "Enjoy unlimited listening.";
     sub.innerText = source;
+    payBtn.classList.add("hidden");
+  } else if (isWithinLocalFreeTrial()) {
+    const daysLeft = localFreeTrialDaysLeft();
+    badge.innerText = "Free for your first month";
+    badge.className = "text-[10px] font-black uppercase tracking-widest text-emerald-400";
+    title.innerText = "Everything's unlocked 🎉";
+    sub.innerText = `${daysLeft} day${daysLeft === 1 ? "" : "s"} left on your free month. Enjoy unlimited listening — no card needed.`;
     payBtn.classList.add("hidden");
   } else if (allowed) {
     badge.innerText = "Free trial";
