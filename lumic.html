@@ -195,6 +195,21 @@
           <button onclick="filterCategory('afro')" id="chip-afro" class="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0">Afrobeats</button>
           <button onclick="filterCategory('mood')" id="chip-mood" class="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition flex-shrink-0">Moods</button>
         </div>
+        <div class="relative flex-shrink-0">
+          <button onclick="toggleNotificationsDropdown(event)" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition relative">
+            <i class="fa-solid fa-bell text-sm"></i>
+            <span id="notifBellBadge" class="hidden absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">0</span>
+          </button>
+          <div id="notificationsDropdown" class="hidden absolute right-0 top-11 w-72 max-w-[85vw] rounded-2xl border border-white/10 shadow-2xl z-40 overflow-hidden" style="background:rgba(20,20,26,0.92); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <span class="text-xs font-black text-white uppercase tracking-widest">Notifications</span>
+              <button onclick="markAllNotificationsRead()" class="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300">Mark all read</button>
+            </div>
+            <div id="notificationsList" class="max-h-80 overflow-y-auto no-scrollbar divide-y divide-white/5">
+              <div class="text-center py-8 text-slate-500 text-xs px-4">Nothing here yet.</div>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -260,28 +275,28 @@
         <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2">
           <div onclick="openCuratedPlaylistView('asake_mix','Asake Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <img data-cover-key="asake_mix" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Asake Mix</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Seyi Vibez, Olamide, Fireboy DML</p>
           </div>
           <div onclick="openCuratedPlaylistView('heartbreak_mix','Heartbreak')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <img data-cover-key="heartbreak_mix" src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-rose-400">Heartbreak</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Lewis Capaldi, Olivia Rodrigo, Adele</p>
           </div>
           <div onclick="openCuratedPlaylistView('olivia_rodrigo_mix','Olivia Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <img data-cover-key="olivia_rodrigo_mix" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-violet-400">Olivia Mix</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Olivia Rodrigo essentials</p>
           </div>
           <div onclick="openCuratedPlaylistView('billie_eilish_mix','Billie Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <img data-cover-key="billie_eilish_mix" src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-green-300">Billie Mix</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Billie Eilish deep cuts</p>
@@ -332,6 +347,14 @@
             <h4 class="font-bold text-xs text-white truncate">Naija Hip Hop</h4>
             <p class="text-[11px] text-slate-400 truncate">Odumodublvck, Blaqbonez</p>
           </div>
+          <div onclick="openCuratedPlaylistView('afrobeats_fresh','Fresh Afrobeats 2025/26')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-lime-500 to-emerald-800 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">New</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Fresh Afrobeats 2025/26</h4>
+            <p class="text-[11px] text-slate-400 truncate">Straight off vistanaij</p>
+          </div>
         </div>
       </div>
 
@@ -344,56 +367,7 @@
       <!-- Browse categories -->
       <div>
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Browse categories</h2>
-        <div class="grid grid-cols-2 gap-3">
-          <div onclick="openCuratedPlaylistView('heartbreak_mix','Heartbreak')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Heartbreak</h4><p class="text-[10px] text-slate-400 mt-0.5">Cry it out anthems</p></div>
-            <i class="fa-solid fa-heart-crack text-rose-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('feel_good','Feel Good')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Feel Good</h4><p class="text-[10px] text-slate-400 mt-0.5">Happy vibes only</p></div>
-            <i class="fa-solid fa-sun text-yellow-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('rnb_soul','R&B & Soul')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">R&B & Soul</h4><p class="text-[10px] text-slate-400 mt-0.5">Smooth vocals</p></div>
-            <i class="fa-solid fa-record-vinyl text-rose-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('gospel_praise','Gospel & Praise')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Gospel & Praise</h4><p class="text-[10px] text-slate-400 mt-0.5">Worship & inspiration</p></div>
-            <i class="fa-solid fa-dove text-sky-300 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('indie_sad','Sad Indie')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Sad Indie</h4><p class="text-[10px] text-slate-400 mt-0.5">Late night feelings</p></div>
-            <i class="fa-solid fa-moon text-indigo-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('party_turnup','Party & Amapiano')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Party & Amapiano</h4><p class="text-[10px] text-slate-400 mt-0.5">High energy basslines</p></div>
-            <i class="fa-solid fa-fire text-amber-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('throwback_2010s','2010s Throwback')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">2010s Throwback</h4><p class="text-[10px] text-slate-400 mt-0.5">Naija classics</p></div>
-            <i class="fa-solid fa-compact-disc text-yellow-300 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('female_naija','Naija Queens')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Naija Queens</h4><p class="text-[10px] text-slate-400 mt-0.5">Women leading the sound</p></div>
-            <i class="fa-solid fa-crown text-pink-300 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('chill_vibes','Chill & Acoustic')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Chill & Acoustic</h4><p class="text-[10px] text-slate-400 mt-0.5">Relax & unwind</p></div>
-            <i class="fa-solid fa-cloud-moon text-slate-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('pop_hits','Global Pop')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Global Pop</h4><p class="text-[10px] text-slate-400 mt-0.5">Chart toppers worldwide</p></div>
-            <i class="fa-solid fa-star text-purple-300 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('upbeat_energy','Upbeat & Energetic')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Upbeat & Energetic</h4><p class="text-[10px] text-slate-400 mt-0.5">Feel-good bangers</p></div>
-            <i class="fa-solid fa-bolt text-amber-400 text-lg"></i>
-          </div>
-          <div onclick="openCuratedPlaylistView('workout_bangers','Workout Bangers')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
-            <div><h4 class="font-bold text-sm text-white">Workout Bangers</h4><p class="text-[10px] text-slate-400 mt-0.5">Gym-ready energy</p></div>
-            <i class="fa-solid fa-dumbbell text-emerald-400 text-lg"></i>
-          </div>
-        </div>
+        <div id="browseCategoriesGrid" class="grid grid-cols-2 gap-3"></div>
       </div>
       </div>
     </section>
@@ -466,7 +440,7 @@
       <div>
         <div class="flex items-center justify-between mb-3">
           <h4 class="font-bold text-sm text-slate-300">Local Files</h4>
-          <label for="localFileInput" class="text-xs text-emerald-400 cursor-pointer hover:text-emerald-300 font-semibold">+ Import</label>
+          <label for="localFileInput" class="w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 cursor-pointer flex items-center justify-center transition"><i class="fa-solid fa-plus text-[10px]"></i></label>
           <input type="file" id="localFileInput" accept="audio/*" multiple class="hidden" onchange="importLocalFiles(event)">
         </div>
         <label for="localFileInput" class="import-zone block">
@@ -504,6 +478,11 @@
         <button onclick="sharePlaylistWithFriends()" id="playlistShareBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-share-nodes text-sm"></i></button>
         <button onclick="downloadPlaylistOffline()" id="playlistDownloadBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-download text-sm"></i></button>
         <button onclick="openSortMenu()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-arrow-down-wide-short text-sm"></i></button>
+      </div>
+      <div id="playlistSearchWrap" class="hidden glass-card rounded-2xl p-2 flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2"></i>
+        <input id="playlistSearchInput" type="text" oninput="filterCurrentPlaylistList()" placeholder="Search your downloads..." class="bg-transparent flex-1 px-2 py-1.5 text-sm text-white placeholder-slate-400 outline-none">
+        <button onclick="clearPlaylistSearch()" id="playlistSearchClearBtn" class="hidden p-1.5 text-slate-400 hover:text-white mr-1"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="playlistSongsList" class="space-y-2"></div>
     </section>
@@ -557,6 +536,14 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+
+        <div class="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-white">Downloads on this device</p>
+            <p id="profileDownloadsSizeLabel" class="text-[11px] text-slate-400 mt-0.5">—</p>
+          </div>
+          <button onclick="clearAllDownloads()" class="text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 px-3 py-2 rounded-full transition flex-shrink-0">Clear downloads</button>
+        </div>
       </div>
 
       <!-- Referral -->
@@ -592,7 +579,34 @@
           <span class="text-slate-400">This device</span>
           <span class="text-white font-semibold">Active session</span>
         </div>
+        <div id="adminPanelEntryRow" class="hidden pt-2 border-t border-white/10">
+          <button onclick="openAdminPanel()" class="w-full flex items-center justify-between text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl transition">
+            <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i>Admin panel</span>
+            <i class="fa-solid fa-chevron-right text-slate-500"></i>
+          </button>
+        </div>
       </div>
+    </section>
+
+    <!-- VIEW: ADMIN -->
+    <section id="view-admin" class="hidden">
+      <button onclick="switchView('profile')" class="text-slate-400 hover:text-white mb-4 text-sm flex items-center gap-2"><i class="fa-solid fa-arrow-left"></i> Back</button>
+      <h2 class="text-xl font-black text-white mb-4"><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i>Admin panel</h2>
+
+      <!-- Broadcast -->
+      <div class="glass-card rounded-3xl p-5 mb-5">
+        <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-bullhorn text-emerald-400 mr-2"></i>Broadcast notification</h3>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell.</p>
+        <textarea id="adminBroadcastInput" rows="3" placeholder="Write your announcement..." class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-3"></textarea>
+        <button id="adminBroadcastBtn" onclick="adminBroadcastNotification()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition" style="background:linear-gradient(135deg,#10b981,#059669);">Send broadcast</button>
+      </div>
+
+      <!-- Users -->
+      <div class="glass-card rounded-2xl p-2 flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2"></i>
+        <input id="adminUserSearchInput" type="text" oninput="debounceAdminSearch()" placeholder="Search users by username..." class="bg-transparent flex-1 px-2 py-1.5 text-sm text-white placeholder-slate-400 outline-none">
+      </div>
+      <div id="adminUsersList" class="space-y-2"></div>
     </section>
 
   </div>
@@ -917,12 +931,12 @@
   <!-- PREMIUM EXPIRED BANNER (subtle, non-blocking — browsing still works) -->
   <div id="premiumBlockBanner" class="hidden">
     <div class="max-w-2xl mx-auto glass-card rounded-2xl p-3.5 flex items-center gap-3 border shadow-2xl" style="background:rgba(22,22,28,0.97); border-color:rgba(245,158,11,0.25);">
-      <i class="fa-solid fa-gem text-amber-400 text-lg flex-shrink-0"></i>
+      <i id="blockBannerIcon" class="fa-solid fa-gem text-amber-400 text-lg flex-shrink-0"></i>
       <div class="min-w-0 flex-1">
-        <p class="text-[12px] font-bold text-white leading-tight">Trial ended — streaming paused</p>
-        <p class="text-[10.5px] text-slate-400 mt-0.5 leading-tight">Refer 3 friends or get Premium for ₦300/month.</p>
+        <p id="blockBannerTitle" class="text-[12px] font-bold text-white leading-tight">Trial ended — streaming paused</p>
+        <p id="blockBannerBody" class="text-[10.5px] text-slate-400 mt-0.5 leading-tight">Refer 3 friends or get Premium for ₦300/month.</p>
       </div>
-      <button onclick="closePremiumBlock(); switchView('profile');" class="text-[11px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-3 py-2 rounded-full flex-shrink-0 transition active:scale-95">Get Premium</button>
+      <button id="blockBannerCta" onclick="closePremiumBlock(); switchView('profile');" class="text-[11px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-3 py-2 rounded-full flex-shrink-0 transition active:scale-95">Get Premium</button>
       <button onclick="closePremiumBlock()" class="text-slate-500 hover:text-white p-1.5 flex-shrink-0"><i class="fa-solid fa-xmark text-sm"></i></button>
     </div>
   </div>
@@ -1095,11 +1109,18 @@ function weightedShuffleByPriority(items, priorityList, getKey) {
     .map(x => x.item);
 }
 
-// Curated playlists
+// Curated playlists. Most are still artist arrays (fetched via
+// fetchByArtists), but a preset can now instead be a descriptor object:
+//   { type: "category", value: "Afrobeats" } — pulled live from the
+//     `category` column on mp3pm_songs, no hardcoded names
+//   { type: "vistanaij" } — pulled live from museek_tracks (the
+//     vistanaij 2025/2026 crawl), newest first
 const PLAYLIST_PRESETS = {
   hot_hits_naija: ["asake","davido","bnxn","rema","seyi vibez","wizkid","burna boy","fireboy","ayra starr","kizz daniel"],
   street_vibes: ["seyi vibez","portable","shallipopi","zinoleesky","naira marley","bella shmurda"],
   afro_top_100: ["burna boy","wizkid","tems","ayra starr","kizz daniel","rema","omah lay","victony"],
+  afrobeats_category: { type: "category", value: "Afrobeats" },
+  afrobeats_fresh: { type: "vistanaij" },
   asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn"],
   heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid"],
   olivia_rodrigo_mix: ["olivia rodrigo","sabrina carpenter","gracie abrams","chappell roan","tate mcrae"],
@@ -1118,7 +1139,13 @@ const PLAYLIST_PRESETS = {
   female_naija: ["tiwa savage","tems","ayra starr","simi","yemi alade","niniola"],
   fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"],
   upbeat_energy: ["asake","davido","ckay","rema","kizz daniel","dua lipa","bruno mars","burna boy"],
-  workout_bangers: ["burna boy","asake","rema","dj neptune","olamide","zlatan","ayra starr","davido"]
+  workout_bangers: ["burna boy","asake","rema","dj neptune","olamide","zlatan","ayra starr","davido"],
+  love_romance: ["chike","simi","adekunle gold","johnny drille","ed sheeran","daniel caesar","h.e.r."],
+  late_night_drive: ["the weeknd","daniel caesar","brent faiyaz","summer walker","sza","frank ocean"],
+  sunday_chill: ["asa","brymo","lucky daye","jorja smith","laura mvula","cleo sol"],
+  throwback_2000s: ["2face idibia","styl-plus","p-square","d'banj","styl plus","asa"],
+  focus_study: ["ludovico einaudi","max richter","brian eno","nils frahm","ólafur arnalds"],
+  wedding_jams: ["flavour","davido","tiwa savage","2baba","yemi alade","kizz daniel"]
 };
 
 // Only used if a live DB fetch for spotlight artists fails outright (e.g.
@@ -1229,6 +1256,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderArtistSpotlight();
   renderRecommended();
   renderMoodCardsGrid();
+  renderBrowseCategoriesGrid();
   loadHotAlbums();
   loadNewAlbums();
   loadTop100Nigeria();
@@ -1236,6 +1264,7 @@ window.addEventListener("DOMContentLoaded", () => {
   initOfflineDB();
   setupMediaSession();
   applyCachedPremiumStatus();
+  applyCachedNotifications();
   bootAuth();
   initSettingsToggles();
 });
@@ -1291,7 +1320,7 @@ window.addEventListener("popstate", () => {
 pushNavState("root");
 
 function switchView(view) {
-  const views = ["home","search","library","playlist","artist","profile"];
+  const views = ["home","search","library","playlist","artist","profile","admin"];
   if (["home","search","library"].includes(view)) prevView = view;
   if (["playlist","artist"].includes(view)) pushNavState(view);
   views.forEach(v => document.getElementById(`view-${v}`).classList.add("hidden"));
@@ -1364,6 +1393,74 @@ function renderMoodCardsGrid() {
       <i class="fa-solid ${m.icon} ${m.color} text-lg"></i>
     </div>
   `).join("");
+}
+
+// "Browse categories" grid — data-driven so adding a new category is just
+// one line here, no HTML editing needed. Entries with `photo: true` don't
+// have a real backend category to source an image from (heartbreak, sad
+// indie, gospel — there's no such column value), so instead of a static
+// icon they get an actual photo: a random artist from that mix's own
+// artist list, resolved through the same iTunes artwork lookup used
+// everywhere else, re-picked on every page load.
+const BROWSE_CATEGORIES = [
+  { key: "afrobeats_category", title: "Afrobeats", sub: "Straight from the catalog", icon: "fa-drum", color: "text-lime-400" },
+  { key: "heartbreak_mix", title: "Heartbreak", sub: "Cry it out anthems", icon: "fa-heart-crack", color: "text-rose-400", photo: true },
+  { key: "feel_good", title: "Feel Good", sub: "Happy vibes only", icon: "fa-sun", color: "text-yellow-400" },
+  { key: "rnb_soul", title: "R&B & Soul", sub: "Smooth vocals", icon: "fa-record-vinyl", color: "text-rose-400" },
+  { key: "gospel_praise", title: "Gospel & Praise", sub: "Worship & inspiration", icon: "fa-dove", color: "text-sky-300", photo: true },
+  { key: "indie_sad", title: "Sad Indie", sub: "Late night feelings", icon: "fa-moon", color: "text-indigo-400", photo: true },
+  { key: "party_turnup", title: "Party & Amapiano", sub: "High energy basslines", icon: "fa-fire", color: "text-amber-400" },
+  { key: "throwback_2010s", title: "2010s Throwback", sub: "Naija classics", icon: "fa-compact-disc", color: "text-yellow-300" },
+  { key: "female_naija", title: "Naija Queens", sub: "Women leading the sound", icon: "fa-crown", color: "text-pink-300" },
+  { key: "chill_vibes", title: "Chill & Acoustic", sub: "Relax & unwind", icon: "fa-cloud-moon", color: "text-slate-400" },
+  { key: "pop_hits", title: "Global Pop", sub: "Chart toppers worldwide", icon: "fa-star", color: "text-purple-300" },
+  { key: "upbeat_energy", title: "Upbeat & Energetic", sub: "Feel-good bangers", icon: "fa-bolt", color: "text-amber-400" },
+  { key: "workout_bangers", title: "Workout Bangers", sub: "Gym-ready energy", icon: "fa-dumbbell", color: "text-emerald-400" },
+  { key: "love_romance", title: "Love & Romance", sub: "For the one you love", icon: "fa-heart", color: "text-pink-400" },
+  { key: "late_night_drive", title: "Late Night Drive", sub: "Smooth R&B for the road", icon: "fa-car", color: "text-indigo-300" },
+  { key: "sunday_chill", title: "Sunday Chill", sub: "Slow it all the way down", icon: "fa-mug-hot", color: "text-amber-300" },
+  { key: "throwback_2000s", title: "2000s Throwback", sub: "Old school Naija classics", icon: "fa-compact-disc", color: "text-orange-300" },
+  { key: "focus_study", title: "Focus & Study", sub: "Instrumental, no distractions", icon: "fa-book", color: "text-cyan-300" },
+  { key: "wedding_jams", title: "Wedding Jams", sub: "Owambe-ready", icon: "fa-ring", color: "text-fuchsia-300" }
+];
+
+function renderBrowseCategoriesGrid() {
+  const grid = document.getElementById("browseCategoriesGrid");
+  if (!grid) return;
+  grid.innerHTML = BROWSE_CATEGORIES.map(c => {
+    if (c.photo) {
+      return `
+        <div onclick="openCuratedPlaylistView('${c.key}','${escapeHtml(c.title)}')" class="relative rounded-2xl overflow-hidden cursor-pointer group h-24 border border-white/10">
+          <img data-cover-key="${c.key}" src="${placeholderFor(c.title)}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-300">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
+          <div class="relative z-10 h-full p-3.5 flex flex-col justify-end">
+            <h4 class="font-bold text-sm text-white">${escapeHtml(c.title)}</h4>
+            <p class="text-[10px] text-slate-300 mt-0.5">${escapeHtml(c.sub)}</p>
+          </div>
+        </div>`;
+    }
+    return `
+      <div onclick="openCuratedPlaylistView('${c.key}','${escapeHtml(c.title)}')" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+        <div><h4 class="font-bold text-sm text-white">${escapeHtml(c.title)}</h4><p class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(c.sub)}</p></div>
+        <i class="fa-solid ${c.icon} ${c.color} text-lg"></i>
+      </div>`;
+  }).join("");
+  hydrateRotatingCovers();
+}
+
+// Picks a random artist from a mix's own artist list and resolves their
+// photo through the normal iTunes-backed resolveImage/cache path — so
+// "gospel", "heartbreak", "sad indie" (and the mixes row below) show an
+// actual musician's photo instead of a generic stock image, and it's a
+// different one on every page load.
+function hydrateRotatingCovers() {
+  document.querySelectorAll("[data-cover-key]").forEach(img => {
+    const key = img.getAttribute("data-cover-key");
+    const preset = PLAYLIST_PRESETS[key];
+    if (!Array.isArray(preset) || !preset.length) return;
+    const artist = preset[Math.floor(Math.random() * preset.length)];
+    resolveImage({ artist, title: "" }).then(url => { img.src = url; });
+  });
 }
 
 const STATUS_ICONS = { success: "fa-circle-check", error: "fa-circle-exclamation", info: "fa-circle-info" };
@@ -2083,10 +2180,53 @@ async function fetchByArtists(artists, limitEach = 12) {
   return fetchByArtistsProgressive(artists, limitEach, null);
 }
 
+// Pulls tracks straight from the `category` column on mp3pm_songs — no
+// hardcoded artist names, whatever's actually tagged with that category
+// in the DB comes back. Newest-crawled first.
+async function fetchByCategory(categoryName, limit = 60) {
+  try {
+    const { data, error } = await supabaseClient
+      .from("mp3pm_songs").select("*")
+      .ilike("category", `%${categoryName}%`)
+      .order("crawled_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map(s => ({ ...s, _src: "mp3pm" })).filter(s => !isPreviewJunk(s));
+  } catch (e) { return []; }
+}
+
+// Fresh Afrobeats straight from vistanaij (museek_tracks) — this table is
+// specifically the 2025/2026 vistanaij crawl, so newest-first here is
+// exactly "a set of afrobeat from 2026-2025".
+async function fetchVistanaijFresh(limit = 60) {
+  try {
+    const { data, error } = await supabaseClient
+      .from("museek_tracks").select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })).filter(s => !isPreviewJunk(s));
+  } catch (e) { return []; }
+}
+
+// A preset in PLAYLIST_PRESETS can be either a plain array of artist names
+// (old behavior — fetched via fetchByArtists) or a descriptor object:
+//   { type: "category", value: "Afrobeats" }  -> fetchByCategory
+//   { type: "vistanaij" }                     -> fetchVistanaijFresh
+// This lets category-backed mixes pull real, current catalog data instead
+// of a fixed artist list.
+async function fetchPresetTracks(presetKey, limit) {
+  const preset = PLAYLIST_PRESETS[presetKey];
+  if (!preset) return [];
+  if (Array.isArray(preset)) return fetchByArtists(preset, limit || 12);
+  if (preset.type === "category") return fetchByCategory(preset.value, limit || 60);
+  if (preset.type === "vistanaij") return fetchVistanaijFresh(limit || 60);
+  return [];
+}
+
 async function playCuratedPlaylist(presetKey) {
-  const artists = PLAYLIST_PRESETS[presetKey] || [];
   showStatus("Loading playlist...");
-  let songs = await fetchByArtists(artists);
+  let songs = await fetchPresetTracks(presetKey);
   if (songs.length === 0) { showStatus("Couldn't find tracks for this mix right now."); return; }
   activeQueue = songs.sort(() => Math.random() - 0.5);
   currentIndex = 0;
@@ -2115,25 +2255,40 @@ async function openCuratedPlaylistView(presetKey, title) {
   document.getElementById("playlistSongsList").innerHTML = `<div class="space-y-2">${Array(6).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
   switchView("playlist");
 
-  const artists = PLAYLIST_PRESETS[presetKey] || [];
+  const preset = PLAYLIST_PRESETS[presetKey];
   let collageBuilt = false;
-  const songs = await fetchByArtistsProgressive(artists, 20, (songsSoFar) => {
-    if (currentPlaylistCtx !== ctxKey) return;
-    currentPlaylistPresetSongs = songsSoFar;
-    document.getElementById("playlistMeta").innerText = `${songsSoFar.length} song${songsSoFar.length === 1 ? "" : "s"}`;
-    renderPlaylistSongsList(songsSoFar, { removable: false });
-    if (!collageBuilt && songsSoFar.length) {
-      collageBuilt = true;
-      const collage = document.getElementById("playlistHeaderCollage");
-      songsSoFar.slice(0, 4).forEach(s => {
-        const img = document.createElement("img");
-        img.className = "w-full h-full object-cover";
-        img.src = placeholderFor(s.title);
-        collage.appendChild(img);
-        resolveImage(s).then(url => img.src = url);
-      });
+
+  function paintCollage(songsSoFar) {
+    if (collageBuilt || !songsSoFar.length) return;
+    collageBuilt = true;
+    const collage = document.getElementById("playlistHeaderCollage");
+    songsSoFar.slice(0, 4).forEach(s => {
+      const img = document.createElement("img");
+      img.className = "w-full h-full object-cover";
+      img.src = placeholderFor(s.title);
+      collage.appendChild(img);
+      resolveImage(s).then(url => img.src = url);
+    });
+  }
+
+  let songs;
+  if (Array.isArray(preset)) {
+    songs = await fetchByArtistsProgressive(preset, 20, (songsSoFar) => {
+      if (currentPlaylistCtx !== ctxKey) return;
+      currentPlaylistPresetSongs = songsSoFar;
+      document.getElementById("playlistMeta").innerText = `${songsSoFar.length} song${songsSoFar.length === 1 ? "" : "s"}`;
+      renderPlaylistSongsList(songsSoFar, { removable: false });
+      paintCollage(songsSoFar);
+    });
+  } else {
+    songs = await fetchPresetTracks(presetKey, 60);
+    if (currentPlaylistCtx === ctxKey) {
+      currentPlaylistPresetSongs = songs;
+      document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+      renderPlaylistSongsList(songs, { removable: false });
+      paintCollage(songs);
     }
-  });
+  }
   if (currentPlaylistCtx !== ctxKey) return;
   currentPlaylistPresetSongs = songs;
   document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
@@ -2521,34 +2676,28 @@ const MAX_AUDIO_RETRIES = 3;
 function handleBuffering(audio) {
   if (audio !== activeAudio) return;
   clearTimeout(bufferingTimer);
-  // Only surface a status message if the stall lasts a moment — most
-  // waiting/stalled events resolve within a second on their own, and
-  // showing a message for every one of those would just be noise.
+  // Just wait quietly — most waiting/stalled events resolve on their own
+  // within a second or two. No status message shown for this anymore.
   bufferingTimer = setTimeout(() => {
     if (audio.paused) return; // user paused on purpose — not a network issue
-    bufferingStatusShown = true;
-    showStatus("Reconnecting...", 15000);
   }, 2500);
 }
 
 function clearBufferingState() {
   clearTimeout(bufferingTimer);
-  if (bufferingStatusShown) {
-    bufferingStatusShown = false;
-    document.getElementById("status").classList.add("hidden");
-  }
+  bufferingStatusShown = false;
   audioRetryCount = 0;
 }
 
 // A genuine `error` event (not just a stall) gets retried with backoff —
 // re-resolving the src each time, since a resolved vistanaij URL or an
 // offline blob URL can itself have gone stale. Only after MAX_AUDIO_RETRIES
-// consecutive failures does the track actually get skipped.
+// consecutive failures does the track actually get skipped. This all
+// happens silently now — no "Reconnecting... (1/3)" status shown.
 function handlePlaybackError(audio) {
   if (audioRetryCount < MAX_AUDIO_RETRIES) {
     audioRetryCount++;
     const backoffMs = audioRetryCount * 1500;
-    showStatus(`Reconnecting... (${audioRetryCount}/${MAX_AUDIO_RETRIES})`, backoffMs + 2000);
     setTimeout(() => {
       if (!currentTrack) return;
       const resumeAt = audio.currentTime || 0;
@@ -3370,7 +3519,7 @@ async function runSearch(query, isFullSearch) {
       songsDone = true;
       if (e.name === "AbortError") return;
       if (searchAbortController === controller && latestAlbums.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results. Have you run lumic_migration.sql yet?</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Nothing here, try again.</div>`;
       }
     });
 
@@ -3498,6 +3647,7 @@ function renderSearchRow(song, queueContext, opts = {}) {
         <div class="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
           <i class="fa-solid fa-play text-white text-xs"></i>
         </div>
+        ${opts.downloadedBadge ? `<div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#09090b] flex items-center justify-center"><i class="fa-solid fa-download text-black" style="font-size:7px;"></i></div>` : ""}
       </div>
       <div class="min-w-0">
         <h4 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h4>
@@ -3835,15 +3985,24 @@ function renderUserPlaylists() {
   }
   ids.forEach(id => {
     const pl = userPlaylists[id];
+    const firstSong = pl.songs && pl.songs[0];
     const row = document.createElement("div");
-    row.className = "glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition";
+    row.className = "glass-card p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-white/10 transition min-h-[84px]";
     row.innerHTML = `
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-record-vinyl text-white"></i></div>
-      <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white truncate">${escapeHtml(pl.name)}</h4><p class="text-[11px] text-slate-400">${pl.songs.length} songs</p></div>
+      <div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center">
+        ${firstSong ? `<img data-cover src="${placeholderFor(pl.name)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-record-vinyl text-white text-lg"></i>`}
+      </div>
+      <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white truncate">${escapeHtml(pl.name)}</h4><p class="text-[11px] text-slate-400 mt-1">${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}</p></div>
       <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
     `;
     row.onclick = () => openPlaylistView(id);
     container.appendChild(row);
+    if (firstSong) {
+      resolveImage(firstSong).then(url => {
+        const el = row.querySelector("[data-cover]");
+        if (el) el.src = url;
+      });
+    }
   });
 }
 
@@ -4004,6 +4163,19 @@ function openPlaylistView(ctxId) {
   document.getElementById("playlistDownloadBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
   document.getElementById("playlistShareBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
 
+  // Search box only makes sense for the Downloaded list — that's the one
+  // that can quietly grow large enough that scrolling to find something
+  // gets annoying.
+  const searchWrap = document.getElementById("playlistSearchWrap");
+  const searchInput = document.getElementById("playlistSearchInput");
+  if (ctxId === "__offline") {
+    searchWrap.classList.remove("hidden");
+    searchInput.value = "";
+    document.getElementById("playlistSearchClearBtn").classList.add("hidden");
+  } else {
+    searchWrap.classList.add("hidden");
+  }
+
   const collage = document.getElementById("playlistHeaderCollage");
   collage.innerHTML = "";
   songs.slice(0, 4).forEach(s => {
@@ -4017,9 +4189,27 @@ function openPlaylistView(ctxId) {
   // Only user-created playlists (not favourites/offline/local, which have
   // their own removal flows) get the remove-from-playlist button.
   const isUserPlaylist = !["__favorites", "__offline", "__local"].includes(ctxId) && !String(ctxId).startsWith("preset:");
-  setCurrentPlaylistSongs(songs, { removable: isUserPlaylist, playlistId: ctxId });
-  renderPlaylistSongsList(songs, { removable: isUserPlaylist, playlistId: ctxId });
+  const renderOpts = { removable: isUserPlaylist, playlistId: ctxId, downloadedBadge: ctxId === "__offline" };
+  setCurrentPlaylistSongs(songs, renderOpts);
+  renderPlaylistSongsList(songs, renderOpts);
   switchView("playlist");
+}
+
+// Client-side filter over whatever's currently loaded in the playlist
+// view (used for the Downloaded search box — everything's already local
+// in IndexedDB/localStorage so this needs no network call at all).
+function filterCurrentPlaylistList() {
+  const q = document.getElementById("playlistSearchInput").value.trim().toLowerCase();
+  document.getElementById("playlistSearchClearBtn").classList.toggle("hidden", !q);
+  const source = currentPlaylistSongsRaw || [];
+  const filtered = q
+    ? source.filter(s => (s.title || "").toLowerCase().includes(q) || (s.artist || "").toLowerCase().includes(q))
+    : source;
+  renderPlaylistSongsList(filtered, currentPlaylistRenderOpts);
+}
+function clearPlaylistSearch() {
+  document.getElementById("playlistSearchInput").value = "";
+  filterCurrentPlaylistList();
 }
 
 // ==================== SORT BY ====================
@@ -4099,6 +4289,37 @@ function updateOfflineCountDisplay() {
   const count = getMergedDownloadedList().length;
   const el = document.getElementById("offlineCount");
   if (el) el.innerText = `${count} song${count === 1 ? "" : "s"} saved`;
+  updateDownloadsSizeLabel();
+}
+
+// Only counts what's actually cached as playable audio on THIS device
+// (offlineSongsMeta) — backendDownloadedMeta entries aren't stored here,
+// so they're not part of "downloads on this device" or what Clear wipes.
+function updateDownloadsSizeLabel() {
+  const el = document.getElementById("profileDownloadsSizeLabel");
+  if (!el) return;
+  const n = offlineSongsMeta.length;
+  el.innerText = n === 0 ? "No downloads stored on this device" : `${n} song${n === 1 ? "" : "s"} stored on this device`;
+}
+
+// Wipes every downloaded audio blob from THIS device's IndexedDB cache.
+// Doesn't touch the account-level downloaded_songs record on the backend
+// (so the songs still show as "downloaded" on your other devices, and
+// still show up here too — they'll just stream instead of play from
+// cache until you download them again on this device).
+function clearAllDownloads() {
+  if (!offlineDB) { showStatus("Offline storage unavailable."); return; }
+  if (!offlineSongsMeta.length) { showStatus("No downloads to clear."); return; }
+  if (!confirm(`Remove ${offlineSongsMeta.length} downloaded song${offlineSongsMeta.length === 1 ? "" : "s"} from this device?`)) return;
+  const tx = offlineDB.transaction("tracks", "readwrite");
+  tx.objectStore("tracks").clear();
+  tx.oncomplete = () => {
+    offlineSongsMeta = [];
+    updateOfflineCountDisplay();
+    if (currentPlaylistCtx === "__offline") openPlaylistView("__offline");
+    showStatus("Downloads cleared from this device");
+  };
+  tx.onerror = () => showStatus("Couldn't clear downloads.");
 }
 
 async function getOfflineSrc(song) {
@@ -4248,6 +4469,233 @@ function savePremiumCache() {
   } catch (e) {}
 }
 
+// ==================== BROADCAST NOTIFICATIONS ====================
+// Admin broadcasts (see the admin panel below) get written into
+// profiles.notifications, a jsonb array of {id, message, created_at, read}.
+// This requires that column to exist:
+//   alter table public.profiles add column if not exists
+//     notifications jsonb not null default '[]'::jsonb;
+// Cached to localStorage so the bell shows something instantly on load,
+// then reconciled once the live profile/poll comes back.
+const NOTIF_CACHE_KEY = "lumic_notifications_cache";
+let userNotifications = [];
+
+function applyCachedNotifications() {
+  try { userNotifications = JSON.parse(localStorage.getItem(NOTIF_CACHE_KEY) || "[]"); }
+  catch (e) { userNotifications = []; }
+  renderNotificationsDropdown();
+}
+
+function syncNotificationsFromProfile() {
+  if (!currentProfile) return;
+  userNotifications = Array.isArray(currentProfile.notifications) ? currentProfile.notifications : [];
+  try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
+  renderNotificationsDropdown();
+}
+
+async function pollBroadcastNotifications() {
+  if (!currentUser) return;
+  try {
+    const { data } = await supabaseClient.from("profiles").select("notifications").eq("id", currentUser.id).maybeSingle();
+    if (data && Array.isArray(data.notifications)) {
+      if (currentProfile) currentProfile.notifications = data.notifications;
+      userNotifications = data.notifications;
+      try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
+      renderNotificationsDropdown();
+    }
+  } catch (e) {}
+}
+
+function renderNotificationsDropdown() {
+  const list = document.getElementById("notificationsList");
+  const badge = document.getElementById("notifBellBadge");
+  if (!list || !badge) return;
+  const sorted = [...userNotifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const unread = sorted.filter(n => !n.read).length;
+  if (unread > 0) { badge.innerText = unread > 9 ? "9+" : String(unread); badge.classList.remove("hidden"); }
+  else badge.classList.add("hidden");
+
+  if (sorted.length === 0) {
+    list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs px-4">Nothing here yet.</div>`;
+    return;
+  }
+  list.innerHTML = sorted.map(n => `
+    <div class="px-4 py-3 ${n.read ? "" : "bg-emerald-500/5"}">
+      <p class="text-xs text-slate-200 leading-relaxed">${escapeHtml(n.message || "")}</p>
+      <p class="text-[10px] text-slate-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p>
+    </div>
+  `).join("");
+}
+
+function toggleNotificationsDropdown(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById("notificationsDropdown");
+  const opening = dd.classList.contains("hidden");
+  dd.classList.toggle("hidden");
+  if (opening) document.addEventListener("click", closeNotificationsDropdownOnOutsideClick);
+}
+function closeNotificationsDropdownOnOutsideClick(e) {
+  const dd = document.getElementById("notificationsDropdown");
+  if (dd.contains(e.target)) return;
+  dd.classList.add("hidden");
+  document.removeEventListener("click", closeNotificationsDropdownOnOutsideClick);
+}
+
+function markAllNotificationsRead() {
+  if (!userNotifications.length) return;
+  userNotifications = userNotifications.map(n => ({ ...n, read: true }));
+  try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
+  if (currentProfile) currentProfile.notifications = userNotifications;
+  renderNotificationsDropdown();
+  if (currentUser) {
+    supabaseClient.from("profiles").update({ notifications: userNotifications }).eq("id", currentUser.id).then(() => {}).catch(() => {});
+  }
+}
+
+// ==================== ADMIN PANEL ====================
+// Add your own account's email here to unlock the admin panel from
+// Profile. This is a client-side gate only — someone could read this JS
+// and see the list, so the real protection has to come from Supabase
+// Row Level Security on profiles (restrict who can write is_premium /
+// is_blocked / notifications), not from hiding the button.
+//
+// Also requires two columns that aren't in the schema you shared yet:
+//   alter table public.profiles add column if not exists
+//     notifications jsonb not null default '[]'::jsonb;
+//   alter table public.profiles add column if not exists
+//     is_blocked boolean not null default false;
+const ADMIN_EMAILS = [];
+
+function isAdminUser() {
+  return !!(currentUser && currentUser.email && ADMIN_EMAILS.some(e => e.toLowerCase() === currentUser.email.toLowerCase()));
+}
+
+function toggleAdminEntryVisibility() {
+  const row = document.getElementById("adminPanelEntryRow");
+  if (row) row.classList.toggle("hidden", !isAdminUser());
+}
+
+let adminUsersCache = [];
+let adminSearchDebounce = null;
+
+function openAdminPanel() {
+  if (!isAdminUser()) { showStatus("Admin access only."); return; }
+  switchView("admin");
+  loadAdminUsers();
+}
+
+function debounceAdminSearch() {
+  clearTimeout(adminSearchDebounce);
+  adminSearchDebounce = setTimeout(() => loadAdminUsers(document.getElementById("adminUserSearchInput").value.trim()), 350);
+}
+
+async function loadAdminUsers(query) {
+  const list = document.getElementById("adminUsersList");
+  list.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-20 rounded-2xl"></div>').join("")}</div>`;
+  try {
+    let req = supabaseClient.from("profiles").select("*").order("created_at", { ascending: false }).limit(100);
+    if (query) req = req.or(`username.ilike.%${query}%,display_name.ilike.%${query}%`);
+    const { data, error } = await req;
+    if (error) throw error;
+    adminUsersCache = data || [];
+    renderAdminUsersList(adminUsersCache);
+  } catch (e) {
+    list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm px-4">Couldn't load users. If this keeps happening, check that your admin account's Supabase policy allows reading all profiles.</div>`;
+  }
+}
+
+function renderAdminUsersList(users) {
+  const list = document.getElementById("adminUsersList");
+  list.innerHTML = "";
+  if (!users.length) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No users found.</div>`; return; }
+  users.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "glass-card p-4 rounded-2xl";
+    const initial = (u.display_name || u.username || "?").charAt(0).toUpperCase();
+    row.innerHTML = `
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-black font-black text-sm flex-shrink-0">${escapeHtml(initial)}</div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-white truncate">${escapeHtml(u.display_name || u.username || "Unnamed")}</p>
+          <p class="text-[11px] text-slate-400 truncate">@${escapeHtml(u.username || "—")}${u.is_premium ? " · Premium" : ""}${u.is_blocked ? " · Blocked" : ""}</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button data-premium class="flex-1 text-xs font-bold py-2 rounded-full transition ${u.is_premium ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-white hover:bg-white/15"}">${u.is_premium ? "Revoke premium" : "Grant premium"}</button>
+        <button data-block class="flex-1 text-xs font-bold py-2 rounded-full transition ${u.is_blocked ? "bg-rose-500/20 text-rose-300" : "bg-white/10 text-white hover:bg-white/15"}">${u.is_blocked ? "Unblock" : "Block"}</button>
+      </div>
+    `;
+    row.querySelector("[data-premium]").onclick = () => adminSetPremium(u, !u.is_premium);
+    row.querySelector("[data-block]").onclick = () => adminSetBlocked(u, !u.is_blocked);
+    list.appendChild(row);
+  });
+}
+
+async function adminSetPremium(user, value) {
+  try {
+    const { error } = await supabaseClient.from("profiles").update({ is_premium: value, premium_source: value ? "admin" : null }).eq("id", user.id);
+    if (error) throw error;
+    user.is_premium = value;
+    renderAdminUsersList(adminUsersCache);
+    showStatus(value ? `Granted premium to @${user.username}` : `Revoked premium from @${user.username}`);
+  } catch (e) { showStatus("Couldn't update premium — check the is_premium column/policy."); }
+}
+
+async function adminSetBlocked(user, value) {
+  try {
+    const { error } = await supabaseClient.from("profiles").update({ is_blocked: value }).eq("id", user.id);
+    if (error) throw error;
+    user.is_blocked = value;
+    renderAdminUsersList(adminUsersCache);
+    showStatus(value ? `Blocked @${user.username} from streaming` : `Unblocked @${user.username}`);
+  } catch (e) { showStatus("Couldn't update — make sure the is_blocked column exists (see comment above)."); }
+}
+
+async function adminBroadcastNotification() {
+  const input = document.getElementById("adminBroadcastInput");
+  const message = input.value.trim();
+  if (!message) return;
+  const btn = document.getElementById("adminBroadcastBtn");
+  btn.disabled = true;
+  btn.innerText = "Sending...";
+  try {
+    const { data: profiles, error } = await supabaseClient.from("profiles").select("id, notifications");
+    if (error) throw error;
+    const notif = { id: "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), message, created_at: new Date().toISOString(), read: false };
+    const CONCURRENCY = 8;
+    let idx = 0;
+    let failed = 0;
+    let firstErrorMsg = "";
+    async function worker() {
+      while (idx < profiles.length) {
+        const p = profiles[idx++];
+        const existing = Array.isArray(p.notifications) ? p.notifications : [];
+        const updated = [notif, ...existing].slice(0, 50); // cap so the column doesn't grow unbounded
+        const { error: writeError } = await supabaseClient.from("profiles").update({ notifications: updated }).eq("id", p.id);
+        if (writeError) { failed++; if (!firstErrorMsg) firstErrorMsg = writeError.message; }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, profiles.length || 1) }, worker));
+    if (failed === profiles.length && profiles.length > 0) {
+      showStatus(`Broadcast failed for all users: ${firstErrorMsg || "unknown error"}`);
+      return;
+    }
+    input.value = "";
+    showStatus(failed > 0
+      ? `Sent to ${profiles.length - failed}/${profiles.length} users (${failed} failed: ${firstErrorMsg})`
+      : `Broadcast sent to ${profiles.length} user${profiles.length === 1 ? "" : "s"}`);
+    if (currentProfile) {
+      currentProfile.notifications = [notif, ...(Array.isArray(currentProfile.notifications) ? currentProfile.notifications : [])].slice(0, 50);
+      syncNotificationsFromProfile();
+    }
+  } catch (e) {
+    showStatus("Broadcast failed — make sure profiles has a notifications jsonb column.");
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Send broadcast";
+  }
+}
+
 async function bootAuth() {
   deviceId = getOrCreateDeviceId();
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -4258,6 +4706,8 @@ async function bootAuth() {
   if (!profile) return;
   currentProfile = profile;
   renderGemBadges();
+  syncNotificationsFromProfile();
+  toggleAdminEntryVisibility();
 
   await claimDeviceSession();
   await loadSubscription();
@@ -4271,6 +4721,7 @@ async function bootAuth() {
   premiumCheckTimer && clearInterval(premiumCheckTimer);
   premiumCheckTimer = setInterval(() => { if (!isPlaybackAllowed() && !activeAudio.paused) { activeAudio.pause(); showPremiumBlock(); } }, 20000);
   setInterval(refreshNotifications, 20000);
+  setInterval(pollBroadcastNotifications, 25000);
   setInterval(savePremiumCache, 60000); // keep the cache fresh in the background
 }
 
@@ -4418,7 +4869,15 @@ function isWithinLocalFreeTrial() {
 // resolved; falls back to the localStorage cache before that (or if the
 // person is offline / on a slow connection), rather than defaulting to a
 // hard block.
+// True once an admin has blocked this account from streaming
+// (profiles.is_blocked). Checked ahead of the premium/trial logic below —
+// a blocked account can't play regardless of premium status.
+function isAccountBlocked() {
+  return !!(currentProfile && currentProfile.is_blocked);
+}
+
 function isPlaybackAllowed() {
+  if (isAccountBlocked()) return false;
   if (isWithinLocalFreeTrial()) return true;
   if (!currentUser && !cachedPremiumStatus) return true; // guest / no info yet — don't block
   const now = Date.now();
@@ -4446,6 +4905,21 @@ function isPlaybackAllowed() {
 }
 
 function showPremiumBlock() {
+  const icon = document.getElementById("blockBannerIcon");
+  const title = document.getElementById("blockBannerTitle");
+  const body = document.getElementById("blockBannerBody");
+  const cta = document.getElementById("blockBannerCta");
+  if (isAccountBlocked()) {
+    icon.className = "fa-solid fa-ban text-rose-400 text-lg flex-shrink-0";
+    title.innerText = "Account restricted";
+    body.innerText = "Streaming has been disabled on this account.";
+    cta.classList.add("hidden");
+  } else {
+    icon.className = "fa-solid fa-gem text-amber-400 text-lg flex-shrink-0";
+    title.innerText = "Trial ended — streaming paused";
+    body.innerText = "Refer 3 friends or get Premium for ₦300/month.";
+    cta.classList.remove("hidden");
+  }
   document.getElementById("premiumBlockBanner").classList.remove("hidden");
 }
 function closePremiumBlock() {
@@ -4472,6 +4946,8 @@ async function renderProfileView() {
   document.getElementById("profileMemberSince").innerText = new Date(currentProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   renderGemBadges();
   initSettingsToggles();
+  updateDownloadsSizeLabel();
+  toggleAdminEntryVisibility();
 
   if (currentProfile.referred_by) {
     const { data: referrer } = await supabaseClient.from("profiles").select("username").eq("id", currentProfile.referred_by).maybeSingle();
