@@ -7,6 +7,21 @@
   <meta name="theme-color" content="#09090b">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="logo.png">
+  <!-- Preconnect to everything on the critical path for "hit play, hear
+       music" and "open a page, see photos": this makes the browser do the
+       DNS lookup + TLS handshake for these domains right away instead of
+       at the moment of the first real request, which is where most of
+       the perceived delay before a track/image actually starts loading
+       comes from. This is the legitimate client-side lever for feeling
+       fast — it can't make the network itself faster, only remove dead
+       time before the real request. -->
+  <link rel="preconnect" href="https://fhogysmvpqakzoxwhxht.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://itunes.apple.com" crossorigin>
+  <link rel="preconnect" href="https://mdundo.com" crossorigin>
+  <link rel="preconnect" href="https://vistanaij.com" crossorigin>
+  <link rel="dns-prefetch" href="https://en.wikipedia.org">
+  <link rel="dns-prefetch" href="https://ws.audioscrobbler.com">
+  <link rel="dns-prefetch" href="https://lrclib.net">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
@@ -201,9 +216,8 @@
             <span id="notifBellBadge" class="hidden absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">0</span>
           </button>
           <div id="notificationsDropdown" class="hidden absolute right-0 top-11 w-72 max-w-[85vw] rounded-2xl border border-white/10 shadow-2xl z-40 overflow-hidden" style="background:rgba(20,20,26,0.92); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <div class="px-4 py-3 border-b border-white/10">
               <span class="text-xs font-black text-white uppercase tracking-widest">Notifications</span>
-              <button onclick="markAllNotificationsRead()" class="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300">Mark all read</button>
             </div>
             <div id="notificationsList" class="max-h-80 overflow-y-auto no-scrollbar divide-y divide-white/5">
               <div class="text-center py-8 text-slate-500 text-xs px-4">Nothing here yet.</div>
@@ -212,6 +226,11 @@
         </div>
       </div>
     </header>
+
+    <!-- Native-style notification banner: drops down from the top when a
+         new broadcast arrives, auto-dismisses, and the message stays
+         available in the bell above either way. -->
+    <div id="notifToastStack" class="fixed top-3 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none"></div>
 
     <div id="status" class="hidden fixed left-1/2 top-4 z-[120] -translate-x-1/2 max-w-[92%] px-2">
       <div id="statusInner" class="flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl border" style="background:rgba(20,20,26,0.94); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-color:rgba(255,255,255,0.08);">
@@ -255,7 +274,7 @@
       
       <!-- New Albums -->
       <div id="newAlbumsSection" class="hidden">
-        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">New albums</h2>
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Naija albums</h2>
         <div id="newAlbumsRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
       </div>
 
@@ -263,8 +282,9 @@
       <div id="top100Section" class="hidden">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xl font-extrabold text-white tracking-tight">Top Nigeria</h2>
-          <button onclick="toggleTop100Expand()" id="top100ToggleBtn" class="text-slate-400 hover:text-white w-8 h-8 rounded-full bg-white/5 flex items-center justify-center transition flex-shrink-0">
-            <i id="top100ToggleIcon" class="fa-solid fa-chevron-down text-xs transition-transform"></i>
+          <button onclick="toggleTop100Expand()" id="top100ToggleBtn" class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 px-3 py-1.5 rounded-full transition flex-shrink-0">
+            <span id="top100ToggleLabel">Show more</span>
+            <i id="top100ToggleIcon" class="fa-solid fa-chevron-down text-[10px] transition-transform"></i>
           </button>
         </div>
         <div id="top100Grid" class="grid grid-cols-2 gap-3"></div>
@@ -276,7 +296,7 @@
           <div onclick="openCuratedPlaylistView('asake_mix','Asake Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
               <img data-cover-key="asake_mix" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Asake Mix</div>
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Afro Mix</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Seyi Vibez, Olamide, Fireboy DML</p>
           </div>
@@ -308,7 +328,7 @@
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Jump back in</h2>
         <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2">
           <div onclick="openCuratedPlaylistView('hot_hits_naija','Hot Hits Naija')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-orange-600 to-red-600 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-orange-600 to-red-600 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">HOT HITS<br><span class="text-black">NAIJA</span></h3>
             </div>
@@ -316,7 +336,7 @@
             <p class="text-[11px] text-slate-400 truncate">Asake, Davido, BNXN, Rema</p>
           </div>
           <div onclick="openCuratedPlaylistView('soul_indie','Soul & Indie')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-rose-500 to-pink-900 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-rose-500 to-pink-900 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">SOUL<br><span class="text-rose-300">INDIE</span></h3>
             </div>
@@ -324,7 +344,7 @@
             <p class="text-[11px] text-slate-400 truncate">Benson Boone, Lewis Capaldi</p>
           </div>
           <div onclick="openCuratedPlaylistView('afro_top_100','Top 100 Afrobeats')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-amber-500 to-purple-800 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-amber-500 to-purple-800 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Top 100</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">AFRO<br><span class="text-amber-300">100</span></h3>
             </div>
@@ -332,7 +352,7 @@
             <p class="text-[11px] text-slate-400 truncate">Burna Boy, Wizkid, Tems</p>
           </div>
           <div onclick="openCuratedPlaylistView('amapiano_grooves','Amapiano Grooves')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-fuchsia-600 to-indigo-800 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-fuchsia-600 to-indigo-800 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">AMAPIANO<br><span class="text-fuchsia-300">GROOVES</span></h3>
             </div>
@@ -340,7 +360,7 @@
             <p class="text-[11px] text-slate-400 truncate">Kabza De Small, Uncle Waffles</p>
           </div>
           <div onclick="openCuratedPlaylistView('hiphop_naija','Naija Hip Hop')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-slate-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-slate-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">NAIJA<br><span class="text-slate-300">HIP HOP</span></h3>
             </div>
@@ -348,7 +368,7 @@
             <p class="text-[11px] text-slate-400 truncate">Odumodublvck, Blaqbonez</p>
           </div>
           <div onclick="openCuratedPlaylistView('afrobeats_fresh','Fresh Afrobeats 2025/26')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-40 h-40 rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-lime-500 to-emerald-800 p-3 flex flex-col justify-between border border-white/10">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-lime-500 to-emerald-800 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">New</span>
               <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
             </div>
@@ -368,6 +388,14 @@
       <div>
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Browse categories</h2>
         <div id="browseCategoriesGrid" class="grid grid-cols-2 gap-3"></div>
+      </div>
+
+      <!-- Whatever's actually in the category column, discovered live —
+           not a hardcoded list, so a new category (Fuji, etc.) shows up
+           automatically the moment it exists in the DB. -->
+      <div id="dbCategoriesSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">More from the catalog</h2>
+        <div id="dbCategoriesGrid" class="grid grid-cols-2 gap-3"></div>
       </div>
       </div>
     </section>
@@ -596,8 +624,18 @@
       <!-- Broadcast -->
       <div class="glass-card rounded-3xl p-5 mb-5">
         <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-bullhorn text-emerald-400 mr-2"></i>Broadcast notification</h3>
-        <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell.</p>
-        <textarea id="adminBroadcastInput" rows="3" placeholder="Write your announcement..." class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-3"></textarea>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell, or just one.</p>
+        <textarea id="adminBroadcastInput" rows="3" placeholder="Write your announcement..." class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-2"></textarea>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input id="adminBroadcastLinkUrl" type="url" placeholder="Link URL (optional)" class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none">
+          <input id="adminBroadcastLinkLabel" type="text" placeholder="Button label" class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none">
+        </div>
+        <div class="flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-crosshairs text-slate-500 text-xs flex-shrink-0"></i>
+          <select id="adminBroadcastTarget" class="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none">
+            <option value="">Everyone</option>
+          </select>
+        </div>
         <button id="adminBroadcastBtn" onclick="adminBroadcastNotification()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition" style="background:linear-gradient(135deg,#10b981,#059669);">Send broadcast</button>
       </div>
 
@@ -1121,8 +1159,8 @@ const PLAYLIST_PRESETS = {
   afro_top_100: ["burna boy","wizkid","tems","ayra starr","kizz daniel","rema","omah lay","victony"],
   afrobeats_category: { type: "category", value: "Afrobeats" },
   afrobeats_fresh: { type: "vistanaij" },
-  asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn"],
-  heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid"],
+  asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn","asake","omah lay"],
+  heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid","dean lewis"],
   olivia_rodrigo_mix: ["olivia rodrigo","sabrina carpenter","gracie abrams","chappell roan","tate mcrae"],
   billie_eilish_mix: ["billie eilish","lorde","clairo","girl in red","gracie abrams"],
   soul_indie: ["benson boone","lewis capaldi","charlie puth","john legend","sam smith","ed sheeran"],
@@ -1257,6 +1295,8 @@ window.addEventListener("DOMContentLoaded", () => {
   renderRecommended();
   renderMoodCardsGrid();
   renderBrowseCategoriesGrid();
+  renderDbCategoriesSection();
+  hydrateJumpBackInColors();
   loadHotAlbums();
   loadNewAlbums();
   loadTop100Nigeria();
@@ -1384,6 +1424,24 @@ const MOOD_CARDS = [
   { key: "party_turnup", title: "Party & Amapiano", sub: "High energy basslines", icon: "fa-fire", color: "text-amber-400" },
   { key: "rnb_soul", title: "R&B & Soul", sub: "Smooth vocals", icon: "fa-record-vinyl", color: "text-rose-400" }
 ];
+
+// "Jump back in" tiles get a random gradient re-picked on every page
+// load, purely cosmetic — inline style so it always wins over the
+// Tailwind gradient classes already on the element (kept as a no-JS
+// fallback).
+const JUMP_TILE_GRADIENTS = [
+  ["#f97316", "#dc2626"], ["#f43f5e", "#831843"], ["#f59e0b", "#7c3aed"],
+  ["#d946ef", "#4338ca"], ["#475569", "#0f172a"], ["#84cc16", "#065f46"],
+  ["#0ea5e9", "#4f46e5"], ["#ec4899", "#7c2d12"], ["#14b8a6", "#0369a1"],
+  ["#eab308", "#9a3412"], ["#a855f7", "#312e81"], ["#22c55e", "#134e4a"]
+];
+function hydrateJumpBackInColors() {
+  const shuffled = [...JUMP_TILE_GRADIENTS].sort(() => Math.random() - 0.5);
+  document.querySelectorAll(".jump-tile-gradient").forEach((el, i) => {
+    const pair = shuffled[i % shuffled.length];
+    el.style.background = `linear-gradient(135deg, ${pair[0]}, ${pair[1]})`;
+  });
+}
 
 function renderMoodCardsGrid() {
   const grid = document.getElementById("moodCardsGrid");
@@ -2063,6 +2121,8 @@ function toggleTop100Expand() {
   });
   const icon = document.getElementById("top100ToggleIcon");
   if (icon) icon.style.transform = top100Expanded ? "rotate(180deg)" : "rotate(0deg)";
+  const label = document.getElementById("top100ToggleLabel");
+  if (label) label.innerText = top100Expanded ? "Show less" : "Show more";
 }
 
 // Finds the closest match in our DB for a Last.fm {title, artist} pair —
@@ -2081,6 +2141,49 @@ async function findBestDbMatch(title, artist) {
   return candidates.find(c => (c.title || "").toLowerCase().includes(targetWord)) || null;
 }
 
+// ==================== IMAGE CACHE (IndexedDB blobs — instant + offline) ====================
+// The localStorage cache above stores the resolved *URL* — still a
+// network request away. This stores the actual image bytes in the same
+// IndexedDB database as downloaded tracks, so a previously-seen photo
+// paints instantly on reload and keeps working with no network at all,
+// not just skips the iTunes lookup.
+let imageObjectUrlCache = {};
+
+function cacheImageBlob(key, blob) {
+  if (!offlineDB || !key || !blob) return;
+  try {
+    const tx = offlineDB.transaction("imageBlobs", "readwrite");
+    tx.objectStore("imageBlobs").put({ key, blob, cachedAt: Date.now() });
+  } catch (e) {}
+}
+
+function getCachedImageBlobURL(key) {
+  return new Promise((resolve) => {
+    if (!key) return resolve(null);
+    if (imageObjectUrlCache[key]) return resolve(imageObjectUrlCache[key]);
+    if (!offlineDB) return resolve(null);
+    try {
+      const tx = offlineDB.transaction("imageBlobs", "readonly");
+      const req = tx.objectStore("imageBlobs").get(key);
+      req.onsuccess = () => {
+        if (req.result && req.result.blob) {
+          const url = URL.createObjectURL(req.result.blob);
+          imageObjectUrlCache[key] = url;
+          resolve(url);
+        } else resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+
+// Fire-and-forget: downloads a resolved image URL into the IndexedDB blob
+// cache in the background. Never blocks or throws for the caller.
+function backgroundCacheImageURL(key, url) {
+  if (!url || !key || !offlineDB) return;
+  fetch(url).then(r => r.ok ? r.blob() : null).then(blob => { if (blob) cacheImageBlob(key, blob); }).catch(() => {});
+}
+
 // ==================== IMAGE RESOLUTION ====================
 async function resolveImage(song) {
   if (song._local) return song.image || placeholderFor(song.title);
@@ -2089,16 +2192,21 @@ async function resolveImage(song) {
   if (!artist) return placeholderFor(song.title || "x");
   if (artistImageCache[artist] !== undefined) return artistImageCache[artist] || placeholderFor(artist);
 
+  // Fastest path: actual bytes already sitting in IndexedDB from a past visit.
+  const blobUrl = await getCachedImageBlobURL(imgCacheKey(artist));
+  if (blobUrl) { artistImageCache[artist] = blobUrl; return blobUrl; }
+
   const cached = getCachedImage(artist);
   if (cached) {
     artistImageCache[artist] = cached;
+    backgroundCacheImageURL(imgCacheKey(artist), cached);
     // Quietly refresh in the background so the cache stays fresh without
     // blocking this (already instant) return.
     fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&entity=song&limit=1`)
       .then(r => r.json())
       .then(data => {
         const art = data.results && data.results[0] ? data.results[0].artworkUrl100.replace("100x100","400x400") : null;
-        if (art) { artistImageCache[artist] = art; setCachedImage(artist, art); }
+        if (art) { artistImageCache[artist] = art; setCachedImage(artist, art); backgroundCacheImageURL(imgCacheKey(artist), art); }
       }).catch(() => {});
     return cached;
   }
@@ -2108,7 +2216,7 @@ async function resolveImage(song) {
     const data = await res.json();
     const art = data.results && data.results[0] ? data.results[0].artworkUrl100.replace("100x100","400x400") : null;
     artistImageCache[artist] = art;
-    if (art) setCachedImage(artist, art);
+    if (art) { setCachedImage(artist, art); backgroundCacheImageURL(imgCacheKey(artist), art); }
     return art || placeholderFor(artist);
   } catch (e) {
     artistImageCache[artist] = null;
@@ -2217,12 +2325,63 @@ async function fetchVistanaijFresh(limit = 60) {
 // This lets category-backed mixes pull real, current catalog data instead
 // of a fixed artist list.
 async function fetchPresetTracks(presetKey, limit) {
+  if (presetKey.startsWith("dbcat:")) return fetchByCategory(presetKey.slice(6), limit || 60);
   const preset = PLAYLIST_PRESETS[presetKey];
   if (!preset) return [];
   if (Array.isArray(preset)) return fetchByArtists(preset, limit || 12);
   if (preset.type === "category") return fetchByCategory(preset.value, limit || 60);
   if (preset.type === "vistanaij") return fetchVistanaijFresh(limit || 60);
   return [];
+}
+
+// Reads whatever distinct values actually exist in mp3pm_songs.category —
+// no hardcoded category names. Whatever you tag songs with in the DB
+// (Fuji, Highlife, whatever) shows up here automatically.
+async function discoverDbCategories() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("mp3pm_songs").select("category")
+      .not("category", "is", null)
+      .order("crawled_at", { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    const seen = new Set();
+    const cats = [];
+    (data || []).forEach(r => {
+      const c = (r.category || "").trim();
+      if (!c) return;
+      const key = c.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      cats.push(c);
+    });
+    return cats;
+  } catch (e) { return []; }
+}
+
+const DB_CATEGORY_ICONS = ["fa-music", "fa-drum", "fa-guitar", "fa-headphones-simple", "fa-microphone-lines", "fa-compact-disc", "fa-radio"];
+
+async function renderDbCategoriesSection() {
+  const section = document.getElementById("dbCategoriesSection");
+  const grid = document.getElementById("dbCategoriesGrid");
+  if (!section || !grid) return;
+  const cats = await discoverDbCategories();
+  // "Afrobeats" already has its own dedicated, hand-styled tile above —
+  // don't show it twice.
+  const already = new Set(["afrobeats"]);
+  const filtered = cats.filter(c => !already.has(c.toLowerCase())).slice(0, 12);
+  if (filtered.length === 0) { section.classList.add("hidden"); return; }
+  section.classList.remove("hidden");
+  grid.innerHTML = filtered.map((c, i) => `
+    <div data-dbcat="${escapeHtml(c)}" class="glass-card p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition">
+      <div><h4 class="font-bold text-sm text-white">${escapeHtml(c)}</h4><p class="text-[10px] text-slate-400 mt-0.5">From the catalog</p></div>
+      <i class="fa-solid ${DB_CATEGORY_ICONS[i % DB_CATEGORY_ICONS.length]} text-emerald-400 text-lg"></i>
+    </div>
+  `).join("");
+  grid.querySelectorAll("[data-dbcat]").forEach(el => {
+    const cat = el.getAttribute("data-dbcat");
+    el.onclick = () => openCuratedPlaylistView("dbcat:" + cat, cat);
+  });
 }
 
 async function playCuratedPlaylist(presetKey) {
@@ -3464,6 +3623,34 @@ async function fetchAlbumMatches(query) {
 // query is faster shows up first, and the other merges in when it lands.
 // This is what actually makes typing feel instant instead of "search,
 // then wait ~1-3s for a big paint".
+// Every full search that comes up completely empty gets logged so admin
+// can see what people are looking for that isn't in the catalog yet.
+// Requires:
+//   create table if not exists public.failed_searches (
+//     id uuid primary key default gen_random_uuid(),
+//     query text not null,
+//     created_at timestamptz not null default now()
+//   );
+//   alter table public.failed_searches enable row level security;
+//   create policy "anyone can insert failed searches" on public.failed_searches
+//     for insert with check (true);
+//   create policy "anyone can read failed searches" on public.failed_searches
+//     for select using (true);
+//   create policy "anyone can delete failed searches" on public.failed_searches
+//     for delete using (true);
+// "Clear in 24 hours" has no real cron here (this is a static page), so
+// the admin panel deletes anything older than 24h every time it loads
+// the list — effectively the same result without needing a server job.
+const loggedFailedSearches = new Set();
+function logFailedSearch(query) {
+  const q = (query || "").trim();
+  if (!q || q.length < 2) return;
+  const key = q.toLowerCase();
+  if (loggedFailedSearches.has(key)) return; // don't spam duplicate logs within this session
+  loggedFailedSearches.add(key);
+  supabaseClient.from("failed_searches").insert({ query: q }).then(() => {}).catch(() => {});
+}
+
 async function runSearch(query, isFullSearch) {
   const container = document.getElementById("searchResults");
   container.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
@@ -3495,6 +3682,7 @@ async function runSearch(query, isFullSearch) {
 
   async function checkNoResults() {
     if (searchAbortController !== controller) return;
+    if (isFullSearch) logFailedSearch(query);
     const suggestions = await fetchSimilarArtistSuggestions(query);
     if (searchAbortController !== controller) return;
     renderNoResultsWithSuggestions(query, container, suggestions);
@@ -4265,12 +4453,13 @@ let offlineDB = null;
 let offlineSongsMeta = [];
 
 function initOfflineDB() {
-  const req = indexedDB.open("lumicOffline", 3);
+  const req = indexedDB.open("lumicOffline", 4);
   req.onupgradeneeded = (e) => {
     const db = e.target.result;
     if (!db.objectStoreNames.contains("tracks")) db.createObjectStore("tracks", { keyPath: "uid" });
     if (!db.objectStoreNames.contains("lyrics")) db.createObjectStore("lyrics", { keyPath: "trackId" });
     if (!db.objectStoreNames.contains("localTracks")) db.createObjectStore("localTracks", { keyPath: "id" });
+    if (!db.objectStoreNames.contains("imageBlobs")) db.createObjectStore("imageBlobs", { keyPath: "key" });
   };
   req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); loadLocalTracksFromDB(); };
   req.onerror = () => { showStatus("Offline storage unavailable on this device."); };
@@ -4482,6 +4671,9 @@ function savePremiumCache() {
 //   create table if not exists public.broadcasts (
 //     id uuid primary key default gen_random_uuid(),
 //     message text not null,
+//     user_id uuid references auth.users(id),  -- null = everyone, set = just that user
+//     link_url text,
+//     link_label text,
 //     created_at timestamptz not null default now()
 //   );
 //   alter table public.broadcasts enable row level security;
@@ -4495,10 +4687,14 @@ function savePremiumCache() {
 // nothing here for RLS to block.
 const NOTIF_CACHE_KEY = "lumic_notifications_cache";
 const NOTIF_LAST_READ_KEY = "lumic_notifications_last_read";
+const NOTIF_TOAST_SEEN_KEY = "lumic_notifications_toast_seen";
 let userNotifications = [];
 
 function getNotificationsLastRead() {
   return localStorage.getItem(NOTIF_LAST_READ_KEY) || "1970-01-01T00:00:00.000Z";
+}
+function getToastLastSeen() {
+  return localStorage.getItem(NOTIF_TOAST_SEEN_KEY) || "1970-01-01T00:00:00.000Z";
 }
 
 function applyCachedNotifications() {
@@ -4508,15 +4704,21 @@ function applyCachedNotifications() {
   fetchBroadcastNotifications();
 }
 
-// Public read — doesn't require the person to be signed in, so this can
-// run immediately on load and on a timer, not just after bootAuth.
+// Public read — a guest sees only untargeted (everyone) broadcasts;
+// once signed in, this also includes anything sent to that user
+// specifically. Doesn't require sign-in, so this can run immediately on
+// load and on a timer, not just after bootAuth.
 async function fetchBroadcastNotifications() {
   try {
-    const { data, error } = await supabaseClient.from("broadcasts").select("*").order("created_at", { ascending: false }).limit(50);
+    let req = supabaseClient.from("broadcasts").select("*").order("created_at", { ascending: false }).limit(50);
+    req = currentUser ? req.or(`user_id.is.null,user_id.eq.${currentUser.id}`) : req.is("user_id", null);
+    const { data, error } = await req;
     if (error) throw error;
+    const isNew = JSON.stringify((userNotifications || []).map(n => n.id)) !== JSON.stringify((data || []).map(n => n.id));
     userNotifications = data || [];
     try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
     renderNotificationsDropdown();
+    if (isNew) showUnseenBroadcastToasts();
   } catch (e) {
     // Table might not exist yet, or a transient network issue — keep
     // whatever's cached rather than clearing it.
@@ -4540,17 +4742,25 @@ function renderNotificationsDropdown() {
   list.innerHTML = sorted.map(n => `
     <div class="px-4 py-3 ${new Date(n.created_at || 0).getTime() > lastRead ? "bg-emerald-500/5" : ""}">
       <p class="text-xs text-slate-200 leading-relaxed">${escapeHtml(n.message || "")}</p>
-      <p class="text-[10px] text-slate-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p>
+      <div class="flex items-center justify-between mt-1.5">
+        <p class="text-[10px] text-slate-500">${n.created_at ? new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p>
+        ${n.link_url ? `<a href="${escapeHtml(n.link_url)}" target="_blank" rel="noopener" class="text-[10px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-2.5 py-1 rounded-full transition">${escapeHtml(n.link_label || "Open")}</a>` : ""}
+      </div>
     </div>
   `).join("");
 }
 
+// Clicking the bell both opens the dropdown AND clears the unread count —
+// no separate "mark as read" action needed.
 function toggleNotificationsDropdown(e) {
   if (e) e.stopPropagation();
   const dd = document.getElementById("notificationsDropdown");
   const opening = dd.classList.contains("hidden");
   dd.classList.toggle("hidden");
-  if (opening) document.addEventListener("click", closeNotificationsDropdownOnOutsideClick);
+  if (opening) {
+    document.addEventListener("click", closeNotificationsDropdownOnOutsideClick);
+    markAllNotificationsRead();
+  }
 }
 function closeNotificationsDropdownOnOutsideClick(e) {
   const dd = document.getElementById("notificationsDropdown");
@@ -4562,6 +4772,49 @@ function closeNotificationsDropdownOnOutsideClick(e) {
 function markAllNotificationsRead() {
   localStorage.setItem(NOTIF_LAST_READ_KEY, new Date().toISOString());
   renderNotificationsDropdown();
+}
+
+// ==================== NATIVE-STYLE NOTIFICATION TOAST ====================
+// Drops a glass banner down from the top the moment a new broadcast is
+// seen (on app entry, or if one arrives while the app's open) — like a
+// native OS push notification. Auto-dismisses after a few seconds either
+// way; the message is still sitting in the bell dropdown for later.
+function showUnseenBroadcastToasts() {
+  const lastSeen = new Date(getToastLastSeen()).getTime();
+  const unseen = userNotifications
+    .filter(n => new Date(n.created_at || 0).getTime() > lastSeen)
+    .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+  if (unseen.length === 0) return;
+  // Show newest first, stagger slightly so multiple don't all pop at once.
+  [...unseen].reverse().forEach((n, i) => setTimeout(() => showNotificationToast(n), i * 350));
+  localStorage.setItem(NOTIF_TOAST_SEEN_KEY, unseen[unseen.length - 1].created_at);
+}
+
+function showNotificationToast(n) {
+  const stack = document.getElementById("notifToastStack");
+  if (!stack) return;
+  const el = document.createElement("div");
+  el.className = "w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl p-4 pointer-events-auto";
+  el.style.cssText = "background:rgba(20,20,26,0.94); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); transform:translateY(-120%); opacity:0; transition:transform .35s cubic-bezier(.2,.9,.3,1), opacity .35s ease;";
+  el.innerHTML = `
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-bell text-emerald-400 text-xs"></i></div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-bold text-white leading-snug">${escapeHtml(n.message || "")}</p>
+        ${n.link_url ? `<a href="${escapeHtml(n.link_url)}" target="_blank" rel="noopener" class="inline-block mt-2 text-[11px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-full transition">${escapeHtml(n.link_label || "Open")}</a>` : ""}
+      </div>
+      <button data-dismiss class="text-slate-500 hover:text-white p-1 flex-shrink-0"><i class="fa-solid fa-xmark text-xs"></i></button>
+    </div>
+  `;
+  stack.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transform = "translateY(0)"; el.style.opacity = "1"; }));
+  const dismiss = () => {
+    el.style.transform = "translateY(-120%)";
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 350);
+  };
+  el.querySelector("[data-dismiss]").onclick = dismiss;
+  setTimeout(dismiss, 6000);
 }
 
 // ==================== ADMIN PANEL ====================
@@ -4611,9 +4864,20 @@ async function loadAdminUsers(query) {
     if (error) throw error;
     adminUsersCache = data || [];
     renderAdminUsersList(adminUsersCache);
+    populateBroadcastTargetSelect(adminUsersCache);
   } catch (e) {
     list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm px-4">Couldn't load users. If this keeps happening, check that your admin account's Supabase policy allows reading all profiles.</div>`;
   }
+}
+
+function populateBroadcastTargetSelect(users) {
+  const sel = document.getElementById("adminBroadcastTarget");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = `<option value="">Everyone</option>` + users.map(u =>
+    `<option value="${escapeHtml(u.id)}">@${escapeHtml(u.username || u.id.slice(0, 8))}</option>`
+  ).join("");
+  sel.value = current;
 }
 
 function renderAdminUsersList(users) {
@@ -4667,10 +4931,18 @@ async function adminBroadcastNotification() {
   const input = document.getElementById("adminBroadcastInput");
   const message = input.value.trim();
   if (!message) return;
+  const linkUrl = document.getElementById("adminBroadcastLinkUrl").value.trim();
+  const linkLabel = document.getElementById("adminBroadcastLinkLabel").value.trim();
+  const targetUserId = document.getElementById("adminBroadcastTarget").value || null;
   const btn = document.getElementById("adminBroadcastBtn");
   btn.disabled = true;
   btn.innerText = "Sending...";
-  const { error } = await supabaseClient.from("broadcasts").insert({ message });
+  const { error } = await supabaseClient.from("broadcasts").insert({
+    message,
+    link_url: linkUrl || null,
+    link_label: linkUrl ? (linkLabel || "Open") : null,
+    user_id: targetUserId
+  });
   btn.disabled = false;
   btn.innerText = "Send broadcast";
   if (error) {
@@ -4678,7 +4950,9 @@ async function adminBroadcastNotification() {
     return;
   }
   input.value = "";
-  showStatus("Broadcast sent — it'll show up in every user's notification bell.");
+  document.getElementById("adminBroadcastLinkUrl").value = "";
+  document.getElementById("adminBroadcastLinkLabel").value = "";
+  showStatus(targetUserId ? "Sent to that user's notification bell." : "Broadcast sent — it'll show up in every user's notification bell.");
   fetchBroadcastNotifications(); // refresh the admin's own bell immediately too
 }
 
@@ -4693,6 +4967,7 @@ async function bootAuth() {
   currentProfile = profile;
   renderGemBadges();
   toggleAdminEntryVisibility();
+  fetchBroadcastNotifications();
 
   await claimDeviceSession();
   await loadSubscription();
@@ -5141,4 +5416,3 @@ async function respondToShare(req, status) {
 </script>
 </body>
 </html>
-
