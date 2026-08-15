@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumic Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  body { background:#09090b; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  .glass-card { background:rgba(255,255,255,0.03); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.06); }
+  .skeleton { background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 37%,rgba(255,255,255,0.04) 63%); background-size:400% 100%; animation:sk 1.4s ease infinite; }
+  @keyframes sk { 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:4px; }
+</style>
+</head>
+<body class="text-slate-100 min-h-screen">
+
+  <!-- PASSWORD GATE -->
+  <div id="gate" class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-sm glass-card rounded-3xl p-6 text-center">
+      <i class="fa-solid fa-shield-halved text-emerald-400 text-3xl mb-3"></i>
+      <h1 class="text-lg font-black text-white mb-1">Lumic Admin</h1>
+      <p class="text-xs text-slate-400 mb-5">Enter the admin password to continue.</p>
+      <input id="gatePasswordInput" type="password" placeholder="Password" autocomplete="off"
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-white placeholder-slate-500 outline-none text-center mb-3">
+      <button onclick="tryUnlock()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition"
+        style="background:linear-gradient(135deg,#10b981,#059669);">Unlock</button>
+      <p id="gateError" class="hidden text-rose-400 text-xs mt-3">Wrong password — try again.</p>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="dashboard" class="hidden max-w-2xl mx-auto px-4 py-6 pb-16">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-xl font-black text-white"><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i>Lumic Admin</h1>
+      <button onclick="lockOut()" class="text-xs font-semibold text-slate-400 hover:text-rose-400 flex items-center gap-1.5"><i class="fa-solid fa-lock"></i> Lock</button>
+    </div>
+
+    <!-- Broadcast -->
+    <div class="glass-card rounded-3xl p-5 mb-6">
+      <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-bullhorn text-emerald-400 mr-2"></i>Broadcast notification</h3>
+      <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell.</p>
+      <textarea id="broadcastInput" rows="3" placeholder="Write your announcement..."
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-3"></textarea>
+      <button id="broadcastBtn" onclick="broadcastNotification()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition"
+        style="background:linear-gradient(135deg,#10b981,#059669);">Send broadcast</button>
+      <p id="broadcastStatus" class="text-xs text-slate-400 mt-2"></p>
+    </div>
+
+    <!-- Active users -->
+    <div class="glass-card rounded-3xl p-5 mb-6">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-black text-white"><i class="fa-solid fa-users text-emerald-400 mr-2"></i>Active users</h3>
+        <button onclick="loadActiveUsers()" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed mb-4">Sessions seen in the last 48 hours.</p>
+      <div id="activeUsersList" class="space-y-2"></div>
+    </div>
+
+    <!-- All users (paginated dropdown) -->
+    <div class="glass-card rounded-3xl p-5">
+      <button onclick="toggleAllUsers()" class="w-full flex items-center justify-between">
+        <h3 class="text-sm font-black text-white"><i class="fa-solid fa-list-ul text-emerald-400 mr-2"></i>All users</h3>
+        <i id="allUsersChevron" class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+      </button>
+      <div id="allUsersPanel" class="hidden mt-4">
+        <div id="allUsersList" class="space-y-2"></div>
+        <div class="flex items-center justify-between mt-4">
+          <button onclick="allUsersPrevPage()" id="allUsersPrevBtn" class="text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2 rounded-full transition disabled:opacity-30 disabled:pointer-events-none">
+            <i class="fa-solid fa-chevron-left mr-1"></i>Prev
+          </button>
+          <span id="allUsersPageLabel" class="text-[11px] text-slate-500">—</span>
+          <button onclick="allUsersNextPage()" id="allUsersNextBtn" class="text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2 rounded-full transition disabled:opacity-30 disabled:pointer-events-none">
+            Next<i class="fa-solid fa-chevron-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Same Supabase project the main app uses.
+  const SUPABASE_URL = "https://fhogysmvpqakzoxwhxht.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob2d5c212cHFha3pveHdoeGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MTg0OTcsImV4cCI6MjEwMDI5NDQ5N30.0WBV1--98XFx_WyL5TkRIsQ1sc-FkUCixv2uf0j8T9g";
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const ADMIN_PASSWORD = "press12345"; // lowercase reference — compared case-insensitively below
+  const AUTH_KEY = "lumic_admin_authed";
+  const ACTIVE_WINDOW_HOURS = 48;
+  const PAGE_SIZE = 10;
+
+  function escapeHtml(str) {
+    return (str || "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // ==================== PASSWORD GATE ====================
+  function tryUnlock() {
+    const input = document.getElementById("gatePasswordInput").value.trim();
+    if (input.toLowerCase() === ADMIN_PASSWORD.toLowerCase()) {
+      localStorage.setItem(AUTH_KEY, "1");
+      enterDashboard();
+    } else {
+      document.getElementById("gateError").classList.remove("hidden");
+    }
+  }
+  document.getElementById("gatePasswordInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") tryUnlock();
+  });
+
+  function lockOut() {
+    localStorage.removeItem(AUTH_KEY);
+    document.getElementById("dashboard").classList.add("hidden");
+    document.getElementById("gate").classList.remove("hidden");
+    document.getElementById("gatePasswordInput").value = "";
+    document.getElementById("gateError").classList.add("hidden");
+  }
+
+  function enterDashboard() {
+    document.getElementById("gate").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    loadActiveUsers();
+  }
+
+  // Skip the gate if this device already unlocked it before.
+  if (localStorage.getItem(AUTH_KEY) === "1") enterDashboard();
+
+  // ==================== BROADCAST ====================
+  // Writes a single row into a dedicated `broadcasts` table — NOT into
+  // profiles.notifications. The old approach needed UPDATE permission on
+  // EVERY user's profiles row, which normal Row Level Security (locked to
+  // auth.uid() = id) blocks outright, since this page never signs in —
+  // that's why every broadcast was silently failing. A dedicated table
+  // needs only one INSERT + a public SELECT, a much smaller ask. Run this
+  // once in Supabase if you haven't:
+  //
+  //   create table if not exists public.broadcasts (
+  //     id uuid primary key default gen_random_uuid(),
+  //     message text not null,
+  //     created_at timestamptz not null default now()
+  //   );
+  //   alter table public.broadcasts enable row level security;
+  //   create policy "anyone can read broadcasts" on public.broadcasts
+  //     for select using (true);
+  //   create policy "anyone can insert broadcasts" on public.broadcasts
+  //     for insert with check (true);
+  async function broadcastNotification() {
+    const input = document.getElementById("broadcastInput");
+    const statusEl = document.getElementById("broadcastStatus");
+    const message = input.value.trim();
+    if (!message) return;
+    const btn = document.getElementById("broadcastBtn");
+    btn.disabled = true;
+    btn.innerText = "Sending...";
+    statusEl.className = "text-xs text-slate-400 mt-2";
+    statusEl.innerText = "";
+
+    const { error } = await supabaseClient.from("broadcasts").insert({ message });
+    btn.disabled = false;
+    btn.innerText = "Send broadcast";
+
+    if (error) {
+      statusEl.className = "text-xs text-rose-400 mt-2";
+      statusEl.innerText = error.message.includes("does not exist")
+        ? `Broadcast failed: the broadcasts table doesn't exist yet. Run the SQL in the comment above this function.`
+        : `Broadcast failed: ${error.message}`;
+      return;
+    }
+    input.value = "";
+    statusEl.className = "text-xs text-emerald-400 mt-2";
+    statusEl.innerText = "Broadcast sent — it'll show up in every user's notification bell.";
+  }
+
+  // ==================== ACTIVE USERS (last 48 hours) ====================
+  async function loadActiveUsers() {
+    const list = document.getElementById("activeUsersList");
+    list.innerHTML = `<div class="space-y-2">${Array(3).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
+    const cutoff = new Date(Date.now() - ACTIVE_WINDOW_HOURS * 3600000).toISOString();
+    const { data: sessions, error } = await supabaseClient
+      .from("sessions").select("*")
+      .eq("status", "active")
+      .gte("updated_at", cutoff)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs px-2">Couldn't load active users: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    if (!sessions || sessions.length === 0) {
+      list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No sessions in the last ${ACTIVE_WINDOW_HOURS} hours.</div>`;
+      return;
+    }
+
+    const userIds = [...new Set(sessions.map(s => s.user_id))];
+    const { data: profiles } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", userIds);
+    const profileMap = {};
+    (profiles || []).forEach(p => profileMap[p.id] = p);
+
+    list.innerHTML = "";
+    sessions.forEach(s => {
+      const p = profileMap[s.user_id];
+      const name = p ? (p.display_name || p.username || "Unnamed") : "Unknown user";
+      const uname = p ? p.username : s.user_id.slice(0, 8);
+      const hrs = (Date.now() - new Date(s.updated_at).getTime()) / 3600000;
+      const ago = hrs < 1 ? Math.max(1, Math.round(hrs * 60)) + "m ago" : Math.round(hrs) + "h ago";
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5";
+      row.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-black font-black text-xs flex-shrink-0">${escapeHtml(name.charAt(0).toUpperCase())}</div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-bold text-white truncate">${escapeHtml(name)}</p>
+          <p class="text-[10px] text-slate-500 truncate">@${escapeHtml(uname)}</p>
+        </div>
+        <span class="text-[10px] text-emerald-400 font-semibold flex-shrink-0">${ago}</span>
+      `;
+      list.appendChild(row);
+    });
+
+    const header = list.parentElement.querySelector("h3");
+    header.innerHTML = `<i class="fa-solid fa-users text-emerald-400 mr-2"></i>Active users <span class="text-slate-500 font-normal">(${sessions.length})</span>`;
+  }
+
+  // ==================== ALL USERS (paginated, 10 per page) ====================
+  let allUsersPage = 0;
+  let allUsersTotalCount = 0;
+  let allUsersOpen = false;
+
+  function toggleAllUsers() {
+    allUsersOpen = !allUsersOpen;
+    document.getElementById("allUsersPanel").classList.toggle("hidden", !allUsersOpen);
+    document.getElementById("allUsersChevron").style.transform = allUsersOpen ? "rotate(180deg)" : "rotate(0deg)";
+    if (allUsersOpen && allUsersTotalCount === 0) loadAllUsersPage(0);
+  }
+
+  function allUsersPrevPage() { if (allUsersPage > 0) loadAllUsersPage(allUsersPage - 1); }
+  function allUsersNextPage() {
+    const maxPage = Math.max(0, Math.ceil(allUsersTotalCount / PAGE_SIZE) - 1);
+    if (allUsersPage < maxPage) loadAllUsersPage(allUsersPage + 1);
+  }
+
+  async function loadAllUsersPage(page) {
+    const list = document.getElementById("allUsersList");
+    list.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-12 rounded-xl"></div>').join("")}</div>`;
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error, count } = await supabaseClient
+      .from("profiles").select("id, username, display_name, is_premium, is_blocked, created_at", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs px-2">Couldn't load users: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+
+    allUsersPage = page;
+    allUsersTotalCount = count || 0;
+    const maxPage = Math.max(0, Math.ceil(allUsersTotalCount / PAGE_SIZE) - 1);
+
+    list.innerHTML = "";
+    if (!data || data.length === 0) {
+      list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No users found.</div>`;
+    } else {
+      data.forEach(u => {
+        const name = u.display_name || u.username || "Unnamed";
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5";
+        row.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-black text-xs flex-shrink-0">${escapeHtml(name.charAt(0).toUpperCase())}</div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-white truncate">${escapeHtml(name)}</p>
+            <p class="text-[10px] text-slate-500 truncate">@${escapeHtml(u.username || "—")}${u.is_premium ? " · Premium" : ""}${u.is_blocked ? " · Blocked" : ""}</p>
+          </div>
+          <span class="text-[10px] text-slate-500 flex-shrink-0">${u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}</span>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    document.getElementById("allUsersPageLabel").innerText = `Page ${page + 1} of ${maxPage + 1} · ${allUsersTotalCount} total`;
+    document.getElementById("allUsersPrevBtn").disabled = page === 0;
+    document.getElementById("allUsersNextBtn").disabled = page >= maxPage;
+  }
+</script>
+</body>
+</html>
