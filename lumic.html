@@ -1265,6 +1265,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupMediaSession();
   applyCachedPremiumStatus();
   applyCachedNotifications();
+  setInterval(fetchBroadcastNotifications, 25000);
   bootAuth();
   initSettingsToggles();
 });
@@ -3519,7 +3520,7 @@ async function runSearch(query, isFullSearch) {
       songsDone = true;
       if (e.name === "AbortError") return;
       if (searchAbortController === controller && latestAlbums.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Nothing here, try again.</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results. Have you run lumic_migration.sql yet?</div>`;
       }
     });
 
@@ -4470,48 +4471,65 @@ function savePremiumCache() {
 }
 
 // ==================== BROADCAST NOTIFICATIONS ====================
-// Admin broadcasts (see the admin panel below) get written into
-// profiles.notifications, a jsonb array of {id, message, created_at, read}.
-// This requires that column to exist:
-//   alter table public.profiles add column if not exists
-//     notifications jsonb not null default '[]'::jsonb;
-// Cached to localStorage so the bell shows something instantly on load,
-// then reconciled once the live profile/poll comes back.
+// Broadcasts live in their own table — NOT profiles.notifications. Writing
+// a broadcast into every single profiles row required UPDATE permission on
+// every OTHER user's row, which normal Row Level Security (locked to
+// auth.uid() = id) blocks outright — that's why the old jsonb-column
+// approach never actually delivered anything. A dedicated table needs only
+// one INSERT (by admin) and a public SELECT (by everyone), which is a much
+// smaller, saner permission to grant. Run this once in Supabase:
+//
+//   create table if not exists public.broadcasts (
+//     id uuid primary key default gen_random_uuid(),
+//     message text not null,
+//     created_at timestamptz not null default now()
+//   );
+//   alter table public.broadcasts enable row level security;
+//   create policy "anyone can read broadcasts" on public.broadcasts
+//     for select using (true);
+//   create policy "anyone can insert broadcasts" on public.broadcasts
+//     for insert with check (true);
+//
+// Read/unread state is tracked purely client-side (a "last read" timestamp
+// in localStorage) — no per-user DB write needed at all, so there's
+// nothing here for RLS to block.
 const NOTIF_CACHE_KEY = "lumic_notifications_cache";
+const NOTIF_LAST_READ_KEY = "lumic_notifications_last_read";
 let userNotifications = [];
+
+function getNotificationsLastRead() {
+  return localStorage.getItem(NOTIF_LAST_READ_KEY) || "1970-01-01T00:00:00.000Z";
+}
 
 function applyCachedNotifications() {
   try { userNotifications = JSON.parse(localStorage.getItem(NOTIF_CACHE_KEY) || "[]"); }
   catch (e) { userNotifications = []; }
   renderNotificationsDropdown();
+  fetchBroadcastNotifications();
 }
 
-function syncNotificationsFromProfile() {
-  if (!currentProfile) return;
-  userNotifications = Array.isArray(currentProfile.notifications) ? currentProfile.notifications : [];
-  try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
-  renderNotificationsDropdown();
-}
-
-async function pollBroadcastNotifications() {
-  if (!currentUser) return;
+// Public read — doesn't require the person to be signed in, so this can
+// run immediately on load and on a timer, not just after bootAuth.
+async function fetchBroadcastNotifications() {
   try {
-    const { data } = await supabaseClient.from("profiles").select("notifications").eq("id", currentUser.id).maybeSingle();
-    if (data && Array.isArray(data.notifications)) {
-      if (currentProfile) currentProfile.notifications = data.notifications;
-      userNotifications = data.notifications;
-      try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
-      renderNotificationsDropdown();
-    }
-  } catch (e) {}
+    const { data, error } = await supabaseClient.from("broadcasts").select("*").order("created_at", { ascending: false }).limit(50);
+    if (error) throw error;
+    userNotifications = data || [];
+    try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
+    renderNotificationsDropdown();
+  } catch (e) {
+    // Table might not exist yet, or a transient network issue — keep
+    // whatever's cached rather than clearing it.
+  }
 }
 
 function renderNotificationsDropdown() {
   const list = document.getElementById("notificationsList");
   const badge = document.getElementById("notifBellBadge");
   if (!list || !badge) return;
+  const lastRead = new Date(getNotificationsLastRead()).getTime();
   const sorted = [...userNotifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  const unread = sorted.filter(n => !n.read).length;
+  const unread = sorted.filter(n => new Date(n.created_at || 0).getTime() > lastRead).length;
   if (unread > 0) { badge.innerText = unread > 9 ? "9+" : String(unread); badge.classList.remove("hidden"); }
   else badge.classList.add("hidden");
 
@@ -4520,7 +4538,7 @@ function renderNotificationsDropdown() {
     return;
   }
   list.innerHTML = sorted.map(n => `
-    <div class="px-4 py-3 ${n.read ? "" : "bg-emerald-500/5"}">
+    <div class="px-4 py-3 ${new Date(n.created_at || 0).getTime() > lastRead ? "bg-emerald-500/5" : ""}">
       <p class="text-xs text-slate-200 leading-relaxed">${escapeHtml(n.message || "")}</p>
       <p class="text-[10px] text-slate-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p>
     </div>
@@ -4542,14 +4560,8 @@ function closeNotificationsDropdownOnOutsideClick(e) {
 }
 
 function markAllNotificationsRead() {
-  if (!userNotifications.length) return;
-  userNotifications = userNotifications.map(n => ({ ...n, read: true }));
-  try { localStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify(userNotifications)); } catch (e) {}
-  if (currentProfile) currentProfile.notifications = userNotifications;
+  localStorage.setItem(NOTIF_LAST_READ_KEY, new Date().toISOString());
   renderNotificationsDropdown();
-  if (currentUser) {
-    supabaseClient.from("profiles").update({ notifications: userNotifications }).eq("id", currentUser.id).then(() => {}).catch(() => {});
-  }
 }
 
 // ==================== ADMIN PANEL ====================
@@ -4658,42 +4670,16 @@ async function adminBroadcastNotification() {
   const btn = document.getElementById("adminBroadcastBtn");
   btn.disabled = true;
   btn.innerText = "Sending...";
-  try {
-    const { data: profiles, error } = await supabaseClient.from("profiles").select("id, notifications");
-    if (error) throw error;
-    const notif = { id: "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), message, created_at: new Date().toISOString(), read: false };
-    const CONCURRENCY = 8;
-    let idx = 0;
-    let failed = 0;
-    let firstErrorMsg = "";
-    async function worker() {
-      while (idx < profiles.length) {
-        const p = profiles[idx++];
-        const existing = Array.isArray(p.notifications) ? p.notifications : [];
-        const updated = [notif, ...existing].slice(0, 50); // cap so the column doesn't grow unbounded
-        const { error: writeError } = await supabaseClient.from("profiles").update({ notifications: updated }).eq("id", p.id);
-        if (writeError) { failed++; if (!firstErrorMsg) firstErrorMsg = writeError.message; }
-      }
-    }
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, profiles.length || 1) }, worker));
-    if (failed === profiles.length && profiles.length > 0) {
-      showStatus(`Broadcast failed for all users: ${firstErrorMsg || "unknown error"}`);
-      return;
-    }
-    input.value = "";
-    showStatus(failed > 0
-      ? `Sent to ${profiles.length - failed}/${profiles.length} users (${failed} failed: ${firstErrorMsg})`
-      : `Broadcast sent to ${profiles.length} user${profiles.length === 1 ? "" : "s"}`);
-    if (currentProfile) {
-      currentProfile.notifications = [notif, ...(Array.isArray(currentProfile.notifications) ? currentProfile.notifications : [])].slice(0, 50);
-      syncNotificationsFromProfile();
-    }
-  } catch (e) {
-    showStatus("Broadcast failed — make sure profiles has a notifications jsonb column.");
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Send broadcast";
+  const { error } = await supabaseClient.from("broadcasts").insert({ message });
+  btn.disabled = false;
+  btn.innerText = "Send broadcast";
+  if (error) {
+    showStatus(`Broadcast failed: ${error.message}`);
+    return;
   }
+  input.value = "";
+  showStatus("Broadcast sent — it'll show up in every user's notification bell.");
+  fetchBroadcastNotifications(); // refresh the admin's own bell immediately too
 }
 
 async function bootAuth() {
@@ -4706,7 +4692,6 @@ async function bootAuth() {
   if (!profile) return;
   currentProfile = profile;
   renderGemBadges();
-  syncNotificationsFromProfile();
   toggleAdminEntryVisibility();
 
   await claimDeviceSession();
@@ -4721,7 +4706,6 @@ async function bootAuth() {
   premiumCheckTimer && clearInterval(premiumCheckTimer);
   premiumCheckTimer = setInterval(() => { if (!isPlaybackAllowed() && !activeAudio.paused) { activeAudio.pause(); showPremiumBlock(); } }, 20000);
   setInterval(refreshNotifications, 20000);
-  setInterval(pollBroadcastNotifications, 25000);
   setInterval(savePremiumCache, 60000); // keep the cache fresh in the background
 }
 
@@ -5157,3 +5141,4 @@ async function respondToShare(req, status) {
 </script>
 </body>
 </html>
+
