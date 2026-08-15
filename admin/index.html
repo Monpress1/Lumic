@@ -42,12 +42,32 @@
     <!-- Broadcast -->
     <div class="glass-card rounded-3xl p-5 mb-6">
       <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-bullhorn text-emerald-400 mr-2"></i>Broadcast notification</h3>
-      <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell.</p>
+      <p class="text-xs text-slate-400 leading-relaxed mb-3">Sends to every user's notification bell, or just one.</p>
       <textarea id="broadcastInput" rows="3" placeholder="Write your announcement..."
-        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-3"></textarea>
+        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none mb-2"></textarea>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <input id="broadcastLinkUrl" type="url" placeholder="Link URL (optional)" class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none">
+        <input id="broadcastLinkLabel" type="text" placeholder="Button label" class="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none">
+      </div>
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fa-solid fa-crosshairs text-slate-500 text-xs flex-shrink-0"></i>
+        <select id="broadcastTarget" class="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          <option value="">Everyone</option>
+        </select>
+      </div>
       <button id="broadcastBtn" onclick="broadcastNotification()" class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition"
         style="background:linear-gradient(135deg,#10b981,#059669);">Send broadcast</button>
       <p id="broadcastStatus" class="text-xs text-slate-400 mt-2"></p>
+    </div>
+
+    <!-- Failed searches -->
+    <div class="glass-card rounded-3xl p-5 mb-6">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-black text-white"><i class="fa-solid fa-magnifying-glass-minus text-amber-400 mr-2"></i>Failed searches</h3>
+        <button onclick="loadFailedSearches()" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed mb-4">Searches that returned nothing, last 24 hours. Older ones are swept on load.</p>
+      <div id="failedSearchesList" class="space-y-2"></div>
     </div>
 
     <!-- Active users -->
@@ -122,6 +142,7 @@
     document.getElementById("gate").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
     loadActiveUsers();
+    loadFailedSearches();
   }
 
   // Skip the gate if this device already unlocked it before.
@@ -139,6 +160,9 @@
   //   create table if not exists public.broadcasts (
   //     id uuid primary key default gen_random_uuid(),
   //     message text not null,
+  //     user_id uuid references auth.users(id),  -- null = everyone, set = just that user
+  //     link_url text,
+  //     link_label text,
   //     created_at timestamptz not null default now()
   //   );
   //   alter table public.broadcasts enable row level security;
@@ -151,26 +175,36 @@
     const statusEl = document.getElementById("broadcastStatus");
     const message = input.value.trim();
     if (!message) return;
+    const linkUrl = document.getElementById("broadcastLinkUrl").value.trim();
+    const linkLabel = document.getElementById("broadcastLinkLabel").value.trim();
+    const targetUserId = document.getElementById("broadcastTarget").value || null;
     const btn = document.getElementById("broadcastBtn");
     btn.disabled = true;
     btn.innerText = "Sending...";
     statusEl.className = "text-xs text-slate-400 mt-2";
     statusEl.innerText = "";
 
-    const { error } = await supabaseClient.from("broadcasts").insert({ message });
+    const { error } = await supabaseClient.from("broadcasts").insert({
+      message,
+      link_url: linkUrl || null,
+      link_label: linkUrl ? (linkLabel || "Open") : null,
+      user_id: targetUserId
+    });
     btn.disabled = false;
     btn.innerText = "Send broadcast";
 
     if (error) {
       statusEl.className = "text-xs text-rose-400 mt-2";
       statusEl.innerText = error.message.includes("does not exist")
-        ? `Broadcast failed: the broadcasts table doesn't exist yet. Run the SQL in the comment above this function.`
+        ? `Broadcast failed: the broadcasts table (or a column on it) doesn't exist yet. Run the SQL in the comment above this function.`
         : `Broadcast failed: ${error.message}`;
       return;
     }
     input.value = "";
+    document.getElementById("broadcastLinkUrl").value = "";
+    document.getElementById("broadcastLinkLabel").value = "";
     statusEl.className = "text-xs text-emerald-400 mt-2";
-    statusEl.innerText = "Broadcast sent — it'll show up in every user's notification bell.";
+    statusEl.innerText = targetUserId ? "Sent to that user's notification bell." : "Broadcast sent — it'll show up in every user's notification bell.";
   }
 
   // ==================== ACTIVE USERS (last 48 hours) ====================
@@ -220,6 +254,7 @@
 
     const header = list.parentElement.querySelector("h3");
     header.innerHTML = `<i class="fa-solid fa-users text-emerald-400 mr-2"></i>Active users <span class="text-slate-500 font-normal">(${sessions.length})</span>`;
+    populateBroadcastTargetSelect(Object.values(profileMap));
   }
 
   // ==================== ALL USERS (paginated, 10 per page) ====================
@@ -266,15 +301,23 @@
       data.forEach(u => {
         const name = u.display_name || u.username || "Unnamed";
         const row = document.createElement("div");
-        row.className = "flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5";
+        row.className = "bg-white/[0.03] border border-white/5 rounded-xl p-3";
         row.innerHTML = `
-          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-black text-xs flex-shrink-0">${escapeHtml(name.charAt(0).toUpperCase())}</div>
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-bold text-white truncate">${escapeHtml(name)}</p>
-            <p class="text-[10px] text-slate-500 truncate">@${escapeHtml(u.username || "—")}${u.is_premium ? " · Premium" : ""}${u.is_blocked ? " · Blocked" : ""}</p>
+          <div class="flex items-center gap-3 mb-2.5">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-black text-xs flex-shrink-0">${escapeHtml(name.charAt(0).toUpperCase())}</div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-bold text-white truncate">${escapeHtml(name)}</p>
+              <p class="text-[10px] text-slate-500 truncate">@${escapeHtml(u.username || "—")}${u.is_premium ? " · Premium" : ""}${u.is_blocked ? " · Blocked" : ""}</p>
+            </div>
+            <span class="text-[10px] text-slate-500 flex-shrink-0">${u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}</span>
           </div>
-          <span class="text-[10px] text-slate-500 flex-shrink-0">${u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}</span>
+          <div class="flex gap-2">
+            <button data-premium class="flex-1 text-[11px] font-bold py-1.5 rounded-full transition ${u.is_premium ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-white hover:bg-white/15"}">${u.is_premium ? "Revoke premium" : "Grant premium"}</button>
+            <button data-block class="flex-1 text-[11px] font-bold py-1.5 rounded-full transition ${u.is_blocked ? "bg-rose-500/20 text-rose-300" : "bg-white/10 text-white hover:bg-white/15"}">${u.is_blocked ? "Unblock" : "Block"}</button>
+          </div>
         `;
+        row.querySelector("[data-premium]").onclick = () => setUserPremium(u, !u.is_premium, row);
+        row.querySelector("[data-block]").onclick = () => setUserBlocked(u, !u.is_blocked, row);
         list.appendChild(row);
       });
     }
@@ -282,6 +325,84 @@
     document.getElementById("allUsersPageLabel").innerText = `Page ${page + 1} of ${maxPage + 1} · ${allUsersTotalCount} total`;
     document.getElementById("allUsersPrevBtn").disabled = page === 0;
     document.getElementById("allUsersNextBtn").disabled = page >= maxPage;
+    populateBroadcastTargetSelect(data || []);
+  }
+
+  // ==================== PREMIUM / BLOCK ACTIONS ====================
+  // Requires (see earlier message): alter table public.profiles add
+  // column if not exists is_blocked boolean not null default false;
+  async function setUserPremium(user, value, rowEl) {
+    const { error } = await supabaseClient.from("profiles").update({ is_premium: value, premium_source: value ? "admin" : null }).eq("id", user.id);
+    if (error) { alert(`Couldn't update premium: ${error.message}`); return; }
+    user.is_premium = value;
+    loadAllUsersPage(allUsersPage);
+  }
+  async function setUserBlocked(user, value, rowEl) {
+    const { error } = await supabaseClient.from("profiles").update({ is_blocked: value }).eq("id", user.id);
+    if (error) { alert(`Couldn't update: ${error.message} — make sure the is_blocked column exists.`); return; }
+    user.is_blocked = value;
+    loadAllUsersPage(allUsersPage);
+  }
+
+  // Fills the broadcast "Target" dropdown with whatever page of users is
+  // currently loaded. For a specific user not on the visible page, load
+  // that page first (Next/Prev) — this is a basic tool, not a full search.
+  function populateBroadcastTargetSelect(users) {
+    const sel = document.getElementById("broadcastTarget");
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = `<option value="">Everyone</option>` + users.map(u =>
+      `<option value="${escapeHtml(u.id)}">@${escapeHtml(u.username || u.id.slice(0, 8))}</option>`
+    ).join("");
+    sel.value = current;
+  }
+
+  // ==================== FAILED SEARCHES (last 24h) ====================
+  // Requires:
+  //   create table if not exists public.failed_searches (
+  //     id uuid primary key default gen_random_uuid(),
+  //     query text not null,
+  //     created_at timestamptz not null default now()
+  //   );
+  //   alter table public.failed_searches enable row level security;
+  //   create policy "anyone can insert failed searches" on public.failed_searches for insert with check (true);
+  //   create policy "anyone can read failed searches" on public.failed_searches for select using (true);
+  //   create policy "anyone can delete failed searches" on public.failed_searches for delete using (true);
+  // No server cron here, so "clear in 24 hours" is enforced by deleting
+  // anything older than 24h every time this loads.
+  async function loadFailedSearches() {
+    const list = document.getElementById("failedSearchesList");
+    list.innerHTML = `<div class="space-y-2">${Array(3).fill('<div class="skeleton h-10 rounded-xl"></div>').join("")}</div>`;
+    const cutoff = new Date(Date.now() - 24 * 3600000).toISOString();
+
+    await supabaseClient.from("failed_searches").delete().lt("created_at", cutoff);
+
+    const { data, error } = await supabaseClient
+      .from("failed_searches").select("*")
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs px-2">Couldn't load: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+    if (!data || data.length === 0) {
+      list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No failed searches in the last 24 hours.</div>`;
+      return;
+    }
+    list.innerHTML = "";
+    data.forEach(row => {
+      const el = document.createElement("div");
+      el.className = "flex items-center justify-between gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2";
+      const mins = Math.round((Date.now() - new Date(row.created_at).getTime()) / 60000);
+      const ago = mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`;
+      el.innerHTML = `
+        <span class="text-xs text-slate-200 truncate">"${escapeHtml(row.query)}"</span>
+        <span class="text-[10px] text-slate-500 flex-shrink-0">${ago}</span>
+      `;
+      list.appendChild(el);
+    });
   }
 </script>
 </body>
