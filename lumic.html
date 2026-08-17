@@ -143,7 +143,7 @@
     .nav-badge { position:absolute; top:-4px; right:-8px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:#f43f5e; color:#fff; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #101018; }
 
     /* ===== Request card ===== */
-    .request-card { background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(255,255,255,0.02)); border:1px solid rgba(16,185,129,0.18); border-radius:18px; padding:12px; }
+    .request-card { background:linear-gradient(135deg,rgba(16,185,129,0.10),rgba(255,255,255,0.02)); border:1px solid rgba(16,185,129,0.16); border-radius:16px; padding:10px; box-shadow:0 4px 18px rgba(0,0,0,0.18); }
 
     /* ===== Premium block banner (subtle, non-blocking) ===== */
     #premiumBlockBanner { position:fixed; left:0; right:0; bottom:80px; z-index:55; padding:0 12px; }
@@ -296,7 +296,7 @@
           <div onclick="openCuratedPlaylistView('asake_mix','Asake Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
               <img data-cover-key="asake_mix" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Afro Mix</div>
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-emerald-400">Asake Mix</div>
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Seyi Vibez, Olamide, Fireboy DML</p>
           </div>
@@ -307,26 +307,21 @@
             </div>
             <p class="text-[11px] text-slate-400 line-clamp-2">Lewis Capaldi, Olivia Rodrigo, Adele</p>
           </div>
-          <div onclick="openCuratedPlaylistView('olivia_rodrigo_mix','Olivia Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img data-cover-key="olivia_rodrigo_mix" src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-violet-400">Olivia Mix</div>
-            </div>
-            <p class="text-[11px] text-slate-400 line-clamp-2">Olivia Rodrigo essentials</p>
-          </div>
-          <div onclick="openCuratedPlaylistView('billie_eilish_mix','Billie Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
-            <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
-              <img data-cover-key="billie_eilish_mix" src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=300" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold text-green-300">Billie Mix</div>
-            </div>
-            <p class="text-[11px] text-slate-400 line-clamp-2">Billie Eilish deep cuts</p>
-          </div>
+          <div id="trendingMixTilesRow" class="contents"></div>
         </div>
       </div>
 
       <div>
         <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Jump back in</h2>
         <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2">
+          <div onclick="openCuratedPlaylistView('indie_sad','Sad Indie')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-700 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-white/70 bg-white/10 w-fit px-2 py-0.5 rounded">Mood</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">Sad<br><span class="text-indigo-300">Music</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Sad Indie</h4>
+            <p class="text-[11px] text-slate-400 truncate">Late night feelings</p>
+          </div>
           <div onclick="openCuratedPlaylistView('hot_hits_naija','Hot Hits Naija')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-orange-600 to-red-600 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
@@ -373,7 +368,23 @@
               <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
             </div>
             <h4 class="font-bold text-xs text-white truncate">Fresh Afrobeats 2025/26</h4>
-            <p class="text-[11px] text-slate-400 truncate">Afrobeat made just for you</p>
+            <p class="text-[11px] text-slate-400 truncate">Tuned just for you</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('late_night_drive','Late Night Drive')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-white/70 bg-white/10 w-fit px-2 py-0.5 rounded">Mood</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">LATE NIGHT<br><span class="text-indigo-300">DRIVE</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Late Night Drive</h4>
+            <p class="text-[11px] text-slate-400 truncate">Smooth R&B for the road</p>
+          </div>
+          <div onclick="openCuratedPlaylistView('wedding_jams','Wedding Jams')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
+            <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-fuchsia-500 to-rose-800 p-3 flex flex-col justify-between border border-white/10">
+              <span class="text-[10px] font-black uppercase tracking-widest text-black/60 bg-white/20 w-fit px-2 py-0.5 rounded">Playlist</span>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">WEDDING<br><span class="text-fuchsia-200">JAMS</span></h3>
+            </div>
+            <h4 class="font-bold text-xs text-white truncate">Wedding Jams</h4>
+            <p class="text-[11px] text-slate-400 truncate">Owambe-ready</p>
           </div>
         </div>
       </div>
@@ -404,7 +415,7 @@
     <section id="view-search" class="hidden space-y-4">
       <div class="glass-card rounded-2xl p-2 flex items-center gap-2 sticky top-2 z-20 shadow-xl">
         <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3"></i>
-        <input id="searchInput" type="text" inputmode="search" oninput="debounceSearch()" onfocus="onSearchFocus()" onkeydown="onSearchKeydown(event)" placeholder="Songs, artists (e.g. Billie Eilish, Benson Boone)..." class="bg-transparent flex-1 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none">
+        <input id="searchInput" type="text" inputmode="search" oninput="debounceSearch()" onfocus="onSearchFocus()" onkeydown="onSearchKeydown(event)" placeholder="Songs, artists ." class="bg-transparent flex-1 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none">
         <button onclick="clearSearch()" id="searchClearBtn" class="hidden p-2 text-slate-400 hover:text-white mr-1"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="searchResults" class="space-y-2">
@@ -1159,8 +1170,8 @@ const PLAYLIST_PRESETS = {
   afro_top_100: ["burna boy","wizkid","tems","ayra starr","kizz daniel","rema","omah lay","victony"],
   afrobeats_category: { type: "category", value: "Afrobeats" },
   afrobeats_fresh: { type: "vistanaij" },
-  asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn","asake","omah lay"],
-  heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid","dean lewis"],
+  asake_mix: ["asake","olamide","fireboy","seyi vibez","young jonn"],
+  heartbreak_mix: ["lewis capaldi","olivia rodrigo","adele","james arthur","sam smith","shawn mendes","khalid"],
   olivia_rodrigo_mix: ["olivia rodrigo","sabrina carpenter","gracie abrams","chappell roan","tate mcrae"],
   billie_eilish_mix: ["billie eilish","lorde","clairo","girl in red","gracie abrams"],
   soul_indie: ["benson boone","lewis capaldi","charlie puth","john legend","sam smith","ed sheeran"],
@@ -1175,7 +1186,7 @@ const PLAYLIST_PRESETS = {
   gospel_praise: ["nathaniel bassey","sinach","mercy chinwo","frank edwards","dunsin oyekan"],
   throwback_2010s: ["davido","wizkid","psquare","flavour","9ice","iyanya","tiwa savage"],
   female_naija: ["tiwa savage","tems","ayra starr","simi","yemi alade","niniola"],
-  fuji_mix: ["k1 de ultimate","lagbaja","fela kuti","femi kuti"],
+  fuji_category: { type: "category", value: "Fuji" },
   upbeat_energy: ["asake","davido","ckay","rema","kizz daniel","dua lipa","bruno mars","burna boy"],
   workout_bangers: ["burna boy","asake","rema","dj neptune","olamide","zlatan","ayra starr","davido"],
   love_romance: ["chike","simi","adekunle gold","johnny drille","ed sheeran","daniel caesar","h.e.r."],
@@ -1295,6 +1306,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderRecommended();
   renderMoodCardsGrid();
   renderBrowseCategoriesGrid();
+  renderTrendingMixTiles();
   renderDbCategoriesSection();
   hydrateJumpBackInColors();
   loadHotAlbums();
@@ -1463,6 +1475,7 @@ function renderMoodCardsGrid() {
 // everywhere else, re-picked on every page load.
 const BROWSE_CATEGORIES = [
   { key: "afrobeats_category", title: "Afrobeats", sub: "Straight from the catalog", icon: "fa-drum", color: "text-lime-400" },
+  { key: "fuji_category", title: "Fuji", sub: "Straight from the catalog", icon: "fa-drum", color: "text-amber-300" },
   { key: "heartbreak_mix", title: "Heartbreak", sub: "Cry it out anthems", icon: "fa-heart-crack", color: "text-rose-400", photo: true },
   { key: "feel_good", title: "Feel Good", sub: "Happy vibes only", icon: "fa-sun", color: "text-yellow-400" },
   { key: "rnb_soul", title: "R&B & Soul", sub: "Smooth vocals", icon: "fa-record-vinyl", color: "text-rose-400" },
@@ -1482,6 +1495,49 @@ const BROWSE_CATEGORIES = [
   { key: "focus_study", title: "Focus & Study", sub: "Instrumental, no distractions", icon: "fa-book", color: "text-cyan-300" },
   { key: "wedding_jams", title: "Wedding Jams", sub: "Owambe-ready", icon: "fa-ring", color: "text-fuchsia-300" }
 ];
+
+const TRENDING_TILE_STYLES = [
+  { text: "text-violet-400" }, { text: "text-green-300" }, { text: "text-sky-300" },
+  { text: "text-amber-300" }, { text: "text-pink-300" }, { text: "text-orange-300" }
+];
+
+async function computeTrendingArtists(sampleSize = 300, topN = 2) {
+  try {
+    const { data, error } = await supabaseClient
+      .from("mp3pm_songs").select("artist")
+      .order("crawled_at", { ascending: false })
+      .limit(sampleSize);
+    if (error) throw error;
+    const counts = {};
+    (data || []).forEach(r => {
+      const a = (r.artist || "").trim();
+      if (!a) return;
+      counts[a] = (counts[a] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, topN).map(([name]) => name);
+  } catch (e) { return []; }
+}
+
+async function renderTrendingMixTiles() {
+  const row = document.getElementById("trendingMixTilesRow");
+  if (!row) return;
+  const artists = await computeTrendingArtists(300, 2);
+  const chosen = artists.length ? artists : ["Olivia Rodrigo", "Billie Eilish"];
+  row.innerHTML = chosen.map((artist, i) => {
+    const key = "trending:" + artist;
+    const style = TRENDING_TILE_STYLES[i % TRENDING_TILE_STYLES.length];
+    PLAYLIST_PRESETS[key] = [artist];
+    return `
+      <div onclick="openCuratedPlaylistView('${escapeHtml(key)}','${escapeHtml(artist)} Mix')" class="w-36 flex-shrink-0 cursor-pointer group scroll-snap-item">
+        <div class="w-36 h-36 rounded-2xl overflow-hidden relative mb-2 bg-slate-800 border border-white/10">
+          <img data-cover-key="${escapeHtml(key)}" src="${placeholderFor(artist)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+          <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 text-xs font-bold ${style.text}">${escapeHtml(artist)} Mix</div>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-2">Trending in your library right now</p>
+      </div>`;
+  }).join("");
+  hydrateRotatingCovers();
+}
 
 function renderBrowseCategoriesGrid() {
   const grid = document.getElementById("browseCategoriesGrid");
@@ -2368,7 +2424,7 @@ async function renderDbCategoriesSection() {
   const cats = await discoverDbCategories();
   // "Afrobeats" already has its own dedicated, hand-styled tile above —
   // don't show it twice.
-  const already = new Set(["afrobeats"]);
+  const already = new Set(["afrobeats", "fuji"]);
   const filtered = cats.filter(c => !already.has(c.toLowerCase())).slice(0, 12);
   if (filtered.length === 0) { section.classList.add("hidden"); return; }
   section.classList.remove("hidden");
@@ -2687,11 +2743,18 @@ function togglePlayPause() {
   else { userInitiatedPause = true; activeAudio.pause(); updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); }
 }
 
+let lastKnownIconIsPlaying = null;
 function updatePlayPauseIcon(isPlaying) {
+  lastKnownIconIsPlaying = isPlaying;
   const icon = isPlaying ? `<i class="fa-solid fa-pause text-sm"></i>` : `<i class="fa-solid fa-play text-sm ml-0.5"></i>`;
   document.getElementById("playPauseBtn").innerHTML = icon;
   const npBtn = document.getElementById("npPlayPauseBtn");
   if (npBtn) npBtn.innerHTML = isPlaying ? `<i class="fa-solid fa-pause text-xl"></i>` : `<i class="fa-solid fa-play text-xl ml-1"></i>`;
+}
+
+function reconcilePlayPauseIcon(audio) {
+  const actuallyPlaying = !audio.paused && !audio.ended;
+  if (lastKnownIconIsPlaying !== actuallyPlaying) updatePlayPauseIcon(actuallyPlaying);
 }
 
 function playNextTrack() {
@@ -2725,6 +2788,7 @@ function toggleRepeat() {
 function setupAudioListeners(audio) {
   audio.addEventListener("timeupdate", () => {
     if (audio !== activeAudio) return;
+    reconcilePlayPauseIcon(audio);
     if (audio.duration) {
       const pct = (audio.currentTime / audio.duration) * 100;
       document.getElementById("progressBar").value = pct;
@@ -2814,7 +2878,7 @@ function setupAudioListeners(audio) {
   // are exhausted does the track actually get skipped.
   audio.addEventListener("waiting", () => handleBuffering(audio));
   audio.addEventListener("stalled", () => handleBuffering(audio));
-  audio.addEventListener("playing", () => { if (audio === activeAudio) clearBufferingState(); });
+  audio.addEventListener("playing", () => { if (audio === activeAudio) { clearBufferingState(); reconcilePlayPauseIcon(audio); } });
   audio.addEventListener("canplay", () => { if (audio === activeAudio) clearBufferingState(); });
 
   audio.addEventListener("error", () => {
@@ -3059,6 +3123,17 @@ let currentLyricsTrackId = null;
 let lyricsAbortController = null;
 let lyricsSyncOffset = 0;
 
+function renderLyricsSearchFallback(song, message) {
+  const q = encodeURIComponent(`${song.title} ${song.artist} lyrics`);
+  return `
+    <div class="text-center py-6">
+      <p class="text-slate-500 text-sm mb-3">${escapeHtml(message)}</p>
+      <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-4 py-2.5 rounded-full transition">
+        <i class="fa-solid fa-magnifying-glass"></i> Search lyrics on Google
+      </a>
+    </div>`;
+}
+
 async function loadLyrics(song, forceRefresh = false) {
   const scrollEl = document.getElementById("lyricsScroll");
   const trackId = uidFor(song);
@@ -3107,13 +3182,13 @@ async function loadLyrics(song, forceRefresh = false) {
       saveLyricsToDB(trackId, lyricsText.trim());
       setSyncButtonState(forceRefresh ? "synced" : "idle");
     } else {
-      scrollEl.innerHTML = `<div class="text-center py-6 text-slate-500 text-sm">No lyrics found for this track.</div>`;
+      scrollEl.innerHTML = renderLyricsSearchFallback(song, "No lyrics found for this track.");
       setSyncButtonState("idle");
     }
   } catch (e) {
     if (e.name === "AbortError") return;
     if (currentLyricsTrackId !== trackId) return;
-    scrollEl.innerHTML = `<div class="text-center py-6 text-slate-500 text-sm">Lyrics unavailable right now.</div>`;
+    scrollEl.innerHTML = renderLyricsSearchFallback(song, "Lyrics unavailable right now.");
     setSyncButtonState("idle");
   } finally {
     if (lyricsAbortController === controller) lyricsAbortController = null;
@@ -3708,7 +3783,7 @@ async function runSearch(query, isFullSearch) {
       songsDone = true;
       if (e.name === "AbortError") return;
       if (searchAbortController === controller && latestAlbums.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Failed to load results. Have you run lumic_migration.sql yet?</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Couldn't load results. Try again in a moment.</div>`;
       }
     });
 
@@ -4049,14 +4124,26 @@ async function loadKnownFriendsAndRender() {
   list.innerHTML = `<div class="space-y-2">${Array(3).fill('<div class="skeleton h-12 rounded-xl"></div>').join("")}</div>`;
   try {
     const { data, error } = await supabaseClient
-      .from("friend_connections")
-      .select("user_a, user_b")
-      .or(`user_a.eq.${currentUser.id},user_b.eq.${currentUser.id}`);
+      .from("shares")
+      .select("sender_id, recipient_id, created_at")
+      .or(`sender_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`)
+      .order("created_at", { ascending: false })
+      .limit(30);
     if (error) throw error;
-    const friendIds = (data || []).map(r => r.user_a === currentUser.id ? r.user_b : r.user_a);
-    if (friendIds.length === 0) { knownFriends = []; renderSharePickerFriends([]); return; }
-    const { data: profs } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", friendIds);
-    knownFriends = profs || [];
+    const seen = new Set();
+    const recentIds = [];
+    (data || []).forEach(r => {
+      const other = r.sender_id === currentUser.id ? r.recipient_id : r.sender_id;
+      if (!other || other === currentUser.id || seen.has(other)) return;
+      seen.add(other);
+      recentIds.push(other);
+    });
+    const topThree = recentIds.slice(0, 3);
+    if (topThree.length === 0) { knownFriends = []; renderSharePickerFriends([]); return; }
+    const { data: profs } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", topThree);
+    const order = {};
+    topThree.forEach((id, i) => { order[id] = i; });
+    knownFriends = (profs || []).sort((a, b) => order[a.id] - order[b.id]);
     renderSharePickerFriends(knownFriends);
   } catch (e) {
     knownFriends = [];
@@ -4067,10 +4154,10 @@ async function loadKnownFriendsAndRender() {
 function renderSharePickerFriends(friends) {
   const list = document.getElementById("sharePickerList");
   if (friends.length === 0) {
-    list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No friends yet — search a username above to send your first song.</div>`;
+    list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No recent contacts — search a username above to send your first song.</div>`;
     return;
   }
-  list.innerHTML = `<div class="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1 px-1">Friends</div>`;
+  list.innerHTML = `<div class="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1 px-1">Recent</div>`;
   friends.forEach(f => list.appendChild(renderFriendRow(f)));
 }
 
@@ -4163,6 +4250,20 @@ function confirmCreatePlaylist() {
   if (createPlaylistFromPicker) closePlaylistPicker();
 }
 
+function deleteUserPlaylist(id) {
+  const pl = userPlaylists[id];
+  if (!pl) return;
+  if (!confirm(`Delete "${pl.name}"? This can't be undone.`)) return;
+  delete userPlaylists[id];
+  localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+  if (currentUser) {
+    supabaseClient.from("user_playlists").delete().eq("id", id).eq("user_id", currentUser.id).then(() => {});
+  }
+  if (currentPlaylistCtx === id) switchView("library");
+  renderUserPlaylists();
+  showStatus(`Deleted "${pl.name}"`);
+}
+
 function renderUserPlaylists() {
   const container = document.getElementById("userPlaylistsList");
   if (!container) return;
@@ -4182,9 +4283,11 @@ function renderUserPlaylists() {
         ${firstSong ? `<img data-cover src="${placeholderFor(pl.name)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-record-vinyl text-white text-lg"></i>`}
       </div>
       <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white truncate">${escapeHtml(pl.name)}</h4><p class="text-[11px] text-slate-400 mt-1">${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}</p></div>
+      <button data-delete-playlist class="row-remove-btn"><i class="fa-solid fa-trash-can text-xs"></i></button>
       <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
     `;
-    row.onclick = () => openPlaylistView(id);
+    row.onclick = (e) => { if (e.target.closest("[data-delete-playlist]")) return; openPlaylistView(id); };
+    row.querySelector("[data-delete-playlist]").onclick = (e) => { e.stopPropagation(); deleteUserPlaylist(id); };
     container.appendChild(row);
     if (firstSong) {
       resolveImage(firstSong).then(url => {
@@ -4725,12 +4828,49 @@ async function fetchBroadcastNotifications() {
   }
 }
 
+let shareNotifications = [];
+
+async function fetchShareNotifications() {
+  if (!currentUser) { shareNotifications = []; return; }
+  try {
+    const { data, error } = await supabaseClient.from("shares").select("*").eq("recipient_id", currentUser.id).eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+    if (error) throw error;
+    const rows = data || [];
+    const senderIds = [...new Set(rows.map(r => r.sender_id))];
+    let senderMap = {};
+    if (senderIds.length) {
+      const { data: senders } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", senderIds);
+      (senders || []).forEach(s => senderMap[s.id] = s);
+    }
+    shareNotifications = rows.map(r => {
+      const sender = senderMap[r.sender_id];
+      const senderName = sender ? (sender.display_name || sender.username) : "Someone";
+      const isPlaylist = r.share_type === "playlist";
+      const title = isPlaylist ? (r.payload && r.payload.name) : (r.payload && r.payload.title);
+      return {
+        id: "share_" + r.id,
+        message: `${senderName} sent you ${isPlaylist ? "a playlist" : "a song"}: "${title || ""}"`,
+        created_at: r.created_at,
+        _isShare: true
+      };
+    });
+  } catch (e) { shareNotifications = []; }
+}
+
 function renderNotificationsDropdown() {
   const list = document.getElementById("notificationsList");
   const badge = document.getElementById("notifBellBadge");
   if (!list || !badge) return;
   const lastRead = new Date(getNotificationsLastRead()).getTime();
-  const sorted = [...userNotifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const hoursSinceRead = (Date.now() - lastRead) / 3600000;
+  const combined = [...userNotifications, ...shareNotifications];
+  const sorted = combined
+    .filter(n => {
+      const t = new Date(n.created_at || 0).getTime();
+      const isRead = t <= lastRead;
+      return !(isRead && hoursSinceRead > 24);
+    })
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   const unread = sorted.filter(n => new Date(n.created_at || 0).getTime() > lastRead).length;
   if (unread > 0) { badge.innerText = unread > 9 ? "9+" : String(unread); badge.classList.remove("hidden"); }
   else badge.classList.add("hidden");
@@ -4740,11 +4880,11 @@ function renderNotificationsDropdown() {
     return;
   }
   list.innerHTML = sorted.map(n => `
-    <div class="px-4 py-3 ${new Date(n.created_at || 0).getTime() > lastRead ? "bg-emerald-500/5" : ""}">
+    <div class="px-4 py-3 ${new Date(n.created_at || 0).getTime() > lastRead ? "bg-emerald-500/5" : ""} ${n._isShare ? "cursor-pointer hover:bg-white/5" : ""}" ${n._isShare ? `onclick="switchView('library'); document.getElementById('notificationsDropdown').classList.add('hidden');"` : ""}>
       <p class="text-xs text-slate-200 leading-relaxed">${escapeHtml(n.message || "")}</p>
       <div class="flex items-center justify-between mt-1.5">
         <p class="text-[10px] text-slate-500">${n.created_at ? new Date(n.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p>
-        ${n.link_url ? `<a href="${escapeHtml(n.link_url)}" target="_blank" rel="noopener" class="text-[10px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-2.5 py-1 rounded-full transition">${escapeHtml(n.link_label || "Open")}</a>` : ""}
+        ${n._isShare ? `<span class="text-[10px] font-bold text-black bg-emerald-500 px-2.5 py-1 rounded-full">View</span>` : (n.link_url ? `<a href="${escapeHtml(n.link_url)}" target="_blank" rel="noopener" class="text-[10px] font-bold text-black bg-emerald-500 hover:bg-emerald-400 px-2.5 py-1 rounded-full transition">${escapeHtml(n.link_label || "Open")}</a>` : "")}
       </div>
     </div>
   `).join("");
@@ -5328,6 +5468,8 @@ async function refreshNotifications() {
     if (pendingRequestsCount > 0) { badge.innerText = pendingRequestsCount > 9 ? "9+" : pendingRequestsCount; badge.classList.remove("hidden"); }
     else badge.classList.add("hidden");
   } catch (e) {}
+  await fetchShareNotifications();
+  renderNotificationsDropdown();
 }
 
 async function renderRequests() {
@@ -5363,22 +5505,19 @@ function renderRequestCard(req, sender) {
   const grad = gradientForSeed(sender ? sender.username : senderName);
 
   card.innerHTML = `
-    <div class="flex items-center gap-3 mb-3">
-      <div class="gem-badge" style="width:32px;height:32px;font-size:12px;background:${grad};">${initial}</div>
-      <p class="text-xs text-slate-300"><span class="font-bold text-white">${escapeHtml(senderName)}</span> sent you ${isPlaylist ? "a playlist" : "a song"}</p>
-    </div>
-    <div class="flex items-center gap-3 mb-3 bg-black/20 rounded-xl p-2.5">
-      <div class="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center ${isPlaylist ? "bg-gradient-to-br from-violet-600 to-indigo-900" : "bg-slate-800"} overflow-hidden">
-        ${isPlaylist ? `<i class="fa-solid fa-record-vinyl text-white"></i>` : `<img src="${placeholderFor(payload.title||"")}" class="w-full h-full object-cover">`}
+    <div class="flex items-center gap-3">
+      <div class="gem-badge flex-shrink-0" style="width:26px;height:26px;font-size:10px;background:${grad};">${initial}</div>
+      <div class="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center ${isPlaylist ? "bg-gradient-to-br from-violet-600 to-indigo-900" : "bg-slate-800"} overflow-hidden">
+        ${isPlaylist ? `<i class="fa-solid fa-record-vinyl text-white text-xs"></i>` : `<img src="${placeholderFor(payload.title||"")}" class="w-full h-full object-cover">`}
       </div>
       <div class="min-w-0 flex-1">
-        <h5 class="font-bold text-xs text-white truncate">${escapeHtml(isPlaylist ? payload.name : payload.title)}</h5>
-        <p class="text-[10px] text-slate-400 truncate">${isPlaylist ? `${(payload.songs||[]).length} songs` : escapeHtml(payload.artist || "")}</p>
+        <p class="text-[10.5px] text-slate-400 truncate leading-tight">${escapeHtml(senderName)} sent ${isPlaylist ? "a playlist" : "a song"}</p>
+        <h5 class="font-bold text-xs text-white truncate leading-tight mt-0.5">${escapeHtml(isPlaylist ? payload.name : payload.title)}</h5>
       </div>
-    </div>
-    <div class="flex gap-2">
-      <button data-listen class="flex-1 bg-emerald-500 text-black font-bold text-xs py-2 rounded-full active:scale-95 transition">Listen</button>
-      <button data-decline class="flex-1 bg-white/10 text-slate-300 font-bold text-xs py-2 rounded-full active:scale-95 transition">Decline</button>
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button data-listen class="w-8 h-8 rounded-full bg-emerald-500 text-black flex items-center justify-center active:scale-90 transition"><i class="fa-solid fa-play text-[10px] ml-0.5"></i></button>
+        <button data-decline class="w-8 h-8 rounded-full bg-white/10 text-slate-400 flex items-center justify-center active:scale-90 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+      </div>
     </div>
   `;
   card.querySelector("[data-listen]").onclick = () => respondToShare(req, "listened");
