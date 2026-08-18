@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-950">
 <head>
@@ -197,6 +198,20 @@
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col justify-between">
 
+  <!-- These live as direct children of body (not inside app-content-wrap)
+       so they're truly fixed to the viewport. Previously they were nested
+       inside the scrolling wrapper below, which — combined with its
+       overflow-x:hidden (implicitly overflow-y:auto) — clipped them to
+       whatever the wrapper's current scroll position was, so they only
+       rendered visibly when scrolled to the top. -->
+  <div id="notifToastStack" class="fixed top-3 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none"></div>
+  <div id="status" class="hidden fixed left-1/2 top-4 z-[120] -translate-x-1/2 max-w-[92%] px-2">
+    <div id="statusInner" class="flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl border" style="background:rgba(20,20,26,0.94); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-color:rgba(255,255,255,0.08);">
+      <i id="statusIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm flex-shrink-0"></i>
+      <span id="statusText" class="text-xs font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis"></span>
+    </div>
+  </div>
+
   <!-- MAIN WRAPPER -->
   <div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-44 flex-1 flex flex-col app-content-wrap">
 
@@ -226,18 +241,6 @@
         </div>
       </div>
     </header>
-
-    <!-- Native-style notification banner: drops down from the top when a
-         new broadcast arrives, auto-dismisses, and the message stays
-         available in the bell above either way. -->
-    <div id="notifToastStack" class="fixed top-3 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none"></div>
-
-    <div id="status" class="hidden fixed left-1/2 top-4 z-[120] -translate-x-1/2 max-w-[92%] px-2">
-      <div id="statusInner" class="flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl border" style="background:rgba(20,20,26,0.94); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-color:rgba(255,255,255,0.08);">
-        <i id="statusIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm flex-shrink-0"></i>
-        <span id="statusText" class="text-xs font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis"></span>
-      </div>
-    </div>
 
     <!-- VIEW: HOME -->
     <section id="view-home" class="space-y-8">
@@ -317,7 +320,7 @@
           <div onclick="openCuratedPlaylistView('indie_sad','Sad Indie')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-700 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
               <span class="text-[10px] font-black uppercase tracking-widest text-white/70 bg-white/10 w-fit px-2 py-0.5 rounded">Mood</span>
-              <h3 class="text-xl font-black text-white leading-tight uppercase">Sad<br><span class="text-indigo-300">Music</span></h3>
+              <h3 class="text-xl font-black text-white leading-tight uppercase">SAD<br><span class="text-indigo-300">INDIE</span></h3>
             </div>
             <h4 class="font-bold text-xs text-white truncate">Sad Indie</h4>
             <p class="text-[11px] text-slate-400 truncate">Late night feelings</p>
@@ -368,7 +371,7 @@
               <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
             </div>
             <h4 class="font-bold text-xs text-white truncate">Fresh Afrobeats 2025/26</h4>
-            <p class="text-[11px] text-slate-400 truncate">Tuned just for you</p>
+            <p class="text-[11px] text-slate-400 truncate">made just for you</p>
           </div>
           <div onclick="openCuratedPlaylistView('late_night_drive','Late Night Drive')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
@@ -415,7 +418,7 @@
     <section id="view-search" class="hidden space-y-4">
       <div class="glass-card rounded-2xl p-2 flex items-center gap-2 sticky top-2 z-20 shadow-xl">
         <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3"></i>
-        <input id="searchInput" type="text" inputmode="search" oninput="debounceSearch()" onfocus="onSearchFocus()" onkeydown="onSearchKeydown(event)" placeholder="Songs, artists ." class="bg-transparent flex-1 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none">
+        <input id="searchInput" type="text" inputmode="search" oninput="debounceSearch()" onfocus="onSearchFocus()" onkeydown="onSearchKeydown(event)" placeholder="Songs, artists (e.g. Billie Eilish, Benson Boone)..." class="bg-transparent flex-1 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none">
         <button onclick="clearSearch()" id="searchClearBtn" class="hidden p-2 text-slate-400 hover:text-white mr-1"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="searchResults" class="space-y-2">
@@ -765,6 +768,10 @@
                 <i id="syncLyricsIcon" class="fa-solid fa-arrows-rotate text-[10px]"></i>
                 <span id="syncLyricsLabel">Sync lyrics</span>
               </button>
+              <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full transition">
+                <i class="fa-solid fa-arrows-up-down text-[10px]"></i>
+                <span data-autoscroll-label>Auto-scroll off</span>
+              </button>
             </div>
           </div>
           <div class="glass-card rounded-2xl p-4" style="background:rgba(16,185,129,0.03); border:1px solid rgba(16,185,129,0.08);">
@@ -799,7 +806,10 @@
         <p id="lyricsFullscreenTitle" class="text-sm font-bold text-white truncate">---</p>
         <p id="lyricsFullscreenArtist" class="text-[11px] text-slate-400 truncate">---</p>
       </div>
-      <button onclick="syncLyricsForCurrentTrack()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-rotate text-sm"></i></button>
+      <div class="flex items-center gap-1">
+        <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-up-down text-sm"></i></button>
+        <button onclick="syncLyricsForCurrentTrack()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-rotate text-sm"></i></button>
+      </div>
     </div>
     <div id="lyricsFullscreenScroll" class="flex-1 overflow-y-auto no-scrollbar px-6 py-10"></div>
   </div>
@@ -843,9 +853,9 @@
           <div class="as-icon bg-pink-500/15"><i class="fa-solid fa-heart text-pink-400"></i></div>
           <span id="asLikeLabel" class="text-sm text-white font-medium">Add to favourites</span>
         </div>
-        <div class="as-item" onclick="actionDownload()">
-          <div class="as-icon bg-sky-500/15"><i class="fa-solid fa-download text-sky-400"></i></div>
-          <span class="text-sm text-white font-medium">Save offline</span>
+        <div id="asDownloadItem" class="as-item" onclick="actionDownload()">
+          <div id="asDownloadIcon" class="as-icon bg-sky-500/15"><i class="fa-solid fa-download text-sky-400"></i></div>
+          <span id="asDownloadLabel" class="text-sm text-white font-medium">Save offline</span>
         </div>
         <div class="as-item" onclick="actionMoreByArtist()">
           <div class="as-icon bg-amber-500/15"><i class="fa-solid fa-user text-amber-400"></i></div>
@@ -1314,6 +1324,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadTop100Nigeria();
   restoreLastSession();
   initOfflineDB();
+  updateAutoScrollButtonUI();
   setupMediaSession();
   applyCachedPremiumStatus();
   applyCachedNotifications();
@@ -3118,20 +3129,54 @@ function closeNowPlaying() {
   document.getElementById("nowPlayingScreen").classList.add("translate-y-full");
 }
 
-// ==================== LYRICS (Supabase Function + IndexedDB cache + Scroll sync) ====================
+// ==================== LYRICS (Supabase Function -> lrclib fallback + IndexedDB cache) ====================
 let currentLyricsTrackId = null;
 let lyricsAbortController = null;
 let lyricsSyncOffset = 0;
+const LRCLIB_URL = "https://lrclib.net/api/get";
 
-function renderLyricsSearchFallback(song, message) {
-  const q = encodeURIComponent(`${song.title} ${song.artist} lyrics`);
+// Plain "not found" state — no external search link. If neither source has
+// it, we just say so; nothing to send the user away to.
+function renderLyricsNotFound(message) {
   return `
     <div class="text-center py-6">
-      <p class="text-slate-500 text-sm mb-3">${escapeHtml(message)}</p>
-      <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-4 py-2.5 rounded-full transition">
-        <i class="fa-solid fa-magnifying-glass"></i> Search lyrics on Google
-      </a>
+      <p class="text-slate-500 text-sm">${escapeHtml(message)}</p>
     </div>`;
+}
+
+// Parses LRC-format synced lyrics ("[00:12.34]some line") into
+// { lines: [...], seconds: [...] } — real per-line timestamps, which beat
+// our length-weighted estimate whenever lrclib has them.
+function parseLRC(lrcText) {
+  const lines = [];
+  const seconds = [];
+  lrcText.split("\n").forEach(raw => {
+    const m = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)$/);
+    if (!m) return;
+    const text = m[4].trim();
+    if (!text) return;
+    const min = parseInt(m[1], 10), sec = parseInt(m[2], 10), ms = m[3] ? parseInt(m[3].padEnd(3, "0"), 10) : 0;
+    lines.push(text);
+    seconds.push(min * 60 + sec + ms / 1000);
+  });
+  return lines.length ? { lines, seconds } : null;
+}
+
+async function fetchFromLrclib(song) {
+  try {
+    const url = `${LRCLIB_URL}?track_name=${encodeURIComponent(song.title)}&artist_name=${encodeURIComponent(song.artist)}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.syncedLyrics && data.syncedLyrics.trim()) {
+      const parsed = parseLRC(data.syncedLyrics);
+      if (parsed) return parsed;
+    }
+    if (data.plainLyrics && data.plainLyrics.trim().length > 10) {
+      return { lines: data.plainLyrics.trim().split("\n").filter(l => l.trim().length > 0), seconds: null };
+    }
+    return null;
+  } catch (e) { return null; }
 }
 
 async function loadLyrics(song, forceRefresh = false) {
@@ -3154,6 +3199,12 @@ async function loadLyrics(song, forceRefresh = false) {
     const cached = await getLyricsFromDB(trackId);
     if (cached) {
       if (currentLyricsTrackId !== trackId) return;
+      // Cached entries are stored as plain text (legacy) or as a
+      // JSON-encoded {lines, seconds} payload for synced lyrics.
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.lines) { renderLyricsLines(parsed.lines.join("\n"), parsed.seconds); return; }
+      } catch (e) { /* legacy plain-text cache */ }
       renderLyricsLines(cached);
       return;
     }
@@ -3181,15 +3232,34 @@ async function loadLyrics(song, forceRefresh = false) {
       renderLyricsLines(lyricsText.trim());
       saveLyricsToDB(trackId, lyricsText.trim());
       setSyncButtonState(forceRefresh ? "synced" : "idle");
+      return;
+    }
+
+    // Musixmatch came back empty — try lrclib before giving up.
+    const fromLrclib = await fetchFromLrclib(song);
+    if (currentLyricsTrackId !== trackId) return;
+    if (fromLrclib) {
+      renderLyricsLines(fromLrclib.lines.join("\n"), fromLrclib.seconds);
+      saveLyricsToDB(trackId, JSON.stringify(fromLrclib));
+      setSyncButtonState(forceRefresh ? "synced" : "idle");
     } else {
-      scrollEl.innerHTML = renderLyricsSearchFallback(song, "No lyrics found for this track.");
+      scrollEl.innerHTML = renderLyricsNotFound("No lyrics found for this track.");
       setSyncButtonState("idle");
     }
   } catch (e) {
     if (e.name === "AbortError") return;
     if (currentLyricsTrackId !== trackId) return;
-    scrollEl.innerHTML = renderLyricsSearchFallback(song, "Lyrics unavailable right now.");
-    setSyncButtonState("idle");
+    // Musixmatch errored (network/etc) — still worth trying lrclib before failing.
+    const fromLrclib = await fetchFromLrclib(song).catch(() => null);
+    if (currentLyricsTrackId !== trackId) return;
+    if (fromLrclib) {
+      renderLyricsLines(fromLrclib.lines.join("\n"), fromLrclib.seconds);
+      saveLyricsToDB(trackId, JSON.stringify(fromLrclib));
+      setSyncButtonState("idle");
+    } else {
+      scrollEl.innerHTML = renderLyricsNotFound("Lyrics unavailable right now.");
+      setSyncButtonState("idle");
+    }
   } finally {
     if (lyricsAbortController === controller) lyricsAbortController = null;
   }
@@ -3221,18 +3291,18 @@ function setSyncButtonState(state) {
   }
 }
 
-let lyricsLineWeights = []; // cumulative progress-fraction per line, weighted by line length
+let lyricsLineWeights = []; // cumulative progress-fraction per line, weighted by line length (estimate fallback)
+let lyricsTimedSeconds = null; // real per-line timestamps from lrclib synced lyrics, or null if estimating
 
-function renderLyricsLines(text) {
+function renderLyricsLines(text, timedSeconds = null) {
   const scroll = document.getElementById("lyricsScroll");
   const fullScroll = document.getElementById("lyricsFullscreenScroll");
   lyricsLines = text.split("\n").filter(l => l.trim().length > 0);
+  lyricsTimedSeconds = (timedSeconds && timedSeconds.length === lyricsLines.length) ? timedSeconds : null;
 
   // Weight each line by character length (with a floor so short ad-libs
   // aren't crushed to near-zero) instead of dividing the song evenly
-  // across all lines. This is still an estimate — we don't have real
-  // per-line timestamps (LRC data) from the lyrics source — but it tracks
-  // actual singing pace noticeably better than a flat uniform split.
+  // across all lines. Only used when we don't have real timestamps.
   const weights = lyricsLines.map(l => Math.max(l.trim().length, 8));
   const totalWeight = weights.reduce((a, b) => a + b, 0) || 1;
   let cum = 0;
@@ -3261,13 +3331,40 @@ function renderLyricsLines(text) {
   lyricsSyncOffset = 0;
 }
 
+// Lyrics no longer force-scroll by default — the user swipes manually.
+// This remembers their choice across sessions.
+let lyricsAutoScroll = localStorage.getItem("lumic_lyrics_autoscroll") === "1";
+
+function toggleLyricsAutoScroll() {
+  lyricsAutoScroll = !lyricsAutoScroll;
+  localStorage.setItem("lumic_lyrics_autoscroll", lyricsAutoScroll ? "1" : "0");
+  updateAutoScrollButtonUI();
+  if (lyricsAutoScroll && lyricsCurrentLine >= 0) applyLyricsWindow(lyricsCurrentLine, true);
+  showStatus(lyricsAutoScroll ? "Auto-scroll on" : "Auto-scroll off — swipe to follow along");
+}
+
+function updateAutoScrollButtonUI() {
+  document.querySelectorAll("[data-autoscroll-btn]").forEach(btn => {
+    btn.classList.toggle("text-emerald-400", lyricsAutoScroll);
+    btn.classList.toggle("bg-emerald-500/10", lyricsAutoScroll);
+    btn.classList.toggle("border-emerald-500/30", lyricsAutoScroll);
+    btn.classList.toggle("text-slate-400", !lyricsAutoScroll);
+    const label = btn.querySelector("[data-autoscroll-label]");
+    if (label) label.innerText = lyricsAutoScroll ? "Auto-scroll on" : "Auto-scroll off";
+  });
+}
+
 function alignLyricLine(i) {
   if (!lyricsLines.length || !activeAudio.duration) return;
-  const rawEstimate = estimateLineFromProgress(activeAudio.currentTime / activeAudio.duration);
-  lyricsSyncOffset += i - rawEstimate;
-
+  if (lyricsTimedSeconds) {
+    // Real timestamps: offset is a time delta, not a line-count delta.
+    lyricsSyncOffset += lyricsTimedSeconds[i] - activeAudio.currentTime;
+  } else {
+    const rawEstimate = estimateLineFromProgress(activeAudio.currentTime / activeAudio.duration);
+    lyricsSyncOffset += i - rawEstimate;
+  }
   lyricsCurrentLine = i;
-  applyLyricsWindow(i);
+  applyLyricsWindow(i, true);
   showStatus("Lyrics synced to playback");
 }
 
@@ -3278,8 +3375,21 @@ function estimateLineFromProgress(progress) {
   return idx;
 }
 
+// Given real timestamps, finds the last line whose timestamp has passed.
+function lineIndexForTime(t) {
+  if (!lyricsTimedSeconds) return -1;
+  let idx = 0;
+  for (let i = 0; i < lyricsTimedSeconds.length; i++) {
+    if (lyricsTimedSeconds[i] <= t) idx = i; else break;
+  }
+  return idx;
+}
+
 const GLOW_WINDOW = 4;
-function applyLyricsWindow(centerLine) {
+// forceScroll: bypass the auto-scroll setting (used for manual "tap to
+// align" and for the toggle button itself) — passive playback updates
+// never force-scroll unless the user has turned auto-scroll on.
+function applyLyricsWindow(centerLine, forceScroll = false) {
   const windowEnd = centerLine + GLOW_WINDOW - 1;
   document.querySelectorAll("[data-line-index]").forEach(el => {
     const idx = parseInt(el.dataset.lineIndex, 10);
@@ -3289,6 +3399,9 @@ function applyLyricsWindow(centerLine) {
     else if (idx <= windowEnd) el.className = `${base} active`;
     else el.className = base;
   });
+
+  if (!lyricsAutoScroll && !forceScroll) return;
+
   const activeLine = document.querySelector(`#lyricsScroll [data-line-index="${centerLine}"]`);
   if (activeLine) {
     const scroll = document.getElementById("lyricsScroll");
@@ -3309,8 +3422,13 @@ function applyLyricsWindow(centerLine) {
 
 function syncLyricsScroll(currentTime, duration) {
   if (!lyricsLines.length || !duration) return;
-  const progress = currentTime / duration;
-  let estimatedLine = estimateLineFromProgress(progress) + lyricsSyncOffset;
+  let estimatedLine;
+  if (lyricsTimedSeconds) {
+    estimatedLine = lineIndexForTime(currentTime + lyricsSyncOffset);
+  } else {
+    const progress = currentTime / duration;
+    estimatedLine = estimateLineFromProgress(progress) + lyricsSyncOffset;
+  }
   estimatedLine = Math.max(0, Math.min(lyricsLines.length - 1, estimatedLine));
   if (estimatedLine === lyricsCurrentLine) return;
   lyricsCurrentLine = estimatedLine;
@@ -3319,12 +3437,16 @@ function syncLyricsScroll(currentTime, duration) {
 
 // ==================== LYRICS FULLSCREEN (Spotify-style zoom) ====================
 function openLyricsFullscreen() {
-  if (!lyricsLines.length) { showStatus("No lyrics to expand yet."); return; }
   document.getElementById("lyricsFullscreenTitle").innerText = currentTrack ? currentTrack.title : "";
   document.getElementById("lyricsFullscreenArtist").innerText = currentTrack ? currentTrack.artist : "";
   document.getElementById("lyricsFullscreenScreen").classList.remove("translate-y-full");
   pushNavState("lyricsFullscreen");
-  if (lyricsCurrentLine >= 0) applyLyricsWindow(lyricsCurrentLine);
+  updateAutoScrollButtonUI();
+  if (!lyricsLines.length) {
+    document.getElementById("lyricsFullscreenScroll").innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No lyrics to show for this track.</div>`;
+    return;
+  }
+  if (lyricsCurrentLine >= 0) applyLyricsWindow(lyricsCurrentLine, true);
 }
 function closeLyricsFullscreen() {
   document.getElementById("lyricsFullscreenScreen").classList.add("translate-y-full");
@@ -3547,6 +3669,8 @@ function updateQueueDrawer() {
     if (idx <= currentIndex) return;
     const item = document.createElement("div");
     item.className = "glass-card p-3 rounded-xl flex items-center gap-3 group";
+    item.setAttribute("data-song-uid", uidFor(song));
+    const downloaded = isSongDownloaded(song);
     item.innerHTML = `
       <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
         <div class="relative flex-shrink-0">
@@ -3554,6 +3678,7 @@ function updateQueueDrawer() {
           <div class="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer">
             <i class="fa-solid fa-play text-white text-xs"></i>
           </div>
+          <div class="song-downloaded-badge absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#09090b] flex items-center justify-center ${downloaded ? "" : "hidden"}"><i class="fa-solid fa-download text-black" style="font-size:6px;"></i></div>
         </div>
         <div class="min-w-0"><h5 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h5><p class="text-[10px] text-slate-400 truncate mt-0.5">${escapeHtml(song.artist)}</p></div>
       </div>
@@ -3904,6 +4029,8 @@ function renderAlbumSearchRow(album) {
 function renderSearchRow(song, queueContext, opts = {}) {
   const card = document.createElement("div");
   card.className = "glass-card p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:bg-white/10 transition group";
+  card.setAttribute("data-song-uid", uidFor(song));
+  const downloaded = isSongDownloaded(song);
   card.innerHTML = `
     <div class="flex items-center gap-3 min-w-0 flex-1">
       <div class="relative flex-shrink-0">
@@ -3911,7 +4038,7 @@ function renderSearchRow(song, queueContext, opts = {}) {
         <div class="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
           <i class="fa-solid fa-play text-white text-xs"></i>
         </div>
-        ${opts.downloadedBadge ? `<div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#09090b] flex items-center justify-center"><i class="fa-solid fa-download text-black" style="font-size:7px;"></i></div>` : ""}
+        <div class="song-downloaded-badge absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#09090b] flex items-center justify-center ${downloaded ? "" : "hidden"}"><i class="fa-solid fa-download text-black" style="font-size:7px;"></i></div>
       </div>
       <div class="min-w-0">
         <h4 class="font-bold text-xs text-white truncate">${escapeHtml(song.title)}</h4>
@@ -3962,6 +4089,13 @@ function openActionSheet(song, e, opts = {}) {
   document.getElementById("asArtist").innerText = song.artist;
   document.getElementById("asLikeLabel").innerText = isLiked(song) ? "Remove from favourites" : "Add to favourites";
 
+  const downloaded = isSongDownloaded(song);
+  document.getElementById("asDownloadLabel").innerText = downloaded ? "Remove download" : "Save offline";
+  document.getElementById("asDownloadIcon").className = downloaded ? "as-icon bg-rose-500/15" : "as-icon bg-sky-500/15";
+  document.getElementById("asDownloadIcon").innerHTML = downloaded
+    ? `<i class="fa-solid fa-trash-can text-rose-400"></i>`
+    : `<i class="fa-solid fa-download text-sky-400"></i>`;
+
   document.getElementById("asRemoveFromPlaylistItem").classList.toggle("hidden", !actionSheetPlaylistId);
   document.getElementById("asRemoveFromQueueItem").classList.toggle("hidden", actionSheetQueueIndex === null);
   document.getElementById("asMoveToTopItem").classList.toggle("hidden", actionSheetQueueIndex === null || actionSheetQueueIndex <= currentIndex + 1);
@@ -3992,7 +4126,17 @@ function actionAddToQueue() {
 }
 function actionAddToPlaylist() { closeActionSheet(); openPlaylistPicker(actionSheetTarget); }
 function actionToggleLike() { if (!actionSheetTarget) return; toggleLike(actionSheetTarget); closeActionSheet(); }
-async function actionDownload() { if (!actionSheetTarget) return; closeActionSheet(); await downloadSongOffline(actionSheetTarget).catch(() => {}); }
+async function actionDownload() {
+  if (!actionSheetTarget) return;
+  const song = actionSheetTarget;
+  closeActionSheet();
+  if (isSongDownloaded(song)) {
+    await removeSongDownload(song).catch(() => showStatus("Couldn't remove download."));
+  } else {
+    await downloadSongOffline(song).catch(() => {});
+    refreshDownloadedBadges();
+  }
+}
 async function actionMoreByArtist() {
   if (!actionSheetTarget) return;
   closeActionSheet();
@@ -4556,6 +4700,11 @@ let offlineDB = null;
 let offlineSongsMeta = [];
 
 function initOfflineDB() {
+  // Ask the browser not to silently evict our storage (IndexedDB blobs)
+  // under disk pressure. Not a hard guarantee, especially on iOS Safari,
+  // but it meaningfully reduces "downloaded songs need data again" bugs.
+  requestPersistentStorage();
+
   const req = indexedDB.open("lumicOffline", 4);
   req.onupgradeneeded = (e) => {
     const db = e.target.result;
@@ -4566,6 +4715,18 @@ function initOfflineDB() {
   };
   req.onsuccess = (e) => { offlineDB = e.target.result; refreshOfflineMeta(); loadLocalTracksFromDB(); };
   req.onerror = () => { showStatus("Offline storage unavailable on this device."); };
+}
+
+async function requestPersistentStorage() {
+  try {
+    if (!navigator.storage || !navigator.storage.persist) return;
+    const already = await navigator.storage.persisted();
+    if (already) return;
+    const granted = await navigator.storage.persist();
+    // Silent either way — browsers grant this heuristically (installed PWA,
+    // site engagement, etc). No UI needed, just best-effort.
+    if (!granted) console.warn("Persistent storage not granted — downloads may be evicted under storage pressure.");
+  } catch (e) { /* storage API unsupported — nothing to do */ }
 }
 
 function refreshOfflineMeta() {
@@ -4595,24 +4756,76 @@ function updateDownloadsSizeLabel() {
   el.innerText = n === 0 ? "No downloads stored on this device" : `${n} song${n === 1 ? "" : "s"} stored on this device`;
 }
 
-// Wipes every downloaded audio blob from THIS device's IndexedDB cache.
-// Doesn't touch the account-level downloaded_songs record on the backend
-// (so the songs still show as "downloaded" on your other devices, and
-// still show up here too — they'll just stream instead of play from
-// cache until you download them again on this device).
-function clearAllDownloads() {
+// Wipes every downloaded audio blob from THIS device AND removes the
+// account-level downloaded_songs rows, so the Downloaded list actually
+// empties out instead of re-populating itself from backendDownloadedMeta.
+async function clearAllDownloads() {
   if (!offlineDB) { showStatus("Offline storage unavailable."); return; }
-  if (!offlineSongsMeta.length) { showStatus("No downloads to clear."); return; }
-  if (!confirm(`Remove ${offlineSongsMeta.length} downloaded song${offlineSongsMeta.length === 1 ? "" : "s"} from this device?`)) return;
+  const totalCount = getMergedDownloadedList().length;
+  if (!totalCount) { showStatus("No downloads to clear."); return; }
+  if (!confirm(`Remove ${totalCount} downloaded song${totalCount === 1 ? "" : "s"} from this device?`)) return;
+
   const tx = offlineDB.transaction("tracks", "readwrite");
   tx.objectStore("tracks").clear();
-  tx.oncomplete = () => {
-    offlineSongsMeta = [];
-    updateOfflineCountDisplay();
-    if (currentPlaylistCtx === "__offline") openPlaylistView("__offline");
-    showStatus("Downloads cleared from this device");
-  };
-  tx.onerror = () => showStatus("Couldn't clear downloads.");
+  await new Promise((resolve) => { tx.oncomplete = resolve; tx.onerror = resolve; });
+
+  offlineSongsMeta = [];
+
+  if (currentUser) {
+    try { await supabaseClient.from("downloaded_songs").delete().eq("user_id", currentUser.id); } catch (e) {}
+  }
+  backendDownloadedMeta = [];
+
+  updateOfflineCountDisplay();
+  if (currentPlaylistCtx === "__offline") openPlaylistView("__offline");
+  refreshDownloadedBadges();
+  showStatus("Downloads cleared from this device");
+}
+
+// Removes a SINGLE song from downloads — local blob + backend record —
+// without touching anything else. This is what was missing before.
+async function removeSongDownload(song, opts = {}) {
+  if (!song) return;
+  const uid = uidFor(song);
+  if (offlineDB) {
+    const tx = offlineDB.transaction("tracks", "readwrite");
+    tx.objectStore("tracks").delete(uid);
+    await new Promise((resolve) => { tx.oncomplete = resolve; tx.onerror = resolve; });
+  }
+  offlineSongsMeta = offlineSongsMeta.filter(s => uidFor(s) !== uid);
+  backendDownloadedMeta = backendDownloadedMeta.filter(s => uidFor(s) !== uid);
+  if (currentUser) {
+    try { await supabaseClient.from("downloaded_songs").delete().eq("user_id", currentUser.id).eq("uid", uid); } catch (e) {}
+  }
+  updateOfflineCountDisplay();
+  if (currentPlaylistCtx === "__offline") openPlaylistView("__offline");
+  refreshDownloadedBadges();
+  if (!opts.silent) showStatus(`Removed "${song.title}" from downloads`);
+}
+
+async function actionRemoveDownload() {
+  if (!actionSheetTarget) return;
+  closeActionSheet();
+  await removeSongDownload(actionSheetTarget).catch(() => showStatus("Couldn't remove download."));
+}
+
+// ---- Shared "is this downloaded" check, used everywhere a song row renders
+// (search results, any playlist, queue, now playing) so the badge is
+// consistent instead of only appearing in the Downloaded tab.
+function isSongDownloaded(song) {
+  const uid = uidFor(song);
+  return offlineSongsMeta.some(s => uidFor(s) === uid) || backendDownloadedMeta.some(s => uidFor(s) === uid);
+}
+
+// Re-renders the download badge on any song rows currently on screen after
+// a download/removal, so the icon updates immediately without a full re-render.
+function refreshDownloadedBadges() {
+  document.querySelectorAll("[data-song-uid]").forEach(el => {
+    const uid = el.getAttribute("data-song-uid");
+    const badge = el.querySelector(".song-downloaded-badge");
+    const isDown = offlineSongsMeta.some(s => uidFor(s) === uid) || backendDownloadedMeta.some(s => uidFor(s) === uid);
+    if (badge) badge.classList.toggle("hidden", !isDown);
+  });
 }
 
 async function getOfflineSrc(song) {
@@ -4644,11 +4857,13 @@ async function downloadSongOffline(song, opts = {}) {
     });
     refreshOfflineMeta();
     if (!opts.silent) showStatus(`Saved "${song.title}"`);
+    refreshDownloadedBadges();
     if (currentUser) {
       supabaseClient.from("downloaded_songs").upsert({ user_id: currentUser.id, uid: uidFor(song), song }, { onConflict: "user_id,uid" })
         .then(() => {
           if (!backendDownloadedMeta.some(s => uidFor(s) === uidFor(song))) backendDownloadedMeta.push(song);
           updateOfflineCountDisplay();
+          refreshDownloadedBadges();
         }).catch(() => {});
     }
   } catch (e) {
