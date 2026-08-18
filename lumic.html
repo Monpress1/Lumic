@@ -95,6 +95,15 @@
     /* About artist magazine style */
     .artist-magazine { background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
     .artist-magazine-photo { width:100%; height:200px; object-fit:cover; }
+    /* Subtle slow zoom/pan on artist photography — a lightweight stand-in
+       for real video thumbnails (no API provides those), used on the
+       artist page banner and, when a track has no other motion, the
+       now-playing artwork. */
+    @keyframes kenburns { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.12) translate(-1.5%, -1.5%); } }
+    .kenburns-photo { animation: kenburns 42s ease-in-out infinite alternate; will-change: transform; }
+    .artist-banner-wrap { position:relative; height:280px; overflow:hidden; border-radius:0 0 28px 28px; }
+    .artist-banner-wrap img { width:100%; height:100%; object-fit:cover; }
+    .artist-banner-fade { position:absolute; inset:0; background:linear-gradient(180deg, rgba(9,9,11,0) 20%, rgba(9,9,11,0.55) 60%, #09090b 100%); }
 
     /* Local import drag */
     .import-zone { border:2px dashed rgba(16,185,129,0.3); border-radius:16px; padding:24px; text-align:center; cursor:pointer; transition:all 0.2s; }
@@ -273,6 +282,14 @@
         <div id="recommendedRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
       </div>
 
+      <!-- "Your Mix" — built from artists similar to who you've actually
+           been playing (Last.fm artist.getSimilar against your top 3-4
+           recent-play artists), not a fixed editorial mix. -->
+      <div id="yourMixSection" class="hidden">
+        <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Your Mix</h2>
+        <div id="yourMixRow" class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2"></div>
+      </div>
+
       <!-- Hot Albums: glassmorphism rectangular slideshow, priority Nigerian artists -->
       
       <!-- New Albums -->
@@ -371,7 +388,7 @@
               <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
             </div>
             <h4 class="font-bold text-xs text-white truncate">Fresh Afrobeats 2025/26</h4>
-            <p class="text-[11px] text-slate-400 truncate">made just for you</p>
+            <p class="text-[11px] text-slate-400 truncate">Straight off vistanaij</p>
           </div>
           <div onclick="openCuratedPlaylistView('late_night_drive','Late Night Drive')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
@@ -428,25 +445,38 @@
 
     <!-- VIEW: ARTIST -->
     <section id="view-artist" class="hidden">
-      <button onclick="switchView(prevView || 'search')" class="text-slate-400 hover:text-white mb-4 text-sm flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i> Back
+      <button onclick="switchView(prevView || 'search')" class="fixed top-4 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4 z-20 pointer-events-none">
+        <span class="pointer-events-auto inline-flex items-center gap-2 text-xs font-bold text-white bg-black/50 backdrop-blur-md px-3 py-2 rounded-full border border-white/10"><i class="fa-solid fa-arrow-left"></i> Back</span>
       </button>
-      <div id="artistHeader" class="mb-6">
-        <div class="flex items-center gap-4">
-          <div class="w-20 h-20 rounded-full overflow-hidden bg-slate-800 border-2 border-emerald-500/40 flex-shrink-0">
-            <img id="artistHeaderImg" src="" class="w-full h-full object-cover">
-          </div>
-          <div>
-            <h2 id="artistHeaderName" class="text-2xl font-black text-white"></h2>
-            <p id="artistHeaderCount" class="text-sm text-slate-400 mt-1"></p>
+      <div id="artistHeader" class="-mx-4 -mt-4 mb-6">
+        <div class="artist-banner-wrap">
+          <img id="artistHeaderImg" src="" class="kenburns-photo">
+          <div class="artist-banner-fade"></div>
+          <div class="absolute bottom-0 left-0 right-0 px-5 pb-5">
+            <div class="flex items-center gap-2 mb-1">
+              <h2 id="artistHeaderName" class="text-3xl font-black text-white truncate"></h2>
+              <i id="artistHeaderVerified" class="fa-solid fa-circle-check text-emerald-400 text-lg hidden flex-shrink-0"></i>
+            </div>
+            <p id="artistHeaderCount" class="text-sm text-slate-300"></p>
           </div>
         </div>
-        <div class="flex gap-3 mt-4">
+        <div class="flex gap-3 mt-5 px-4">
           <button onclick="playArtistAll(false)" class="flex-1 bg-emerald-500 text-black font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-play"></i>Play all</button>
           <button onclick="playArtistAll(true)" class="flex-1 bg-white/10 text-white font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-shuffle"></i>Shuffle</button>
         </div>
+        <div id="artistBioBlock" class="hidden mt-5 px-4">
+          <p id="artistBioText" class="text-xs text-slate-400 leading-relaxed"></p>
+        </div>
+        <div id="artistGalleryRow" class="hidden mt-4 px-4 grid grid-cols-3 gap-2"></div>
       </div>
-      <div id="artistSongsList" class="space-y-2"></div>
+      <div class="px-4">
+        <div class="glass-card rounded-2xl p-2.5 flex items-center gap-2 mb-4">
+          <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2 text-sm flex-shrink-0"></i>
+          <input id="artistSongSearchInput" type="text" oninput="filterArtistSongs(this.value)" placeholder="Search this artist's songs" class="bg-transparent flex-1 min-w-0 px-2 py-1.5 text-sm text-white placeholder-slate-500 outline-none">
+        </div>
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Songs</h3>
+        <div id="artistSongsList" class="space-y-2"></div>
+      </div>
     </section>
 
     <!-- VIEW: LIBRARY -->
@@ -510,13 +540,17 @@
         <div class="relative z-10">
           <span id="playlistKind" class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Playlist</span>
           <h2 id="playlistName" class="text-2xl font-black text-white leading-tight">Playlist</h2>
-          <p id="playlistMeta" class="text-xs text-slate-400 mt-1">0 songs</p>
+          <div class="flex items-center gap-2 mt-1">
+            <p id="playlistMeta" class="text-xs text-slate-400">0 songs</p>
+            <div id="playlistCollabBadges" class="hidden flex items-center -space-x-2"></div>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-3 mb-4">
         <button onclick="playAllInPlaylist(false)" class="flex-1 bg-emerald-500 text-black font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-play"></i>Play all</button>
         <button onclick="playAllInPlaylist(true)" class="flex-1 bg-white/10 text-white font-bold text-sm py-2.5 rounded-full flex items-center justify-center gap-2 active:scale-95 transition"><i class="fa-solid fa-shuffle"></i>Shuffle</button>
         <button onclick="addAllCurrentPlaylistSongs()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-square-plus text-sm"></i></button>
+        <button onclick="openCollabInviteModal()" id="playlistCollabBtn" class="hidden w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-user-plus text-sm"></i></button>
         <button onclick="sharePlaylistWithFriends()" id="playlistShareBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-share-nodes text-sm"></i></button>
         <button onclick="downloadPlaylistOffline()" id="playlistDownloadBtn" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-download text-sm"></i></button>
         <button onclick="openSortMenu()" class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition flex-shrink-0"><i class="fa-solid fa-arrow-down-wide-short text-sm"></i></button>
@@ -718,13 +752,16 @@
           <img id="npImg" src="" class="w-full h-full object-cover">
         </div>
 
-        <!-- Title + like -->
-        <div class="flex items-center justify-between mb-5">
-          <div class="min-w-0 pr-4">
+        <!-- Title + like + quick-add -->
+        <div class="flex items-center justify-between mb-5 gap-3">
+          <div class="min-w-0 flex-1">
             <h2 id="npTitle" class="text-2xl font-black text-white truncate">---</h2>
-            <button onclick="openArtistViewFromNp()" id="npArtist" class="text-sm text-emerald-400 truncate mt-1 text-left hover:text-emerald-300 transition">---</button>
+            <button onclick="openArtistViewFromNp()" id="npArtist" class="block w-full text-sm text-emerald-400 truncate mt-1 text-left hover:text-emerald-300 transition">---</button>
           </div>
-          <button onclick="toggleLikeCurrent(event)" id="npLikeBtn" class="text-2xl text-slate-400 hover:text-pink-400 flex-shrink-0 transition heart-float-wrap"><i class="fa-regular fa-heart"></i></button>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <button onclick="quickAddCurrentToPlaylist(event)" id="npAddBtn" class="text-2xl text-slate-400 hover:text-white transition"><i class="fa-solid fa-circle-plus"></i></button>
+            <button onclick="toggleLikeCurrent(event)" id="npLikeBtn" class="text-2xl text-slate-400 hover:text-pink-400 transition heart-float-wrap"><i class="fa-regular fa-heart"></i></button>
+          </div>
         </div>
 
         <!-- Progress -->
@@ -1314,6 +1351,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderLocalFiles();
   renderArtistSpotlight();
   renderRecommended();
+  renderYourMix();
   renderMoodCardsGrid();
   renderBrowseCategoriesGrid();
   renderTrendingMixTiles();
@@ -1402,7 +1440,7 @@ function switchView(view) {
 
   if (view === "profile") renderProfileView();
   if (view === "library") renderRequests();
-  if (view === "home") { renderArtistSpotlight(); renderRecommended(); } // New Albums / Top 100 stay loaded from initial page load — no need to re-fetch on every tab switch
+  if (view === "home") { renderArtistSpotlight(); renderRecommended(); renderYourMix(); } // New Albums / Top 100 stay loaded from initial page load — no need to re-fetch on every tab switch
 }
 
 let activeCategory = "all";
@@ -1795,21 +1833,81 @@ function renderRecommendedRow(list, row) {
   });
 }
 
+// ==================== YOUR MIX (similar-artist mix, Last.fm artist.getSimilar) ====================
+// Picks 3-4 artists from your actual play history, finds artists similar
+// to EACH of them via Last.fm, and blends real DB-backed tracks from that
+// combined pool into one mix — same idea as a "Daylist"/"Mix" tile, but
+// grounded in your own listening instead of a fixed editorial playlist.
+const YOUR_MIX_CACHE_KEY = "lumic_cache_yourmix_v1";
+
+async function fetchSimilarArtists(artistName, limit = 5) {
+  try {
+    const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&artist=${encodeURIComponent(artistName)}&api_key=${LASTFM_API_KEY}&format=json&limit=${limit}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return (data?.similarartists?.artist || []).map(a => a.name).filter(Boolean);
+  } catch (e) { return []; }
+}
+
+async function renderYourMix() {
+  const section = document.getElementById("yourMixSection");
+  const row = document.getElementById("yourMixRow");
+  if (!section || !row) return;
+
+  const cached = readListCache(YOUR_MIX_CACHE_KEY);
+  if (cached && cached.data && cached.data.length) {
+    section.classList.remove("hidden");
+    renderRecommendedRow(cached.data, row);
+  }
+
+  const primaryArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))];
+  const seedArtists = (primaryArtists.length ? primaryArtists : [...PRIORITY_ARTISTS]).slice(0, 4);
+  if (!seedArtists.length) { if (!cached) section.classList.add("hidden"); return; }
+
+  const similarLists = await Promise.all(seedArtists.map(a => fetchSimilarArtists(a, 6)));
+  let pool = [...new Set(similarLists.flat())].filter(Boolean);
+  // Always include the seed artists themselves too — similarartists can
+  // come back thin/empty for lesser-known Naija acts Last.fm doesn't know.
+  pool = [...new Set([...pool, ...seedArtists])].sort(() => Math.random() - 0.5).slice(0, 10);
+  if (!pool.length) { if (!cached) section.classList.add("hidden"); return; }
+
+  section.classList.remove("hidden");
+  if (!cached || !cached.data.length) {
+    row.innerHTML = `<div class="flex gap-4">${Array(4).fill('<div class="rec-card"><div class="skeleton" style="width:150px;height:150px;border-radius:14px;"></div></div>').join("")}</div>`;
+  }
+
+  const perArtist = await Promise.all(pool.map(a => fetchAcrossAllTables(a, 3)));
+  let unique = [];
+  const seen = new Set();
+  perArtist.forEach(tracks => tracks.forEach(t => { const u = uidFor(t); if (seen.has(u)) return; seen.add(u); unique.push(t); }));
+  unique = unique.sort(() => Math.random() - 0.5).slice(0, 15);
+
+  if (unique.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
+  renderRecommendedRow(unique, row);
+  writeListCache(YOUR_MIX_CACHE_KEY, unique);
+}
+
 // Fetches a small number of tracks for one artist across all 3 tables
 // (songs, mp3pm_songs, museek_tracks) — the same 3-table method used by
 // search. Used by Recommended For You and can be reused anywhere a
 // cross-table artist lookup is needed.
+// Pulls a WIDER pool per artist than requested, then shuffles down to
+// limitEach — otherwise this always returns the exact same first N rows
+// per artist on every call (that's the bug behind "Asake mix"/"Olivia
+// Rodrigo mix" cards looking frozen/static between opens).
 async function fetchAcrossAllTables(artistName, limitEach = 3) {
+  const poolEach = Math.min(limitEach * 4, 20);
   const [songsRes, mp3Res, museekRes] = await Promise.all([
-    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(limitEach)
+    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(poolEach)
       .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
-    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(limitEach)
+    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(poolEach)
       .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" }))),
-    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(limitEach)
+    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(poolEach)
       .then(r => (r.data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })))
       .catch(() => []) // table may not exist on some deployments — fail soft
   ]);
-  return [...songsRes, ...mp3Res, ...museekRes].filter(s => !isPreviewJunk(s));
+  const pool = [...songsRes, ...mp3Res, ...museekRes].filter(s => !isPreviewJunk(s));
+  return shuffleAndTrim(pool, limitEach);
 }
 
 // ==================== HOT ALBUMS (glassmorphism rectangular rail) ====================
@@ -2331,13 +2429,18 @@ async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
   for (let i = 0; i < artists.length; i += BATCH_SIZE) {
     const chunk = artists.slice(i, i + BATCH_SIZE);
     const perArtistLists = await Promise.all(chunk.map(async (a) => {
+      // Wider pool than requested + shuffle — otherwise this always
+      // returns the same first-N rows per artist every time (the bug
+      // behind artist-mix cards like "Asake mix" looking frozen/static).
+      const poolEach = Math.min(limitEach * 4, 20);
       const [mdundo, mp3] = await Promise.all([
-        ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", a).limit(limitEach)
+        ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", a).limit(poolEach)
           .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
-        ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", a).limit(limitEach)
+        ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", a).limit(poolEach)
           .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" })))
       ]);
-      return [...mdundo, ...mp3].filter(s => !isPreviewJunk(s));
+      const pool = [...mdundo, ...mp3].filter(s => !isPreviewJunk(s));
+      return shuffleAndTrim(pool, limitEach);
     }));
 
     let addedAny = false;
@@ -2356,32 +2459,82 @@ async function fetchByArtists(artists, limitEach = 12) {
   return fetchByArtistsProgressive(artists, limitEach, null);
 }
 
+// Shuffles then trims to `limit` — used so "the same category" doesn't
+// always render in the same crawled-order sequence. Pulls a wider pool
+// than requested first, so repeated opens can land on genuinely different
+// songs, not just the same set reordered.
+function shuffleAndTrim(arr, limit) {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, limit);
+}
+
 // Pulls tracks straight from the `category` column on mp3pm_songs — no
 // hardcoded artist names, whatever's actually tagged with that category
-// in the DB comes back. Newest-crawled first.
+// in the DB comes back. Pool is wider than `limit` and shuffled, so a
+// mood mix (e.g. "Sad Indie") looks different — random songs, random
+// order — on every open, not the same fixed newest-first list each time.
 async function fetchByCategory(categoryName, limit = 60) {
   try {
+    const poolSize = Math.min(limit * 3, 200);
     const { data, error } = await supabaseClient
       .from("mp3pm_songs").select("*")
       .ilike("category", `%${categoryName}%`)
       .order("crawled_at", { ascending: false })
-      .limit(limit);
+      .limit(poolSize);
     if (error) throw error;
-    return (data || []).map(s => ({ ...s, _src: "mp3pm" })).filter(s => !isPreviewJunk(s));
+    const clean = (data || []).map(s => ({ ...s, _src: "mp3pm" })).filter(s => !isPreviewJunk(s));
+    let result = shuffleAndTrim(clean, limit);
+    // Category came up thin — genuinely leverage iTunes to widen it: look
+    // up the category as a genre term, pull back distinct artist names
+    // iTunes associates with it that we haven't already got, then check
+    // OUR db for real playable tracks by those artists (iTunes previews
+    // themselves are 30s clips and aren't used for playback here).
+    if (result.length < limit) {
+      const extra = await supplementFromItunesGenre(categoryName, clean.map(s => s.artist), limit - result.length);
+      result = [...result, ...extra];
+    }
+    return result;
+  } catch (e) { return []; }
+}
+
+// Uses iTunes' genre-tagged search results purely as an artist-discovery
+// signal (not for playback — those are 30s previews) to find real,
+// DB-backed songs by artists associated with a genre/mood we're short on.
+async function supplementFromItunesGenre(genreTerm, alreadyHaveArtists, need) {
+  if (need <= 0) return [];
+  try {
+    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(genreTerm)}&entity=song&limit=25`);
+    const data = await res.json();
+    const haveSet = new Set(alreadyHaveArtists.map(a => (a || "").toLowerCase()));
+    const candidateArtists = [];
+    const seen = new Set();
+    (data.results || []).forEach(r => {
+      const name = (r.artistName || "").trim();
+      const key = name.toLowerCase();
+      if (!name || haveSet.has(key) || seen.has(key)) return;
+      seen.add(key);
+      candidateArtists.push(name);
+    });
+    if (!candidateArtists.length) return [];
+    const found = await fetchByArtists(candidateArtists.slice(0, 6), Math.ceil(need / 2));
+    return shuffleAndTrim(found, need);
   } catch (e) { return []; }
 }
 
 // Fresh Afrobeats straight from vistanaij (museek_tracks) — this table is
-// specifically the 2025/2026 vistanaij crawl, so newest-first here is
-// exactly "a set of afrobeat from 2026-2025".
+// specifically the 2025/2026 vistanaij crawl. Pool is wider than `limit`
+// and shuffled so this mix also varies between opens instead of always
+// being the exact same newest-first slice.
 async function fetchVistanaijFresh(limit = 60) {
   try {
+    const poolSize = Math.min(limit * 3, 200);
     const { data, error } = await supabaseClient
       .from("museek_tracks").select("*")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(poolSize);
     if (error) throw error;
-    return (data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })).filter(s => !isPreviewJunk(s));
+    const clean = (data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })).filter(s => !isPreviewJunk(s));
+    return shuffleAndTrim(clean, limit);
   } catch (e) { return []; }
 }
 
@@ -2526,16 +2679,59 @@ async function openCuratedPlaylistView(presetKey, title) {
 }
 
 // ==================== ARTIST VIEW ====================
+// Shared bio + photo + gallery fetch, used by both the artist page and the
+// now-playing "About the artist" card so the two never drift apart.
+const artistMagazineCache = {};
+async function fetchArtistMagazineData(artistName) {
+  const key = (artistName || "").trim().toLowerCase();
+  if (artistMagazineCache[key]) return artistMagazineCache[key];
+  const [wikiRes, itunesData] = await Promise.all([
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`).catch(() => null),
+    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&entity=song&limit=9`).then(r => r.json()).catch(() => ({ results: [] }))
+  ]);
+  const images = (itunesData.results || []).map(r => r.artworkUrl100.replace("100x100", "400x400"));
+  let bio = "";
+  let wikiImg = null;
+  if (wikiRes && wikiRes.ok) {
+    const wikiData = await wikiRes.json();
+    bio = wikiData.extract || "";
+    if (wikiData.thumbnail) wikiImg = wikiData.thumbnail.source;
+  }
+  const result = { bio, headerImg: wikiImg || images[0] || null, images };
+  artistMagazineCache[key] = result;
+  return result;
+}
+
 async function openArtistView(artistName) {
   prevView = document.querySelector('[class*="font-bold"]:not(.hidden)')?.id?.replace("tab-","") || prevView;
   currentArtistName = artistName;
   switchView("artist");
   document.getElementById("artistHeaderName").innerText = artistName;
   document.getElementById("artistHeaderCount").innerText = "Loading...";
+  document.getElementById("artistHeaderVerified").classList.add("hidden");
+  document.getElementById("artistBioBlock").classList.add("hidden");
+  document.getElementById("artistGalleryRow").classList.add("hidden");
   document.getElementById("artistSongsList").innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
 
   resolveImage({ artist: artistName }).then(img => {
     document.getElementById("artistHeaderImg").src = img;
+  });
+
+  fetchArtistMagazineData(artistName).then(({ bio, headerImg, images }) => {
+    if (headerImg) document.getElementById("artistHeaderImg").src = headerImg;
+    if (bio) {
+      document.getElementById("artistBioText").innerText = bio.length > 320 ? bio.slice(0, 320) + "..." : bio;
+      document.getElementById("artistBioBlock").classList.remove("hidden");
+    }
+    if (images.length) {
+      const row = document.getElementById("artistGalleryRow");
+      row.innerHTML = images.slice(0, 6).map(src => `<img src="${src}" class="w-full aspect-square object-cover rounded-xl bg-slate-800">`).join("");
+      row.classList.remove("hidden");
+    }
+  });
+
+  getArtistSongCount(artistName).then(count => {
+    if (count >= 50) document.getElementById("artistHeaderVerified").classList.remove("hidden");
   });
 
   const [mdundo, mp3, museek] = await Promise.all([
@@ -2551,10 +2747,22 @@ async function openArtistView(artistName) {
 
   currentArtistSongs = songs;
   document.getElementById("artistHeaderCount").innerText = `${songs.length} song${songs.length !== 1 ? "s" : ""}`;
+  document.getElementById("artistSongSearchInput").value = "";
   const list = document.getElementById("artistSongsList");
   list.innerHTML = "";
   if (songs.length === 0) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No songs found for this artist.</div>`; return; }
   songs.forEach(song => list.appendChild(renderSearchRow(song, songs)));
+}
+
+// Client-side filter over the artist's already-loaded song list — instant,
+// no extra fetch. Matches on title (the artist is fixed on this page).
+function filterArtistSongs(query) {
+  const q = (query || "").trim().toLowerCase();
+  const list = document.getElementById("artistSongsList");
+  const filtered = q ? currentArtistSongs.filter(s => (s.title || "").toLowerCase().includes(q)) : currentArtistSongs;
+  list.innerHTML = "";
+  if (!filtered.length) { list.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No songs match "${escapeHtml(query)}".</div>`; return; }
+  filtered.forEach(song => list.appendChild(renderSearchRow(song, filtered)));
 }
 
 async function openArtistViewFromNp() {
@@ -3459,26 +3667,14 @@ async function loadArtistInfo(song) {
   el.innerHTML = `<div class="p-5 text-center text-slate-500 text-xs animate-pulse">Loading artist info...</div>`;
   gallery.innerHTML = "";
 
-  const [wikiRes, itunesData] = await Promise.all([
-    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(song.artist)}`).catch(() => null),
-    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(song.artist)}&entity=song&limit=9`).then(r => r.json()).catch(() => ({ results: [] }))
-  ]);
-
-  const images = (itunesData.results || []).map(r => r.artworkUrl100.replace("100x100", "400x400"));
-  let bio = "No biography available.";
-  let wikiImg = null;
-  if (wikiRes && wikiRes.ok) {
-    const wikiData = await wikiRes.json();
-    bio = wikiData.extract || "No biography available.";
-    if (wikiData.thumbnail) wikiImg = wikiData.thumbnail.source;
-  }
-
-  const headerImg = wikiImg || images[0] || placeholderFor(song.artist);
-  const bioShort = bio.length > 400 ? bio.substring(0, 400) + "..." : bio;
+  const { bio, headerImg, images } = await fetchArtistMagazineData(song.artist);
+  const bioText = bio || "No biography available.";
+  const finalHeaderImg = headerImg || images[0] || placeholderFor(song.artist);
+  const bioShort = bioText.length > 400 ? bioText.substring(0, 400) + "..." : bioText;
 
   el.innerHTML = `
     <div>
-      <img src="${headerImg}" class="artist-magazine-photo" onerror="this.src='${placeholderFor(song.artist)}'">
+      <img src="${finalHeaderImg}" class="artist-magazine-photo kenburns-photo" onerror="this.src='${placeholderFor(song.artist)}'">
       <div class="p-4">
         <div class="flex items-center gap-2 mb-3">
           <span class="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">Artist</span>
@@ -3736,21 +3932,53 @@ function clearSearch() {
 
 function renderRecentSearches() {
   const container = document.getElementById("searchResults");
-  if (recentSearches.length === 0) {
-    container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Search for songs, artists or albums</div>`;
-    return;
-  }
-  container.innerHTML = `
+
+  // "Recently played" artists — up to 7 distinct artists from your last
+  // plays, shown as a swipeable circle row. This is what actually makes
+  // the search tab feel personal/instant instead of a blank box.
+  const recentArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))].slice(0, 7);
+
+  const chipsHTML = recentSearches.length ? `
     <div class="flex items-center justify-between mb-2">
       <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Recent searches</h4>
       <button onclick="clearRecentSearches()" class="text-[11px] text-slate-500 hover:text-slate-300">Clear</button>
     </div>
-    <div class="flex flex-wrap gap-2">
-      ${recentSearches.slice(0, 10).map(q => `
-        <button onclick="doSearch('${escapeHtml(q)}')" class="artist-chip">${escapeHtml(q)}</button>
-      `).join("")}
-    </div>
+    <div class="flex flex-wrap gap-2 mb-6">
+      ${recentSearches.slice(0, 8).map(q => `<button onclick="doSearch('${escapeHtml(q)}')" class="artist-chip">${escapeHtml(q)}</button>`).join("")}
+    </div>` : "";
+
+  const artistsHTML = recentArtists.length ? `
+    <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Jump back to an artist</h4>
+    <div id="searchRecentArtistsRow" class="flex gap-4 overflow-x-auto no-scrollbar pb-1 mb-6"></div>` : "";
+
+  container.innerHTML = `
+    ${chipsHTML}
+    ${artistsHTML}
+    <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Browse a vibe</h4>
+    <div id="searchMoodTilesGrid" class="grid grid-cols-2 gap-3"></div>
   `;
+
+  if (recentArtists.length) {
+    const row = document.getElementById("searchRecentArtistsRow");
+    recentArtists.forEach(name => row.appendChild(renderArtistSearchCard(name)));
+  }
+
+  const grid = document.getElementById("searchMoodTilesGrid");
+  grid.innerHTML = MOOD_CARDS.map(m => `
+    <button data-mood="${m.key}" class="glass-card rounded-2xl p-4 text-left hover:bg-white/10 transition min-w-0">
+      <i class="fa-solid ${m.icon} ${m.color} text-xl mb-2 block"></i>
+      <h5 class="font-bold text-sm text-white truncate">${escapeHtml(m.title)}</h5>
+      <p class="text-[10.5px] text-slate-500 truncate mt-0.5">${escapeHtml(m.sub)}</p>
+    </button>
+  `).join("");
+  grid.querySelectorAll("[data-mood]").forEach(el => {
+    el.onclick = () => openCuratedPlaylistView(el.getAttribute("data-mood"), MOOD_CARDS.find(m => m.key === el.getAttribute("data-mood"))?.title || "Mix");
+  });
+
+  if (recentSearches.length === 0 && recentArtists.length === 0 && !currentUser) {
+    // Nothing personal to show at all — keep the plain empty state rather
+    // than an empty artist row + generic tiles for a brand-new user.
+  }
 }
 
 function clearRecentSearches() {
@@ -3877,7 +4105,8 @@ async function runSearch(query, isFullSearch) {
       if (songsDone && albumsDone) checkNoResults();
       return;
     }
-    renderSearchResults(latestSongs, query, container, isFullSearch, latestAlbums);
+    if (isFullSearch) renderSearchResults(latestSongs, query, container, isFullSearch, latestAlbums);
+    else renderLiveSearchResults(latestSongs, query, container, latestAlbums);
   }
 
   async function checkNoResults() {
@@ -3958,6 +4187,98 @@ function renderNoResultsWithSuggestions(query, container, suggestions) {
       </div>
     </div>
   `;
+}
+
+// ==================== ARTIST SEARCH CARDS (live/instant search) ====================
+// Cached per-artist total song counts (across songs/mp3pm_songs/museek_tracks)
+// so the "verified" badge (50+ songs in catalog) doesn't re-query on every
+// keystroke — only once per artist name for the life of the page.
+const artistSongCountCache = {};
+async function getArtistSongCount(artistName) {
+  const key = (artistName || "").trim().toLowerCase();
+  if (!key) return 0;
+  if (artistSongCountCache[key] !== undefined) return artistSongCountCache[key];
+  try {
+    const [a, b, c] = await Promise.all([
+      supabaseClient.from("songs").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`),
+      supabaseClient.from("mp3pm_songs").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`),
+      supabaseClient.from("museek_tracks").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`)
+    ]);
+    const total = (a.count || 0) + (b.count || 0) + (c.count || 0);
+    artistSongCountCache[key] = total;
+    return total;
+  } catch (e) { return 0; }
+}
+
+// Resolves an artist photo by reusing resolveImage()'s artist-image cache
+// path (pass a pseudo-song with no track image so it falls straight
+// through to the per-artist iTunes lookup + cache).
+function resolveArtistImage(name) { return resolveImage({ artist: name, title: name }); }
+
+function renderArtistSearchCard(name) {
+  const card = document.createElement("div");
+  card.className = "flex-shrink-0 w-24 text-center cursor-pointer group";
+  card.innerHTML = `
+    <div class="relative w-20 h-20 mx-auto rounded-full overflow-hidden bg-slate-800 ring-1 ring-white/10 group-hover:ring-emerald-400/40 transition">
+      <img data-artist-img src="${placeholderFor(name)}" class="w-full h-full object-cover fade-img">
+    </div>
+    <p class="text-[11px] font-bold text-white mt-2 truncate flex items-center justify-center gap-1">
+      <span class="truncate">${escapeHtml(name)}</span>
+      <i data-verified-badge class="fa-solid fa-circle-check text-emerald-400 text-[10px] flex-shrink-0 hidden"></i>
+    </p>
+    <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Artist</p>
+  `;
+  card.onclick = () => openArtistView(name);
+  resolveArtistImage(name).then(img => { const el = card.querySelector("[data-artist-img]"); if (el) el.src = img; });
+  getArtistSongCount(name).then(count => {
+    if (count >= 50) card.querySelector("[data-verified-badge]").classList.remove("hidden");
+  });
+  return card;
+}
+
+// The "instant" typing-state view: a row of matching artist cards up top
+// (feels immediate, like tapping straight into an artist) followed by a
+// short top-5 songs list — not the full 12-result dump. Full Enter/tap
+// search still shows the complete list via renderSearchResults().
+function renderLiveSearchResults(songs, query, container, albums = []) {
+  container.innerHTML = "";
+
+  if (albums.length) {
+    const albumLabel = document.createElement("h4");
+    albumLabel.className = "text-xs font-bold uppercase tracking-widest text-slate-500 mb-1";
+    albumLabel.innerText = "Albums";
+    container.appendChild(albumLabel);
+    albums.slice(0, 2).forEach(album => container.appendChild(renderAlbumSearchRow(album)));
+  }
+
+  // Up to 3 distinct artists represented in this result set, ranked by
+  // how many of the matched songs are theirs.
+  const counts = {};
+  songs.forEach(s => { counts[s.artist] = (counts[s.artist] || 0) + 1; });
+  const topArtists = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 3);
+
+  if (topArtists.length) {
+    const label = document.createElement("h4");
+    label.className = "text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 mt-4";
+    label.innerText = "Artists";
+    container.appendChild(label);
+    const row = document.createElement("div");
+    row.className = "flex gap-3 overflow-x-auto no-scrollbar pb-1 mb-1";
+    topArtists.forEach(name => row.appendChild(renderArtistSearchCard(name)));
+    container.appendChild(row);
+  }
+
+  if (songs.length) {
+    const label = document.createElement("h4");
+    label.className = "text-xs font-bold uppercase tracking-widest text-slate-500 mb-1 mt-4";
+    label.innerText = "Top songs";
+    container.appendChild(label);
+    songs.slice(0, 5).forEach(song => container.appendChild(renderSearchRow(song, songs)));
+  }
+
+  if (!songs.length && !albums.length && !topArtists.length) {
+    container.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">No matches yet...</div>`;
+  }
 }
 
 function renderSearchResults(songs, query, container, isFinal, albums = []) {
@@ -4208,17 +4529,34 @@ function renderPlaylistPickerList() {
   const list = document.getElementById("playlistPickerList");
   list.innerHTML = "";
   const names = Object.keys(userPlaylists);
+
+  const createRow = document.createElement("button");
+  createRow.className = "w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-left transition border border-dashed border-white/15 mb-2";
+  createRow.innerHTML = `
+    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-plus text-white text-xs"></i></div>
+    <span class="text-sm text-white flex-1 font-medium">Create new playlist</span>
+  `;
+  createRow.onclick = () => openCreatePlaylistModal(true);
+  list.appendChild(createRow);
+
   if (names.length === 0) {
-    list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No playlists yet.</div>`;
+    const empty = document.createElement("div");
+    empty.className = "text-center py-4 text-slate-500 text-xs";
+    empty.innerText = "No playlists yet — create one above.";
+    list.appendChild(empty);
+    return;
   }
   names.forEach(id => {
     const pl = userPlaylists[id];
+    const firstSong = pl.songs && pl.songs[0];
     const row = document.createElement("button");
     row.className = "w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 text-left transition";
     row.innerHTML = `
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-record-vinyl text-white text-xs"></i></div>
-      <span class="text-sm text-white flex-1 font-medium">${escapeHtml(pl.name)}</span>
-      <span class="text-[10px] text-slate-500">${pl.songs.length} songs</span>
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center flex-shrink-0 overflow-hidden">
+        ${firstSong ? `<img data-cover src="${placeholderFor(pl.name)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-record-vinyl text-white text-xs"></i>`}
+      </div>
+      <span class="text-sm text-white flex-1 font-medium truncate">${escapeHtml(pl.name)}</span>
+      <span class="text-[10px] text-slate-500 flex-shrink-0">${pl.songs.length} songs</span>
     `;
     row.onclick = () => {
       if (playlistPickerBulkSongs) {
@@ -4233,7 +4571,17 @@ function renderPlaylistPickerList() {
       closePlaylistPicker();
     };
     list.appendChild(row);
+    if (firstSong) resolveImage(firstSong).then(url => { const el = row.querySelector("[data-cover]"); if (el) el.src = url; });
   });
+}
+
+// The "+" button next to the heart icon in now-playing — one tap straight
+// into the playlist picker for whatever's currently playing, no need to
+// go through the "..." action sheet first.
+function quickAddCurrentToPlaylist(e) {
+  if (e) e.stopPropagation();
+  if (!currentTrack) return;
+  openPlaylistPicker(currentTrack);
 }
 
 function closePlaylistPicker() {
@@ -4387,7 +4735,7 @@ function confirmCreatePlaylist() {
     else if (actionSheetTarget) userPlaylists[id].songs.push(actionSheetTarget);
   }
   localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
-  pushPlaylistToBackend(id, userPlaylists[id]);
+  pushPlaylistToBackend(id, userPlaylists[id], true);
   renderUserPlaylists();
   showStatus(`Created "${name}"`);
   document.getElementById("createPlaylistModal").classList.add("hidden");
@@ -4423,10 +4771,20 @@ function renderUserPlaylists() {
     const row = document.createElement("div");
     row.className = "glass-card p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-white/10 transition min-h-[84px]";
     row.innerHTML = `
-      <div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center">
+      <div class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-600 to-indigo-900 flex items-center justify-center relative">
         ${firstSong ? `<img data-cover src="${placeholderFor(pl.name)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-record-vinyl text-white text-lg"></i>`}
+        ${pl.is_collaborative ? `<div class="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#16161e] flex items-center justify-center"><i class="fa-solid fa-user-group text-black" style="font-size:7px;"></i></div>` : ""}
       </div>
-      <div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white truncate">${escapeHtml(pl.name)}</h4><p class="text-[11px] text-slate-400 mt-1">${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}</p></div>
+      <div class="min-w-0 flex-1">
+        <h4 class="font-bold text-sm truncate">
+          <span class="text-white">${escapeHtml(pl.name)}</span>
+          ${pl.sharedByName ? `<span class="text-slate-500 font-normal text-xs"> by </span><span class="font-bold" style="color:${gradientForSeed(pl.sharedByName).match(/#[0-9a-fA-F]{6}/)?.[0] || "#a78bfa"}">${escapeHtml(pl.sharedByName)}</span>` : ""}
+        </h4>
+        <div class="flex items-center gap-2 mt-1">
+          <p class="text-[11px] text-slate-400 flex-shrink-0">${pl.songs.length} song${pl.songs.length === 1 ? "" : "s"}</p>
+          <div data-row-collab-badges class="flex items-center -space-x-1.5"></div>
+        </div>
+      </div>
       <button data-delete-playlist class="row-remove-btn"><i class="fa-solid fa-trash-can text-xs"></i></button>
       <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
     `;
@@ -4437,6 +4795,12 @@ function renderUserPlaylists() {
       resolveImage(firstSong).then(url => {
         const el = row.querySelector("[data-cover]");
         if (el) el.src = url;
+      });
+    }
+    if (pl.is_collaborative && currentUser) {
+      loadPlaylistCollaborators(id).then(collabs => {
+        const wrap = row.querySelector("[data-row-collab-badges]");
+        if (wrap && collabs.length) wrap.innerHTML = collabs.slice(0, 3).map(collabBadgeHTML).join("");
       });
     }
   });
@@ -4573,15 +4937,33 @@ function removeSongFromPlaylist(playlistId, song) {
 // Pushes one playlist's current name+songs up to the backend so it's the
 // same on every device signed into this account. Fire-and-forget — local
 // storage + the UI have already been updated by the caller.
-function pushPlaylistToBackend(playlistId, pl) {
+//
+// isNew=true is ONLY for a brand-new playlist the current user is
+// creating (INSERT, sets them as owner). Every other call is an UPDATE
+// that never touches user_id/ownership — this matters once collaborative
+// playlists exist, since a collaborator editing someone else's playlist
+// must never be able to reassign ownership to themselves. Row Level
+// Security on user_playlists is what actually decides whether an update
+// from a non-owner (collaborator) is allowed through.
+function pushPlaylistToBackend(playlistId, pl, isNew = false) {
   if (!currentUser || !pl) return;
-  supabaseClient.from("user_playlists").upsert({
-    id: playlistId,
-    user_id: currentUser.id,
-    name: pl.name,
-    songs: pl.songs,
-    updated_at: new Date().toISOString()
-  }, { onConflict: "id" }).then(() => {}).catch(() => {});
+  if (isNew) {
+    supabaseClient.from("user_playlists").insert({
+      id: playlistId,
+      user_id: currentUser.id,
+      name: pl.name,
+      songs: pl.songs,
+      is_collaborative: !!pl.is_collaborative,
+      updated_at: new Date().toISOString()
+    }).then(() => {}).catch(() => {});
+  } else {
+    supabaseClient.from("user_playlists").update({
+      name: pl.name,
+      songs: pl.songs,
+      is_collaborative: !!pl.is_collaborative,
+      updated_at: new Date().toISOString()
+    }).eq("id", playlistId).then(() => {}).catch(() => {});
+  }
 }
 
 function addAllCurrentPlaylistSongs() {
@@ -4590,14 +4972,145 @@ function addAllCurrentPlaylistSongs() {
   openPlaylistPickerBulk(songs);
 }
 
+// ==================== COLLABORATIVE PLAYLISTS ====================
+// SQL (run once in Supabase):
+//   alter table public.user_playlists add column if not exists is_collaborative boolean default false;
+//
+//   create table if not exists public.playlist_collaborators (
+//     playlist_id text not null references public.user_playlists(id) on delete cascade,
+//     user_id uuid not null references public.profiles(id) on delete cascade,
+//     joined_at timestamptz not null default now(),
+//     primary key (playlist_id, user_id)
+//   );
+//   alter table public.playlist_collaborators enable row level security;
+//   create policy "collaborators can view memberships on their playlists" on public.playlist_collaborators
+//     for select using (
+//       auth.uid() = user_id
+//       or playlist_id in (select id from public.user_playlists where user_id = auth.uid())
+//     );
+//   create policy "a user can add themself as a collaborator" on public.playlist_collaborators
+//     for insert with check (auth.uid() = user_id);
+//   create policy "owner can remove a collaborator, or a user can leave" on public.playlist_collaborators
+//     for delete using (
+//       auth.uid() = user_id
+//       or playlist_id in (select id from public.user_playlists where user_id = auth.uid())
+//     );
+//
+//   -- Collaborators need to read/update the shared songs list, not just the owner:
+//   create policy "collaborators can view a collaborative playlist" on public.user_playlists
+//     for select using (
+//       auth.uid() = user_id
+//       or id in (select playlist_id from public.playlist_collaborators where user_id = auth.uid())
+//     );
+//   create policy "collaborators can update a collaborative playlist" on public.user_playlists
+//     for update using (
+//       is_collaborative = true
+//       and id in (select playlist_id from public.playlist_collaborators where user_id = auth.uid())
+//     );
+// (Check your existing owner-only policies on user_playlists don't already
+// conflict with these — Postgres OR's multiple permissive policies
+// together, so adding these alongside an existing "owner only" policy is
+// safe and just widens access for collaborators. No separate invites
+// table needed — invites now travel through the same `shares` table your
+// song-sharing already uses, so they show up in the exact same
+// notification bell + Library "requests" section as everything else.)
+
+let currentCollabPlaylistId = null;
+const collaboratorCache = {}; // playlistId -> [{id, username, display_name}]
+
+async function loadPlaylistCollaborators(playlistId, forceRefresh = false) {
+  if (!forceRefresh && collaboratorCache[playlistId]) return collaboratorCache[playlistId];
+  try {
+    const { data: rows } = await supabaseClient.from("playlist_collaborators").select("user_id").eq("playlist_id", playlistId);
+    const ids = (rows || []).map(r => r.user_id);
+    if (!ids.length) { collaboratorCache[playlistId] = []; return []; }
+    const { data: profs } = await supabaseClient.from("profiles").select("id, username, display_name").in("id", ids);
+    collaboratorCache[playlistId] = profs || [];
+    return collaboratorCache[playlistId];
+  } catch (e) { return []; }
+}
+
+// Small overlapping circle-badges (first-letter initials in each
+// collaborator's gradient) — shown under the playlist name and in the
+// user playlists list, same visual language as the profile "gem" badge.
+function collabBadgeHTML(person) {
+  const initial = (person.display_name || person.username || "?").charAt(0).toUpperCase();
+  const grad = gradientForSeed(person.username || person.id || "");
+  const label = escapeHtml(person.display_name || person.username || "");
+  return `<span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-[#09090b]" style="background:${grad}" title="${label}">${initial}</span>`;
+}
+
+async function renderPlaylistCollabState(playlistId) {
+  const badgesWrap = document.getElementById("playlistCollabBadges");
+  const collabBtn = document.getElementById("playlistCollabBtn");
+  // Collaboration only makes sense for a playlist YOU created — not
+  // Favourites/Downloaded/Local Files, and not a preset/curated mix.
+  const isUserPlaylist = !["__favorites", "__offline", "__local"].includes(playlistId) && !String(playlistId).startsWith("preset:");
+  collabBtn.classList.toggle("hidden", !isUserPlaylist || !currentUser);
+  if (!isUserPlaylist) { badgesWrap.classList.add("hidden"); return; }
+
+  const collaborators = await loadPlaylistCollaborators(playlistId);
+  if (!collaborators.length) { badgesWrap.classList.add("hidden"); return; }
+  badgesWrap.classList.remove("hidden");
+  const shown = collaborators.slice(0, 4);
+  const overflow = collaborators.length - shown.length;
+  badgesWrap.innerHTML = shown.map(collabBadgeHTML).join("") +
+    (overflow > 0 ? `<span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-300 bg-white/10 border-2 border-[#09090b]">+${overflow}</span>` : "");
+}
+
+// Opens the SAME friend picker used for sharing a song — search by
+// username/Universal ID, or tap a recent contact. Sending a collab
+// invite is just another "share" (share_type: "collab_invite") so it
+// rides the exact notification + accept/decline plumbing that already
+// exists for song shares, instead of a separate link system.
+function openCollabInviteModal() {
+  if (!currentCollabPlaylistId && currentPlaylistCtx) currentCollabPlaylistId = currentPlaylistCtx;
+  const playlistId = currentCollabPlaylistId;
+  if (!playlistId || !currentUser) { showStatus("Sign in to invite collaborators."); return; }
+  const isUserPlaylist = !["__favorites", "__offline", "__local"].includes(playlistId) && !String(playlistId).startsWith("preset:");
+  if (!isUserPlaylist) { showStatus("Only playlists you created can have collaborators."); return; }
+  openSharePicker("collab_invite", { playlist_id: playlistId, playlist_name: getPlaylistName(playlistId) }, "Invite a friend to collaborate");
+}
+
+// Called from respondToShare() when someone accepts a collab_invite share.
+async function acceptCollabRequest(req) {
+  const payload = req.payload || {};
+  const playlistId = payload.playlist_id;
+  if (!playlistId || !currentUser) return;
+  try {
+    await supabaseClient.from("playlist_collaborators").upsert(
+      { playlist_id: playlistId, user_id: currentUser.id },
+      { onConflict: "playlist_id,user_id" }
+    );
+    const { data: playlist } = await supabaseClient.from("user_playlists").select("id, name, songs, is_collaborative, user_id").eq("id", playlistId).maybeSingle();
+    if (!playlist) { showStatus("This playlist no longer exists."); return; }
+    const { data: owner } = await supabaseClient.from("profiles").select("username, display_name").eq("id", playlist.user_id).maybeSingle();
+    userPlaylists[playlist.id] = {
+      name: playlist.name,
+      songs: playlist.songs || [],
+      is_collaborative: true,
+      owner_id: playlist.user_id,
+      // Drives the "{playlist name} · by {friend name}" two-color label
+      // in the library list — only set on playlists YOU joined, not ones
+      // you created and invited others to (those show badges instead).
+      sharedByName: owner ? (owner.display_name || owner.username) : null
+    };
+    localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
+    renderUserPlaylists();
+    showStatus(`You're now collaborating on "${playlist.name}"`);
+  } catch (e) { showStatus("Couldn't join this playlist right now."); }
+}
+
 function openPlaylistView(ctxId) {
   currentPlaylistCtx = ctxId;
+  currentCollabPlaylistId = ctxId;
   const songs = getPlaylistSongs(ctxId);
   document.getElementById("playlistName").innerText = getPlaylistName(ctxId);
   document.getElementById("playlistKind").innerText = ctxId === "__favorites" ? "Favourites" : ctxId === "__offline" ? "Offline" : "Playlist";
   document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
   document.getElementById("playlistDownloadBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
   document.getElementById("playlistShareBtn").classList.toggle("hidden", ctxId === "__offline" || ctxId === "__local");
+  renderPlaylistCollabState(ctxId);
 
   // Search box only makes sense for the Downloaded list — that's the one
   // that can quietly grow large enough that scrolling to find something
@@ -5413,22 +5926,36 @@ async function syncLikedSongsFromBackend() {
 
 async function syncPlaylistsFromBackend() {
   try {
-    const { data, error } = await supabaseClient.from("user_playlists").select("id, name, songs").eq("user_id", currentUser.id);
+    const { data, error } = await supabaseClient.from("user_playlists").select("id, name, songs, is_collaborative, user_id").eq("user_id", currentUser.id);
     if (error || !data) return;
     const backendIds = new Set(data.map(r => r.id));
 
     // Pull down playlists that exist on the account but not this device.
     data.forEach(r => {
-      if (!userPlaylists[r.id]) userPlaylists[r.id] = { name: r.name, songs: r.songs || [] };
+      if (!userPlaylists[r.id]) userPlaylists[r.id] = { name: r.name, songs: r.songs || [], is_collaborative: !!r.is_collaborative, owner_id: r.user_id };
+      else { userPlaylists[r.id].is_collaborative = !!r.is_collaborative; userPlaylists[r.id].owner_id = r.user_id; }
     });
+
+    // Also pull down any playlist someone else owns that THIS user is a
+    // collaborator on — otherwise a joined collaborative playlist would
+    // only ever show up on the device that accepted the invite.
+    const { data: memberships } = await supabaseClient.from("playlist_collaborators").select("playlist_id").eq("user_id", currentUser.id);
+    const collabIds = (memberships || []).map(m => m.playlist_id);
+    if (collabIds.length) {
+      const { data: collabPlaylists } = await supabaseClient.from("user_playlists").select("id, name, songs, is_collaborative, user_id").in("id", collabIds);
+      (collabPlaylists || []).forEach(r => {
+        userPlaylists[r.id] = { name: r.name, songs: r.songs || [], is_collaborative: !!r.is_collaborative, owner_id: r.user_id };
+      });
+    }
+
     localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
     renderUserPlaylists();
 
     // Push up any playlists created locally before this sync ran.
-    const toPush = Object.keys(userPlaylists).filter(id => !backendIds.has(id));
+    const toPush = Object.keys(userPlaylists).filter(id => !backendIds.has(id) && !collabIds.includes(id));
     if (toPush.length) {
       await supabaseClient.from("user_playlists").upsert(
-        toPush.map(id => ({ id, user_id: currentUser.id, name: userPlaylists[id].name, songs: userPlaylists[id].songs, updated_at: new Date().toISOString() })),
+        toPush.map(id => ({ id, user_id: currentUser.id, name: userPlaylists[id].name, songs: userPlaylists[id].songs, is_collaborative: !!userPlaylists[id].is_collaborative, updated_at: new Date().toISOString() })),
         { onConflict: "id" }
       );
     }
@@ -5714,10 +6241,38 @@ function renderRequestCard(req, sender) {
   const card = document.createElement("div");
   card.className = "request-card";
   const isPlaylist = req.share_type === "playlist";
+  const isCollab = req.share_type === "collab_invite";
   const payload = req.payload || {};
   const senderName = sender ? (sender.display_name || sender.username) : "Someone";
   const initial = (senderName || "?").charAt(0).toUpperCase();
   const grad = gradientForSeed(sender ? sender.username : senderName);
+
+  if (isCollab) {
+    // Two-color line: friend's name in their own gradient-matched hue,
+    // the playlist name in emerald — same idea as the "Playlist by Friend"
+    // label shown once the invite's accepted.
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="gem-badge flex-shrink-0" style="width:26px;height:26px;font-size:10px;background:${grad};">${initial}</div>
+        <div class="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-violet-600 to-indigo-900"><i class="fa-solid fa-user-group text-white text-xs"></i></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[10.5px] text-slate-400 truncate leading-tight">Collaborate on a playlist</p>
+          <h5 class="font-bold text-xs truncate leading-tight mt-0.5">
+            <span style="color:${grad.match(/#[0-9a-fA-F]{6}/)?.[0] || "#a78bfa"}">${escapeHtml(senderName)}</span>
+            <span class="text-slate-500 font-normal">·</span>
+            <span class="text-emerald-400">${escapeHtml(payload.playlist_name || "a playlist")}</span>
+          </h5>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <button data-accept class="w-8 h-8 rounded-full bg-emerald-500 text-black flex items-center justify-center active:scale-90 transition"><i class="fa-solid fa-check text-xs"></i></button>
+          <button data-decline class="w-8 h-8 rounded-full bg-white/10 text-slate-400 flex items-center justify-center active:scale-90 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+        </div>
+      </div>
+    `;
+    card.querySelector("[data-accept]").onclick = () => respondToShare(req, "accepted");
+    card.querySelector("[data-decline]").onclick = () => respondToShare(req, "declined");
+    return card;
+  }
 
   card.innerHTML = `
     <div class="flex items-center gap-3">
@@ -5748,7 +6303,9 @@ async function respondToShare(req, status) {
   try {
     await supabaseClient.from("shares").update({ status, responded_at: new Date().toISOString() }).eq("id", req.id);
   } catch (e) {}
-  if (status === "listened") {
+  if (req.share_type === "collab_invite" && status === "accepted") {
+    await acceptCollabRequest(req);
+  } else if (status === "listened") {
     const payload = req.payload || {};
     if (req.share_type === "playlist") {
       activeQueue = payload.songs || [];
