@@ -51,10 +51,11 @@
     #lyricsScroll::-webkit-scrollbar { display:none; }
 
     /* Fullscreen lyrics zoom */
-    .lyric-line-full { transition:all 0.4s ease; padding:10px 0; color:rgba(255,255,255,0.28); font-size:26px; font-weight:800; line-height:1.35; cursor:pointer; }
-    .lyric-line-full.active { color:#fff; transform:scale(1.02); }
-    .lyric-line-full.past { color:rgba(255,255,255,0.4); }
+    .lyric-line-full { transition:all 0.4s ease; padding:10px 0; color:rgba(255,255,255,0.32); font-size:26px; font-weight:800; line-height:1.35; cursor:pointer; }
+    .lyric-line-full.active { color:#ecfdf5; text-shadow:0 0 22px rgba(16,185,129,0.55), 0 0 2px rgba(16,185,129,0.4); transform:scale(1.03); }
+    .lyric-line-full.past { color:rgba(255,255,255,0.42); }
     #lyricsFullscreenScroll { scroll-behavior:smooth; }
+    .lyrics-fullscreen-bg { background:radial-gradient(ellipse 90% 50% at 50% 0%, rgba(16,185,129,0.16), transparent 60%), radial-gradient(ellipse 70% 40% at 50% 100%, rgba(139,92,246,0.10), transparent 60%), #09090b; }
     #lyricsFullscreenScroll::-webkit-scrollbar { display:none; }
 
     /* Progress bar custom style */
@@ -75,6 +76,12 @@
 
     /* Artist card hover */
     .artist-chip { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:3px 10px; border-radius:20px; font-size:11px; color:#94a3b8; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .mood-tile { min-height:104px; box-shadow:0 4px 14px rgba(0,0,0,0.25); transition:transform 0.15s ease; }
+    .mood-tile::after { content:""; position:absolute; inset:0; background:radial-gradient(circle at 100% 100%, rgba(255,255,255,0.14), transparent 60%); pointer-events:none; }
+    .mood-tile:active { transform:scale(0.96); }
+    .mood-tile { min-height:104px; box-shadow:0 4px 16px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); }
+    .mood-tile:active { transform:scale(0.97); }
+    .mood-tile::after { content:""; position:absolute; inset:0; background:radial-gradient(circle at 100% 0%, rgba(255,255,255,0.14), transparent 60%); }
     .artist-chip:hover { background:rgba(16,185,129,0.15); color:#10b981; border-color:rgba(16,185,129,0.3); }
 
     /* Playback bar */
@@ -804,9 +811,8 @@
                 <i id="syncLyricsIcon" class="fa-solid fa-arrows-rotate text-[10px]"></i>
                 <span id="syncLyricsLabel">Sync lyrics</span>
               </button>
-              <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full transition">
-                <i class="fa-solid fa-arrows-up-down text-[10px]"></i>
-                <span data-autoscroll-label>Auto-scroll off</span>
+              <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="relative w-9 h-5 rounded-full bg-white/10 border border-white/10 transition flex-shrink-0" title="Auto-scroll">
+                <span data-autoscroll-dot class="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-slate-400 transition-transform duration-200"></span>
               </button>
             </div>
           </div>
@@ -835,15 +841,17 @@
   </div>
 
   <!-- LYRICS FULLSCREEN (Spotify-style zoom) -->
-  <div id="lyricsFullscreenScreen" class="fixed inset-0 z-[62] transform translate-y-full transition-transform duration-300 flex flex-col max-w-2xl mx-auto" style="background:#09090b;">
+  <div id="lyricsFullscreenScreen" class="fixed inset-0 z-[62] transform translate-y-full transition-transform duration-300 flex flex-col max-w-2xl mx-auto lyrics-fullscreen-bg">
     <div class="p-4 flex items-center justify-between border-b border-white/5">
       <button onclick="closeLyricsFullscreen()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-chevron-down text-lg"></i></button>
       <div class="text-center min-w-0 px-2">
         <p id="lyricsFullscreenTitle" class="text-sm font-bold text-white truncate">---</p>
         <p id="lyricsFullscreenArtist" class="text-[11px] text-slate-400 truncate">---</p>
       </div>
-      <div class="flex items-center gap-1">
-        <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-up-down text-sm"></i></button>
+      <div class="flex items-center gap-2.5">
+        <button data-autoscroll-btn onclick="toggleLyricsAutoScroll()" class="relative w-9 h-5 rounded-full bg-white/10 border border-white/10 transition flex-shrink-0" title="Auto-scroll">
+          <span data-autoscroll-dot class="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-slate-400 transition-transform duration-200"></span>
+        </button>
         <button onclick="syncLyricsForCurrentTrack()" class="p-2 text-slate-300 hover:text-white"><i class="fa-solid fa-arrows-rotate text-sm"></i></button>
       </div>
     </div>
@@ -1439,6 +1447,10 @@ function switchView(view) {
 
   if (view === "profile") renderProfileView();
   if (view === "library") renderRequests();
+  if (view === "search") {
+    const q = document.getElementById("searchInput").value.trim();
+    if (!q) renderRecentSearches(); // show artists/mood tiles right away, not just on focus
+  }
   if (view === "home") { renderArtistSpotlight(); renderRecommended(); renderYourMix(); } // New Albums / Top 100 stay loaded from initial page load — no need to re-fetch on every tab switch
 }
 
@@ -1483,6 +1495,20 @@ const MOOD_CARDS = [
   { key: "chill_vibes", title: "Chill & Acoustic", sub: "Relax & unwind", icon: "fa-cloud-moon", color: "text-slate-400" },
   { key: "party_turnup", title: "Party & Amapiano", sub: "High energy basslines", icon: "fa-fire", color: "text-amber-400" },
   { key: "rnb_soul", title: "R&B & Soul", sub: "Smooth vocals", icon: "fa-record-vinyl", color: "text-rose-400" }
+];
+
+// One gradient wash per mood tile in the search "Browse a vibe" grid —
+// keyed by index so it's stable across renders, not randomized like the
+// jump-tile gradients.
+const MOOD_TILE_GRADIENTS = [
+  "linear-gradient(135deg,#f59e0b,#dc2626)",
+  "linear-gradient(135deg,#e11d48,#4c1d95)",
+  "linear-gradient(135deg,#f97316,#7c2d12)",
+  "linear-gradient(135deg,#059669,#064e3b)",
+  "linear-gradient(135deg,#4f46e5,#1e1b4b)",
+  "linear-gradient(135deg,#475569,#0f172a)",
+  "linear-gradient(135deg,#d946ef,#701a75)",
+  "linear-gradient(135deg,#f43f5e,#831843)"
 ];
 
 // "Jump back in" tiles get a random gradient re-picked on every page
@@ -2743,6 +2769,9 @@ async function openArtistView(artistName) {
   let songs = [...(mdundo.data || []), ...(mp3.data || []), ...(museek.data || [])].filter(s => !isPreviewJunk(s));
   const seen = new Set();
   songs = songs.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
+  // Most popular first — same signal (the `popularity` column, bumped on
+  // every play) that search results are ranked by.
+  songs.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
 
   currentArtistSongs = songs;
   document.getElementById("artistHeaderCount").innerText = `${songs.length} song${songs.length !== 1 ? "s" : ""}`;
@@ -2767,7 +2796,7 @@ function filterArtistSongs(query) {
 async function openArtistViewFromNp() {
   if (!currentTrack) return;
   closeNowPlaying();
-  await openArtistView(currentTrack.artist);
+  await openArtistView(splitFeaturedArtists(currentTrack.artist).primary || currentTrack.artist);
 }
 
 function playArtistAll(shuffle) {
@@ -3552,12 +3581,16 @@ function toggleLyricsAutoScroll() {
 
 function updateAutoScrollButtonUI() {
   document.querySelectorAll("[data-autoscroll-btn]").forEach(btn => {
-    btn.classList.toggle("text-emerald-400", lyricsAutoScroll);
-    btn.classList.toggle("bg-emerald-500/10", lyricsAutoScroll);
-    btn.classList.toggle("border-emerald-500/30", lyricsAutoScroll);
-    btn.classList.toggle("text-slate-400", !lyricsAutoScroll);
-    const label = btn.querySelector("[data-autoscroll-label]");
-    if (label) label.innerText = lyricsAutoScroll ? "Auto-scroll on" : "Auto-scroll off";
+    btn.classList.toggle("bg-emerald-500", lyricsAutoScroll);
+    btn.classList.toggle("bg-white/10", !lyricsAutoScroll);
+    btn.classList.toggle("border-emerald-400", lyricsAutoScroll);
+    btn.classList.toggle("border-white/10", !lyricsAutoScroll);
+    const dot = btn.querySelector("[data-autoscroll-dot]");
+    if (dot) {
+      dot.classList.toggle("translate-x-4", lyricsAutoScroll);
+      dot.classList.toggle("bg-black", lyricsAutoScroll);
+      dot.classList.toggle("bg-slate-400", !lyricsAutoScroll);
+    }
   });
 }
 
@@ -3571,7 +3604,10 @@ function alignLyricLine(i) {
     lyricsSyncOffset += i - rawEstimate;
   }
   lyricsCurrentLine = i;
-  applyLyricsWindow(i, true);
+  // Only actually SHOW the highlight if auto-scroll is on — with it off,
+  // tapping a line still records the sync offset for later, but the
+  // "current line" indicator itself stays fully hidden either way.
+  applyLyricsWindow(i, lyricsAutoScroll);
   showStatus("Lyrics synced to playback");
 }
 
@@ -3596,12 +3632,19 @@ const GLOW_WINDOW = 4;
 // forceScroll: bypass the auto-scroll setting (used for manual "tap to
 // align" and for the toggle button itself) — passive playback updates
 // never force-scroll unless the user has turned auto-scroll on.
+//
+// When auto-scroll is OFF (and this isn't a forced call), the "where the
+// song currently is" highlight is fully hidden too, not just the
+// scrolling — off means the indicator is gone, so lines read as plain
+// static text you swipe through yourself.
 function applyLyricsWindow(centerLine, forceScroll = false) {
+  const showIndicator = lyricsAutoScroll || forceScroll;
   const windowEnd = centerLine + GLOW_WINDOW - 1;
   document.querySelectorAll("[data-line-index]").forEach(el => {
     const idx = parseInt(el.dataset.lineIndex, 10);
-    const isFull = el.classList.contains("lyric-line-full");
+    const isFull = el.className.includes("lyric-line-full");
     const base = isFull ? "lyric-line-full" : "lyric-line";
+    if (!showIndicator) { el.className = base; return; }
     if (idx < centerLine) el.className = `${base} past`;
     else if (idx <= windowEnd) el.className = `${base} active`;
     else el.className = base;
@@ -3929,13 +3972,13 @@ function clearSearch() {
   renderRecentSearches();
 }
 
-function renderRecentSearches() {
+async function renderRecentSearches() {
   const container = document.getElementById("searchResults");
 
   // "Recently played" artists — up to 7 distinct artists from your last
   // plays, shown as a swipeable circle row. This is what actually makes
   // the search tab feel personal/instant instead of a blank box.
-  const recentArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))].slice(0, 7);
+  let recentArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))].slice(0, 7);
 
   const chipsHTML = recentSearches.length ? `
     <div class="flex items-center justify-between mb-2">
@@ -3958,16 +4001,25 @@ function renderRecentSearches() {
   `;
 
   if (recentArtists.length) {
+    // Verified (50+ songs) artists sort first, same rule as live search.
+    const counts50 = await Promise.all(recentArtists.map(name => getArtistSongCount(name)));
+    recentArtists = recentArtists
+      .map((name, i) => ({ name, verified: counts50[i] >= 50 }))
+      .sort((a, b) => (b.verified - a.verified))
+      .map(a => a.name);
     const row = document.getElementById("searchRecentArtistsRow");
-    recentArtists.forEach(name => row.appendChild(renderArtistSearchCard(name)));
+    if (row) recentArtists.forEach(name => row.appendChild(renderArtistSearchCard(name)));
   }
 
+  // Each mood gets its own gradient wash (keyed to MOOD_CARDS order so
+  // it's stable, not random) instead of a flat glass card — makes the
+  // grid feel like a set of distinct destinations rather than a plain list.
   const grid = document.getElementById("searchMoodTilesGrid");
-  grid.innerHTML = MOOD_CARDS.map(m => `
-    <button data-mood="${m.key}" class="glass-card rounded-2xl p-4 text-left hover:bg-white/10 transition min-w-0">
-      <i class="fa-solid ${m.icon} ${m.color} text-xl mb-2 block"></i>
-      <h5 class="font-bold text-sm text-white truncate">${escapeHtml(m.title)}</h5>
-      <p class="text-[10.5px] text-slate-500 truncate mt-0.5">${escapeHtml(m.sub)}</p>
+  grid.innerHTML = MOOD_CARDS.map((m, i) => `
+    <button data-mood="${m.key}" class="mood-tile rounded-2xl p-4 text-left transition min-w-0 relative overflow-hidden" style="background:${MOOD_TILE_GRADIENTS[i % MOOD_TILE_GRADIENTS.length]}">
+      <i class="fa-solid ${m.icon} text-white/90 text-xl mb-6 block relative z-10"></i>
+      <h5 class="font-black text-sm text-white truncate relative z-10">${escapeHtml(m.title)}</h5>
+      <p class="text-[10.5px] text-white/70 truncate mt-0.5 relative z-10">${escapeHtml(m.sub)}</p>
     </button>
   `).join("");
   grid.querySelectorAll("[data-mood]").forEach(el => {
@@ -4239,7 +4291,7 @@ function renderArtistSearchCard(name) {
 // (feels immediate, like tapping straight into an artist) followed by a
 // short top-5 songs list — not the full 12-result dump. Full Enter/tap
 // search still shows the complete list via renderSearchResults().
-function renderLiveSearchResults(songs, query, container, albums = []) {
+async function renderLiveSearchResults(songs, query, container, albums = []) {
   container.innerHTML = "";
 
   if (albums.length) {
@@ -4250,11 +4302,29 @@ function renderLiveSearchResults(songs, query, container, albums = []) {
     albums.slice(0, 2).forEach(album => container.appendChild(renderAlbumSearchRow(album)));
   }
 
-  // Up to 3 distinct artists represented in this result set, ranked by
-  // how many of the matched songs are theirs.
+  // Up to 3 distinct artists represented in this result set. Uses the
+  // cleaned-up PRIMARY artist name (splitting off "ft. X" collaborators)
+  // so grouping/counting/image lookup/verified-count all work off a real
+  // single artist name instead of a compound "A ft. B" string, which
+  // previously produced bad artwork lookups and wrong verified badges.
   const counts = {};
-  songs.forEach(s => { counts[s.artist] = (counts[s.artist] || 0) + 1; });
-  const topArtists = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 3);
+  songs.forEach(s => {
+    const primary = splitFeaturedArtists(s.artist || "").primary || s.artist;
+    if (!primary) return;
+    counts[primary] = (counts[primary] || 0) + 1;
+  });
+  let topArtists = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 6);
+
+  // Resolve verified status up front so verified artists can be sorted
+  // to the front of the row, then trim to 3 for display.
+  if (topArtists.length) {
+    const counts50 = await Promise.all(topArtists.map(name => getArtistSongCount(name)));
+    topArtists = topArtists
+      .map((name, i) => ({ name, verified: counts50[i] >= 50 }))
+      .sort((a, b) => (b.verified - a.verified))
+      .slice(0, 3)
+      .map(a => a.name);
+  }
 
   if (topArtists.length) {
     const label = document.createElement("h4");
@@ -4375,7 +4445,7 @@ function renderSearchRow(song, queueContext, opts = {}) {
     playTrack(song);
   };
   card.querySelector("[data-more]").onclick = (e) => { e.stopPropagation(); openActionSheet(song, e, { playlistId: opts.playlistId }); };
-  card.querySelector("[data-artist]").onclick = (e) => { e.stopPropagation(); openArtistView(song.artist); };
+  card.querySelector("[data-artist]").onclick = (e) => { e.stopPropagation(); openArtistView(splitFeaturedArtists(song.artist).primary || song.artist); };
   if (opts.removable) {
     card.querySelector("[data-remove]").onclick = (e) => {
       e.stopPropagation();
@@ -4689,18 +4759,25 @@ function onShareSearchInput() {
 async function sendShareTo(profile) {
   if (!currentUser || !shareTargetPayload) return;
   try {
-    await supabaseClient.from("shares").insert({
+    const { error } = await supabaseClient.from("shares").insert({
       sender_id: currentUser.id,
       recipient_id: profile.id,
       share_type: shareTargetType,
       payload: shareTargetPayload,
       status: "pending"
     });
+    if (error) throw error;
     const [a, b] = [currentUser.id, profile.id].sort();
     await supabaseClient.from("friend_connections").upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b", ignoreDuplicates: true }).select();
     showStatus(`Sent to ${profile.display_name || profile.username}`);
     closeSharePicker();
   } catch (e) {
+    // Log the real reason (RLS denial, a CHECK constraint rejecting an
+    // unrecognized share_type, etc) instead of only showing a vague toast
+    // — this exact silence is what hid the collab_invite type being
+    // rejected by a shares_share_type_check constraint that didn't know
+    // about it yet.
+    console.error("sendShareTo failed:", e);
     showStatus("Couldn't send right now — try again.");
   }
 }
@@ -5077,11 +5154,13 @@ async function acceptCollabRequest(req) {
   const playlistId = payload.playlist_id;
   if (!playlistId || !currentUser) return;
   try {
-    await supabaseClient.from("playlist_collaborators").upsert(
+    const { error: collabErr } = await supabaseClient.from("playlist_collaborators").upsert(
       { playlist_id: playlistId, user_id: currentUser.id },
       { onConflict: "playlist_id,user_id" }
     );
-    const { data: playlist } = await supabaseClient.from("user_playlists").select("id, name, songs, is_collaborative, user_id").eq("id", playlistId).maybeSingle();
+    if (collabErr) throw collabErr;
+    const { data: playlist, error: fetchErr } = await supabaseClient.from("user_playlists").select("id, name, songs, is_collaborative, user_id").eq("id", playlistId).maybeSingle();
+    if (fetchErr) throw fetchErr;
     if (!playlist) { showStatus("This playlist no longer exists."); return; }
     const { data: owner } = await supabaseClient.from("profiles").select("username, display_name").eq("id", playlist.user_id).maybeSingle();
     userPlaylists[playlist.id] = {
@@ -5097,7 +5176,18 @@ async function acceptCollabRequest(req) {
     localStorage.setItem("lumic_playlists", JSON.stringify(userPlaylists));
     renderUserPlaylists();
     showStatus(`You're now collaborating on "${playlist.name}"`);
-  } catch (e) { showStatus("Couldn't join this playlist right now."); }
+    // Land the person straight on the playlist so accepting actually
+    // feels like something happened — previously this just updated data
+    // in the background with no visible change, which read as "broken."
+    switchView("library");
+    openPlaylistView(playlist.id);
+  } catch (e) {
+    // Same idea as sendShareTo — if playlist_collaborators or the
+    // user_playlists select/update policy from the SQL above isn't
+    // applied yet, this fails on RLS and previously just went silent.
+    console.error("acceptCollabRequest failed:", e);
+    showStatus("Couldn't join this playlist right now.");
+  }
 }
 
 function openPlaylistView(ctxId) {
