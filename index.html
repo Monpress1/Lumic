@@ -229,7 +229,7 @@ const HOME_SLIDES = [
   { headline: "One ID,<br>everywhere", sub: "Your Universal ID — share it, get discovered." }
 ];
 
-window.addEventListener("DOMContentLoaded", boot);
+
 
 // Races Supabase's getSession() against a timeout. getSession() normally
 // resolves from local storage instantly, but if the token is near expiry it
@@ -245,7 +245,17 @@ async function getSessionWithTimeout(ms = 2000) {
   }
 }
 
+window.addEventListener("DOMContentLoaded", boot);
+
 async function boot() {
+  // Fully offline → skip auth entirely, let them straight into the app.
+  // navigator.onLine can occasionally report true when there's actually no
+  // real connectivity, so back it up with a quick real network probe.
+  if (!navigator.onLine || !(await hasRealConnectivity())) {
+    window.location.href = "lumic.html";
+    return;
+  }
+
   // Service Worker Registration for Offline capability
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
@@ -256,10 +266,6 @@ async function boot() {
 
   const { data: { session } } = await getSessionWithTimeout();
 
-  // A device that already finished onboarding should reach lumic.html even
-  // if getSession() timed out (offline + expired/near-expired token). Check
-  // this before requiring a resolved session so a bad network can't strand
-  // a returning user on the boot screen.
   if (!session && localStorage.getItem(LS_DEV_REG) === "true") {
     window.location.href = "lumic.html";
     return;
@@ -273,6 +279,20 @@ async function boot() {
   showHomeScreen();
 }
 
+// A lightweight real-connectivity check — navigator.onLine only reflects
+// whether the device has a network interface up, not whether it can
+// actually reach the internet (e.g. connected to wifi with no internet).
+async function hasRealConnectivity() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    await fetch(SUPABASE_URL + "/auth/v1/health", { method: "GET", signal: controller.signal, cache: "no-store" });
+    clearTimeout(timeout);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 // ==================== ROUTING ====================
 async function routeSessionForward(session) {
   // Returning device that's already finished onboarding — trust that locally
@@ -677,4 +697,3 @@ async function finalizeOnboarding(session) {
 </script>
 </body>
 </html>
-
