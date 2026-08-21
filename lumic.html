@@ -394,7 +394,7 @@
               <h3 class="text-xl font-black text-white leading-tight uppercase">FRESH<br><span class="text-lime-200">AFROBEATS</span></h3>
             </div>
             <h4 class="font-bold text-xs text-white truncate">Fresh Afrobeats 2025/26</h4>
-            <p class="text-[11px] text-slate-400 truncate">Straight off vistanaij</p>
+            <p class="text-[11px] text-slate-400 truncate">made for you</p>
           </div>
           <div onclick="openCuratedPlaylistView('late_night_drive','Late Night Drive')" class="w-40 flex-shrink-0 cursor-pointer group scroll-snap-item">
             <div class="w-40 h-40 jump-tile-gradient rounded-2xl overflow-hidden relative mb-2 bg-gradient-to-br from-indigo-600 to-slate-900 p-3 flex flex-col justify-between border border-white/10">
@@ -645,7 +645,8 @@
           <button onclick="copyUid()" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center flex-shrink-0 transition"><i class="fa-solid fa-share-nodes text-sm text-white"></i></button>
         </div>
       </div>
-
+      
+      
       <!-- Account info -->
       <div class="glass-card rounded-3xl p-5 mb-5 space-y-3">
         <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-circle-info text-slate-400 mr-2"></i>Account</h3>
@@ -660,8 +661,37 @@
         <div class="flex items-center justify-between text-xs">
           <span class="text-slate-400">This device</span>
           <span class="text-white font-semibold">Active session</span>
+          
+          
+          <button id="lumicLogoutBtn" style="
+  width:100%;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(239,68,68,0.12);
+  color:#f87171;
+  font-weight:700;
+  font-size:14px;
+  border:1px solid rgba(239,68,68,0.25);
+  cursor:pointer;">
+  Log out
+</button>
+
+<script>
+document.getElementById('lumicLogoutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  // Clear the "this device already finished onboarding" flag too — otherwise
+  // index.html's offline-friendly returning-device shortcut will just send
+  // you straight back into lumic.html without actually requiring login.
+  localStorage.removeItem('lumic_device_registered');
+  localStorage.removeItem('lumic_pending_uid');
+  localStorage.removeItem('lumic_pending_ref');
+  window.location.href = "index.html";
+});
+</script>
+
         </div>
         <div id="adminPanelEntryRow" class="hidden pt-2 border-t border-white/10">
+            
           <button onclick="openAdminPanel()" class="w-full flex items-center justify-between text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl transition">
             <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i>Admin panel</span>
             <i class="fa-solid fa-chevron-right text-slate-500"></i>
@@ -2896,6 +2926,7 @@ function playTrack(song, opts = {}) {
     activeAudio.volume = 1;
     activeAudio.currentTime = opts.startAt || 0;
     activeAudio.play().catch(() => {});
+    if (window.LumicNative) window.LumicNative.play(src, song.title, song.artist);
   }).catch(() => {
     showStatus("Couldn't resolve this stream — skipping.");
     skipBrokenTrack();
@@ -2986,8 +3017,19 @@ function setSleepTimer(minutes) {
 function togglePlayPause() {
   if (!activeAudio.src) return;
   if (!isPlaybackAllowed()) { showPremiumBlock(); userInitiatedPause = true; activeAudio.pause(); return; }
-  if (activeAudio.paused) { userInitiatedPause = false; activeAudio.play(); updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); }
-  else { userInitiatedPause = true; activeAudio.pause(); updatePlayPauseIcon(false); document.getElementById("playerPlayingDot").classList.add("hidden"); }
+  if (activeAudio.paused) {
+    userInitiatedPause = false;
+    activeAudio.play();
+    updatePlayPauseIcon(true);
+    document.getElementById("playerPlayingDot").classList.remove("hidden");
+    if (window.LumicNative && currentTrack) window.LumicNative.play(activeAudio.src, currentTrack.title, currentTrack.artist);
+  } else {
+    userInitiatedPause = true;
+    activeAudio.pause();
+    updatePlayPauseIcon(false);
+    document.getElementById("playerPlayingDot").classList.add("hidden");
+    if (window.LumicNative) window.LumicNative.pause();
+  }
 }
 
 let lastKnownIconIsPlaying = null;
