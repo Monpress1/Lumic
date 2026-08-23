@@ -2923,10 +2923,15 @@ function playTrack(song, opts = {}) {
   resolvePlaybackSrc(song).then(src => {
     if (!src) { showStatus("This track is unavailable."); return; }
     activeAudio.src = src;
-    activeAudio.volume = 1;
     activeAudio.currentTime = opts.startAt || 0;
-    activeAudio.play().catch(() => {});
-    if (window.LumicNative) window.LumicNative.play(src, song.title, song.artist);
+    if (window.LumicNative) {
+      window.LumicNative.play(src, song.title, song.artist);
+      activeAudio.volume = 0;
+      activeAudio.play().catch(() => {});
+    } else {
+      activeAudio.volume = 1;
+      activeAudio.play().catch(() => {});
+    }
   }).catch(() => {
     showStatus("Couldn't resolve this stream — skipping.");
     skipBrokenTrack();
@@ -3019,10 +3024,15 @@ function togglePlayPause() {
   if (!isPlaybackAllowed()) { showPremiumBlock(); userInitiatedPause = true; activeAudio.pause(); return; }
   if (activeAudio.paused) {
     userInitiatedPause = false;
-    activeAudio.play();
     updatePlayPauseIcon(true);
     document.getElementById("playerPlayingDot").classList.remove("hidden");
-    if (window.LumicNative && currentTrack) window.LumicNative.play(activeAudio.src, currentTrack.title, currentTrack.artist);
+    if (window.LumicNative && currentTrack) {
+      window.LumicNative.play(activeAudio.src, currentTrack.title, currentTrack.artist);
+      activeAudio.volume = 0;
+    } else {
+      activeAudio.volume = 1;
+    }
+    activeAudio.play();
   } else {
     userInitiatedPause = true;
     activeAudio.pause();
@@ -3218,6 +3228,12 @@ function handlePlaybackError(audio) {
         if (!src) { skipBrokenTrack(); return; }
         audio.src = src;
         audio.currentTime = resumeAt;
+        if (window.LumicNative && currentTrack) {
+          window.LumicNative.play(src, currentTrack.title, currentTrack.artist);
+          audio.volume = 0;
+        } else {
+          audio.volume = 1;
+        }
         audio.play().catch(() => {});
       }).catch(() => skipBrokenTrack());
     }, backoffMs);
@@ -3278,8 +3294,15 @@ function peekNextTrack() {
   return activeQueue[idx];
 }
 
+
 function startCrossfade(outgoing, remaining) {
   const incoming = inactiveAudio;
+  const inApp = !!window.LumicNative;
+  // In-app, real audio comes from Android's single native player — there's
+  // no second stream to fade in, so incoming stays silent the whole time
+  // and we just hand the new track to LumicNative once, right at the swap
+  // (see runCrossfadeInterval below). incoming.play() still runs so the
+  // progress bar / "ended" / track-switch logic keeps working normally.
   incoming.volume = 0;
   incoming.currentTime = 0;
 
@@ -3307,8 +3330,10 @@ function startCrossfade(outgoing, remaining) {
   const iv = setInterval(() => {
     i++;
     const t = i / steps;
-    outgoing.volume = Math.max(0, 1 - t);
-    incoming.volume = Math.min(1, t);
+    if (!inApp) {
+      outgoing.volume = Math.max(0, 1 - t);
+      incoming.volume = Math.min(1, t);
+    }
     if (i >= steps) {
       clearInterval(iv);
       activeAudio = incoming;
@@ -3343,6 +3368,9 @@ function startCrossfade(outgoing, remaining) {
       updateQueueDrawer();
       addToRecent(currentTrack);
       updateMediaSession();
+      if (window.LumicNative && currentTrack) {
+        window.LumicNative.play(activeAudio.src, currentTrack.title, currentTrack.artist);
+      }
       loadLyrics(currentTrack);
       if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
         loadArtistInfo(currentTrack);
@@ -6458,3 +6486,4 @@ async function respondToShare(req, status) {
 </script>
 </body>
 </html>
+
