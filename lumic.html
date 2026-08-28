@@ -19,6 +19,7 @@
   <link rel="preconnect" href="https://itunes.apple.com" crossorigin>
   <link rel="preconnect" href="https://mdundo.com" crossorigin>
   <link rel="preconnect" href="https://vistanaij.com" crossorigin>
+  <link rel="preconnect" href="https://museekserver-n52t.onrender.com" crossorigin>
   <link rel="dns-prefetch" href="https://en.wikipedia.org">
   <link rel="dns-prefetch" href="https://ws.audioscrobbler.com">
   <link rel="dns-prefetch" href="https://lrclib.net">
@@ -28,7 +29,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     html, body { width: 100%; }
-    body { background:#09090b; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+    body { background:#09090b; font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; letter-spacing:-0.01em; -webkit-tap-highlight-color:transparent; }
     * { box-sizing: border-box; }
     .app-content-wrap { overflow-x: hidden; max-width: 100vw; }
     .glass-nav { background:rgba(18,18,22,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid rgba(255,255,255,0.08); }
@@ -83,6 +84,44 @@
     .mood-tile:active { transform:scale(0.97); }
     .mood-tile::after { content:""; position:absolute; inset:0; background:radial-gradient(circle at 100% 0%, rgba(255,255,255,0.14), transparent 60%); }
     .artist-chip:hover { background:rgba(16,185,129,0.15); color:#10b981; border-color:rgba(16,185,129,0.3); }
+
+    /* Soft API suggestions — compact like a modern music app, not big cards. */
+    .api-suggestion-list {
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,0.055);
+      border-radius:18px;
+      background:rgba(255,255,255,0.018);
+      box-shadow:0 8px 26px rgba(0,0,0,0.14);
+    }
+    .api-suggestion {
+      width:100%; display:flex; align-items:center; gap:12px; padding:10px 14px;
+      min-height:58px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.045);
+      transition:background .15s ease, transform .12s ease;
+    }
+    .api-suggestion:last-child { border-bottom:0; }
+    .api-suggestion:hover,.api-suggestion:active { background:rgba(255,255,255,0.055); }
+    .api-suggestion:active { transform:scale(.995); }
+    .api-suggestion-art { width:42px; height:42px; flex:0 0 42px; object-fit:cover; background:#18181b; }
+    .api-suggestion-art.artist { border-radius:50%; }
+    .api-suggestion-art.song { border-radius:10px; }
+    .api-suggestion-copy { min-width:0; flex:1; }
+    .api-suggestion-title { color:#f5f5f5; font-size:14px; font-weight:650; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .api-suggestion-sub { color:#8f9bad; font-size:11px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .api-suggestion-icon { color:#a7b1c2; font-size:13px; width:20px; text-align:center; flex-shrink:0; }
+
+    /* Current track: soft highlight wherever the same song appears. */
+    .song-row-now-playing {
+      background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.045)) !important;
+      border-color:rgba(16,185,129,0.22) !important;
+      box-shadow:0 5px 18px rgba(16,185,129,0.07);
+    }
+    .song-row-now-playing h4 { color:#ecfdf5 !important; }
+    .song-row-now-playing [data-artist] { color:#6ee7b7 !important; }
+    .song-row-now-playing [data-song-img] { box-shadow:0 0 0 2px rgba(16,185,129,0.28); }
+    .song-row-now-playing::after {
+      content:""; width:5px; height:5px; border-radius:50%; background:#10b981;
+      box-shadow:0 0 8px rgba(16,185,129,.7); flex-shrink:0;
+    }
 
     /* Playback bar */
     .playback-btn { width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:all 0.15s; }
@@ -228,7 +267,7 @@
   </div>
 
   <!-- MAIN WRAPPER -->
-  <div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-44 flex-1 flex flex-col app-content-wrap">
+  <div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-32 flex-1 flex flex-col app-content-wrap">
 
     <!-- Filter Chips Header -->
     <header id="mainHeader" class="sticky top-0 z-30 pt-2 pb-4 bg-[#09090b]/90 backdrop-blur-md">
@@ -450,7 +489,7 @@
     </section>
 
     <!-- VIEW: ARTIST -->
-    <section id="view-artist" class="hidden">
+    <section id="view-artist" class="hidden pb-44">
       <button onclick="switchView(prevView || 'search')" class="fixed top-4 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4 z-20 pointer-events-none">
         <span class="pointer-events-auto inline-flex items-center gap-2 text-xs font-bold text-white bg-black/50 backdrop-blur-md px-3 py-2 rounded-full border border-white/10"><i class="fa-solid fa-arrow-left"></i> Back</span>
       </button>
@@ -482,6 +521,9 @@
         </div>
         <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Songs</h3>
         <div id="artistSongsList" class="space-y-2"></div>
+        <div id="artistLoadMoreWrap" class="hidden pt-3 pb-2">
+          <button id="artistLoadMoreBtn" onclick="loadMoreArtistSongs()" class="w-full glass-card py-3 rounded-xl text-sm font-bold text-white hover:bg-white/10 transition">Show more</button>
+        </div>
       </div>
     </section>
 
@@ -735,9 +777,9 @@ document.getElementById('lumicLogoutBtn').addEventListener('click', async () => 
 
   <!-- STICKY BOTTOM PLAYER BAR -->
   <div id="playerBar" class="fixed bottom-16 left-0 right-0 z-40 transform translate-y-full transition-all duration-300">
-    <div class="max-w-2xl mx-auto glass-nav mx-3 rounded-2xl shadow-2xl border border-white/10 p-3">
+    <div class="max-w-2xl mx-auto glass-nav mx-3 rounded-2xl shadow-2xl border border-white/10 p-2.5">
       <!-- Slim progress line -->
-      <div class="mb-2 px-1">
+      <div class="mb-1.5 px-1">
         <input type="range" id="progressBar" value="0" min="0" max="100" class="w-full" style="height:3px; accent-color:#10b981;">
       </div>
       <div class="flex items-center gap-2">
@@ -1320,6 +1362,9 @@ let currentPlaylistCtx = null;
 let artistImageCache = {};
 let currentArtistSongs = [];
 let currentArtistName = "";
+let currentArtistApiPage = 1;
+let currentArtistApiLoading = false;
+let currentArtistApiExhausted = false;
 let createPlaylistFromPicker = false;
 let lyricsLines = [];
 let lyricsCurrentLine = -1;
@@ -1350,6 +1395,8 @@ let inactiveAudio = audioB;
 let crossfadeStarted = false;
 let preloadedNext = null;
 let preloadReady = false; // true only once inactiveAudio.src is actually loaded, not just requested
+let playbackLookahead = [];
+let playbackLookaheadBusy = new Set();
 const CROSSFADE_SECONDS = 5;
 // True only when the person deliberately hit pause. Any OTHER pause
 // (browser dropping playback on a network blip, etc.) is unexpected and
@@ -1375,8 +1422,326 @@ try { playCounts = JSON.parse(localStorage.getItem("lumic_play_counts") || "{}")
 function uidFor(song) {
   if (!song) return "";
   if (song._local) return song.id ? `local_${song.id}` : `local_${song.title}_${song.artist}`;
+  // museekAPI ids are pagination/source ids and are intentionally not stable.
+  // Keep favourites, downloads and popularity stable by hashing title+artist.
+  if (song._src === "museekapi") {
+    return btoa(unescape(encodeURIComponent(`${song.title || ""}__${song.artist || ""}`))).slice(0, 24);
+  }
   if (song.id) return `${song._src || ""}_${song.id}`;
   return btoa(unescape(encodeURIComponent(`${song.title}__${song.artist}`))).slice(0, 24);
+}
+
+// ==================== MUSEEK API SEARCH ADAPTER ====================
+const MUSEEK_API_URL = "https://museekserver-n52t.onrender.com/api/search";
+const MUSEEK_API_CACHE_TTL = 30 * 60 * 1000;
+const MUSEEK_API_TIMEOUT = 8000;
+const museekMemoryCache = new Map();
+const museekInflight = new Map();
+let knownNamesCache = null;
+let knownNamesPromise = null;
+
+function normalizeMuseekSong(raw) {
+  if (!raw || !raw.title || !raw.artist || !raw.stream_url) return null;
+  return {
+    title: String(raw.title).trim(),
+    artist: String(raw.artist).trim(),
+    image: raw.image ? String(raw.image) : "",
+    stream_url: String(raw.stream_url),
+    duration: raw.duration ? String(raw.duration) : "",
+    _src: "museekapi"
+  };
+}
+
+function dedupeMuseekResults(rows) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of rows || []) {
+    const song = normalizeMuseekSong(raw);
+    if (!song || isPreviewJunk(song)) continue;
+    const key = fuzzySongKey(song);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(song);
+  }
+  return out;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = MUSEEK_API_TIMEOUT) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function bestEffortMuseekEnrichment(songs) {
+  // Intentionally non-blocking. The search response is already usable before
+  // this housekeeping finishes (or fails).
+  try {
+    const candidates = songs.slice(0, 20);
+    if (!candidates.length) return;
+    await Promise.race([
+      (async () => {
+        for (const song of candidates) {
+          try {
+            const mbUrl = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(`recording:${song.title} AND artist:${song.artist}`)}&fmt=json&limit=1`;
+            const mb = await fetchWithTimeout(mbUrl, { headers: { "Accept": "application/json", "User-Agent": "Lumic/1.0 (music search)" } }, 1200);
+            if (!mb.ok) continue;
+            const data = await mb.json();
+            const rec = data?.recordings?.[0];
+            const artist = rec?.["artist-credit"]?.[0]?.artist?.name;
+            if (artist) song.artist = artist;
+          } catch (_) {}
+        }
+      })(),
+      new Promise(resolve => setTimeout(resolve, 1800))
+    ]);
+  } catch (_) {}
+}
+
+async function cacheKnownSongs(songs) {
+  if (!songs.length) return;
+  try {
+    await supabaseClient.from("known_songs").upsert(
+      songs.map(s => ({ uid: uidFor(s), title: s.title, artist: s.artist, updated_at: new Date().toISOString() })),
+      { onConflict: "uid" }
+    );
+  } catch (_) {}
+}
+
+async function searchMuseekAPI(query, page = 1) {
+  const cleanQuery = (query || "").trim();
+  if (!cleanQuery) return [];
+
+  const cacheKey = `${cleanQuery.toLowerCase()}::${page}`;
+  const now = Date.now();
+
+  // Fastest path: memory cache or an already-running identical request.
+  const mem = museekMemoryCache.get(cacheKey);
+  if (mem && now - mem.cachedAt < MUSEEK_API_CACHE_TTL) return mem.results;
+  if (mem) museekMemoryCache.delete(cacheKey);
+  if (museekInflight.has(cacheKey)) return museekInflight.get(cacheKey);
+
+  const request = (async () => {
+    // Race the shared Supabase cache against the live API. This avoids the
+    // old situation where a slow Supabase cache lookup delayed the API.
+    let cacheResolve, cacheReject;
+    const cachePromise = new Promise((resolve, reject) => {
+      cacheResolve = resolve;
+      cacheReject = reject;
+    });
+
+    (async () => {
+      try {
+        const { data: cached, error } = await supabaseClient
+          .from("search_cache")
+          .select("results, cached_at")
+          .eq("query", cacheKey)
+          .maybeSingle();
+        if (!error && cached?.results && cached.cached_at &&
+            Date.now() - new Date(cached.cached_at).getTime() < MUSEEK_API_CACHE_TTL) {
+          cacheResolve(dedupeMuseekResults(cached.results));
+        } else {
+          cacheResolve(null);
+        }
+      } catch (_) {
+        cacheResolve(null);
+      }
+    })();
+
+    const livePromise = (async () => {
+      const url = `${MUSEEK_API_URL}?q=${encodeURIComponent(cleanQuery)}&p=${page}`;
+      let response;
+      try {
+        response = await fetchWithTimeout(url, {}, MUSEEK_API_TIMEOUT);
+      } catch (e) {
+        throw new Error(e?.name === "AbortError" ? "Museek API timeout" : "Museek API unavailable");
+      }
+      if (!response.ok) throw new Error(`Museek API HTTP ${response.status}`);
+      const payload = await response.json();
+      if (!payload?.success || !Array.isArray(payload.songs)) {
+        throw new Error("Unexpected Museek API response");
+      }
+      return dedupeMuseekResults(payload.songs);
+    })();
+
+    // Whichever usable source responds first wins. The slower source is
+    // still allowed to finish and warm the shared cache.
+    const winner = await Promise.race([
+      cachePromise.then(rows => rows && rows.length ? { rows, source: "cache" } : null),
+      livePromise.then(rows => ({ rows, source: "api" }))
+    ]);
+
+    if (winner?.rows) {
+      museekMemoryCache.set(cacheKey, { results: winner.rows, cachedAt: Date.now() });
+
+      if (winner.source === "api") {
+        // Cache writes are deliberately fire-and-forget. They must never
+        // hold up the search UI.
+        supabaseClient.from("search_cache").upsert({
+          query: cacheKey,
+          results: winner.rows,
+          cached_at: new Date().toISOString()
+        }, { onConflict: "query" }).then(() => {}).catch(() => {});
+        Promise.resolve(bestEffortMuseekEnrichment(winner.rows.map(s => ({ ...s }))))
+          .then(() => cacheKnownSongs(winner.rows))
+          .catch(() => cacheKnownSongs(winner.rows));
+      }
+
+      // If the cache won, the API can still warm the same memory key for the
+      // next request without affecting this one.
+      livePromise.then(rows => {
+        if (rows?.length) {
+          museekMemoryCache.set(cacheKey, { results: rows, cachedAt: Date.now() });
+          supabaseClient.from("search_cache").upsert({
+            query: cacheKey, results: rows, cached_at: new Date().toISOString()
+          }, { onConflict: "query" }).then(() => {}).catch(() => {});
+        }
+      }).catch(() => {});
+
+      return winner.rows;
+    }
+
+    // Both sources failed/returned empty. Propagate the API error so the
+    // caller can use the existing Vistanaij fallback.
+    return await livePromise;
+  })();
+
+  museekInflight.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    museekInflight.delete(cacheKey);
+  }
+}
+
+async function loadKnownNames() {
+  if (knownNamesCache) return knownNamesCache;
+  if (knownNamesPromise) return knownNamesPromise;
+  knownNamesPromise = (async () => {
+    try {
+      const [artistsRes, songsRes] = await Promise.all([
+        supabaseClient.from("known_artists").select("name").limit(5000),
+        supabaseClient.from("known_songs").select("title,artist").limit(5000)
+      ]);
+      const artists = new Set((artistsRes.data || []).map(r => (r.name || "").trim()).filter(Boolean));
+      const titles = new Set();
+      (songsRes.data || []).forEach(r => {
+        if (r.title) titles.add(r.title.trim());
+        if (r.artist) artists.add(r.artist.trim());
+      });
+      knownNamesCache = { artists: [...artists], titles: [...titles] };
+      return knownNamesCache;
+    } catch (_) {
+      knownNamesCache = { artists: [], titles: [] };
+      return knownNamesCache;
+    }
+  })();
+  return knownNamesPromise;
+}
+
+function paintInstantSuggestions(query) {
+  const container = document.getElementById("searchResults");
+  if (!container) return;
+  const q = (query || "").trim().toLowerCase();
+  if (!q || q.length < 2 || !knownNamesCache) return;
+  const artists = knownNamesCache.artists.filter(n => n.toLowerCase().includes(q)).slice(0, 6);
+  const titles = knownNamesCache.titles.filter(n => n.toLowerCase().includes(q)).slice(0, 6);
+  if (!artists.length && !titles.length) return;
+  container.innerHTML = `<div class="space-y-1">${[
+    ...artists.map(n => `<button data-instant-query="${escapeHtml(n)}" class="w-full text-left glass-card p-3 rounded-xl hover:bg-white/10 transition"><i class="fa-solid fa-user text-emerald-400 mr-2"></i>${escapeHtml(n)}</button>`),
+    ...titles.map(n => `<button data-instant-query="${escapeHtml(n)}" class="w-full text-left glass-card p-3 rounded-xl hover:bg-white/10 transition"><i class="fa-solid fa-music text-slate-400 mr-2"></i>${escapeHtml(n)}</button>`)
+  ].join("")}</div>`;
+  container.querySelectorAll("[data-instant-query]").forEach(btn => btn.onclick = () => doSearch(btn.dataset.instantQuery));
+}
+
+async function fetchKnownSongFallback(query, limit = 12) {
+  try {
+    const { data, error } = await supabaseClient.from("known_songs")
+      .select("uid,title,artist,updated_at")
+      .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
+      .order("updated_at", { ascending: false })
+      .limit(Math.min(limit, 12));
+    if (error || !data?.length) return [];
+    // known_songs is an index, not a playback source. Rehydrate matches via
+    // the shared API adapter so returned rows remain playable.
+    const hydrated = await Promise.all(data.slice(0, 8).map(async row => {
+      try {
+        const candidates = await searchMuseekAPI(`${row.title} ${row.artist}`, 1);
+        return candidates.find(s => fuzzySongKey(s) === fuzzySongKey(row)) || candidates[0] || null;
+      } catch (_) { return null; }
+    }));
+    return hydrated.filter(Boolean).slice(0, limit);
+  } catch (_) { return []; }
+}
+
+async function sortByPopularity(songs) {
+  if (!songs?.length) return [];
+
+  const uids = [...new Set(songs.map(uidFor).filter(Boolean))];
+  const scoreMap = new Map();
+
+  try {
+    for (let i = 0; i < uids.length; i += 500) {
+      const batch = uids.slice(i, i + 500);
+      const { data } = await supabaseClient
+        .from("song_popularity")
+        .select("uid,plays")
+        .in("uid", batch);
+      (data || []).forEach(r => scoreMap.set(r.uid, Number(r.plays) || 0));
+    }
+  } catch (_) {}
+
+  const popular = [];
+  const unplayed = [];
+
+  for (const song of songs) {
+    if ((scoreMap.get(uidFor(song)) || 0) > 0) popular.push(song);
+    else unplayed.push(song);
+  }
+
+  popular.sort((a, b) =>
+    (scoreMap.get(uidFor(b)) || 0) - (scoreMap.get(uidFor(a)) || 0)
+  );
+
+  // Never preserve API/database order for unplayed search results.
+  for (let i = unplayed.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [unplayed[i], unplayed[j]] = [unplayed[j], unplayed[i]];
+  }
+
+  return [...popular, ...unplayed];
+}
+
+function artistHas50Fast(results) { return results.length >= 50; }
+
+async function isArtistVerified(artistName) {
+  const seen = new Set();
+  const add = rows => {
+    for (const s of rows || []) {
+      if (seen.size >= 50) break;
+      const key = fuzzySongKey(s);
+      if (key) seen.add(key);
+    }
+  };
+  try {
+    // One API page already contains up to 50 results. Combined with the two
+    // independent catalogues, this is enough to decide the boolean threshold
+    // without the old six-page API fan-out.
+    const [songsRes, vistanaijRes, apiRows] = await Promise.all([
+      ilikeAllWords(supabaseClient.from("songs").select("title,artist,stream_url,id"), "artist", artistName).limit(50),
+      ilikeAllWords(supabaseClient.from("museek_tracks").select("title,artist,stream_ref,id"), "artist", artistName).limit(50),
+      searchMuseekAPI(artistName, 1).catch(() => [])
+    ]);
+    add(songsRes.data);
+    add(vistanaijRes.data);
+    add(apiRows);
+    return seen.size >= 50;
+  } catch (_) {
+    return seen.size >= 50;
+  }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -1406,6 +1771,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setInterval(fetchBroadcastNotifications, 25000);
   bootAuth();
   initSettingsToggles();
+  loadKnownNames();
 });
 
 // ==================== PWA / SERVICE WORKER ====================
@@ -1607,19 +1973,10 @@ const TRENDING_TILE_STYLES = [
 
 async function computeTrendingArtists(sampleSize = 300, topN = 2) {
   try {
-    const { data, error } = await supabaseClient
-      .from("mp3pm_songs").select("artist")
-      .order("crawled_at", { ascending: false })
-      .limit(sampleSize);
+    const { data, error } = await supabaseClient.from("known_artists").select("name,play_count").order("play_count", { ascending: false }).limit(sampleSize);
     if (error) throw error;
-    const counts = {};
-    (data || []).forEach(r => {
-      const a = (r.artist || "").trim();
-      if (!a) return;
-      counts[a] = (counts[a] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, topN).map(([name]) => name);
-  } catch (e) { return []; }
+    return (data || []).filter(r => r.name).slice(0, topN).map(r => r.name);
+  } catch (_) { return []; }
 }
 
 async function renderTrendingMixTiles() {
@@ -1716,12 +2073,12 @@ let spotlightArtistPoolCache = null; // cached per page-load so repeated Home vi
 async function fetchSpotlightArtistPool() {
   if (spotlightArtistPoolCache && spotlightArtistPoolCache.length >= 10) return spotlightArtistPoolCache;
   try {
-    const [songsRes, mp3Res, museekRes] = await Promise.all([
-      supabaseClient.from("songs").select("artist").order("popularity", { ascending: false }).limit(120),
-      supabaseClient.from("mp3pm_songs").select("artist").order("popularity", { ascending: false }).limit(120),
-      supabaseClient.from("museek_tracks").select("artist").limit(80).catch(() => ({ data: [] }))
+    const [songsRes, museekRes, knownRes] = await Promise.all([
+      supabaseClient.from("songs").select("artist").limit(120),
+      supabaseClient.from("museek_tracks").select("artist").limit(80).catch(() => ({ data: [] })),
+      supabaseClient.from("known_artists").select("name").limit(120).catch(() => ({ data: [] }))
     ]);
-    const all = [...(songsRes.data || []), ...(mp3Res.data || []), ...(museekRes.data || [])];
+    const all = [...(songsRes.data || []), ...(museekRes.data || []), ...(knownRes.data || []).map(r => ({ artist: r.name }))];
     const names = new Set();
     all.forEach(r => {
       if (!r.artist) return;
@@ -1888,20 +2245,105 @@ function renderRecommendedRow(list, row) {
   });
 }
 
-// ==================== YOUR MIX (similar-artist mix, Last.fm artist.getSimilar) ====================
-// Picks 3-4 artists from your actual play history, finds artists similar
-// to EACH of them via Last.fm, and blends real DB-backed tracks from that
-// combined pool into one mix — same idea as a "Daylist"/"Mix" tile, but
-// grounded in your own listening instead of a fixed editorial playlist.
-const YOUR_MIX_CACHE_KEY = "lumic_cache_yourmix_v1";
+// ==================== YOUR MIX (API-only + local cache) ====================
+// Your Mix is intentionally lightweight:
+// 1) Paint the last successful mix from localStorage immediately.
+// 2) Never block Home or playback while refreshing it.
+// 3) Refresh from the single Museek API in parallel using recent artists.
+// 4) Save the fresh result locally so the next visit is instant.
+const YOUR_MIX_CACHE_KEY = "lumic_cache_yourmix_v2";
+const YOUR_MIX_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+let yourMixRefreshBusy = false;
+let yourMixRefreshTimer = null;
 
-async function fetchSimilarArtists(artistName, limit = 5) {
+function getYourMixCache() {
+  const cached = readListCache(YOUR_MIX_CACHE_KEY);
+  if (!cached || !Array.isArray(cached.data) || !cached.data.length) return null;
+  return cached;
+}
+
+function renderYourMixCached() {
+  const section = document.getElementById("yourMixSection");
+  const row = document.getElementById("yourMixRow");
+  if (!section || !row) return false;
+  const cached = getYourMixCache();
+  if (!cached) return false;
+  section.classList.remove("hidden");
+  renderRecommendedRow(cached.data, row);
+  return true;
+}
+
+async function refreshYourMixInBackground(force = false) {
+  if (yourMixRefreshBusy) return;
+  const cached = getYourMixCache();
+  if (!force && cached?.cachedAt && Date.now() - cached.cachedAt < YOUR_MIX_CACHE_TTL) return;
+
+  yourMixRefreshBusy = true;
   try {
-    const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&artist=${encodeURIComponent(artistName)}&api_key=${LASTFM_API_KEY}&format=json&limit=${limit}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return (data?.similarartists?.artist || []).map(a => a.name).filter(Boolean);
-  } catch (e) { return []; }
+    const primaryArtists = [...new Set(
+      recentSongs
+        .map(s => splitFeaturedArtists(s.artist || "").primary)
+        .filter(Boolean)
+    )];
+
+    // No listening history yet: use a small priority seed pool. Every request
+    // still goes through the ONE Museek API — no mp3pm, Last.fm or DB fan-out.
+    const seedArtists = (primaryArtists.length ? primaryArtists : PRIORITY_ARTISTS)
+      .slice(0, 5);
+
+    if (!seedArtists.length) return;
+
+    // Query the single API in parallel. Each request is already memory/cache
+    // deduped by searchMuseekAPI(), so repeated refreshes are cheap.
+    const apiLists = await Promise.all(
+      seedArtists.map(artist => searchMuseekAPI(artist, 1).catch(() => []))
+    );
+
+    const played = new Set(recentSongs.map(uidFor));
+    const seen = new Set();
+    const pool = [];
+
+    // Randomize the API pool before selecting so a mix doesn't freeze on the
+    // same first few tracks returned by the API.
+    const flattened = apiLists.flat().sort(() => Math.random() - 0.5);
+    for (const song of flattened) {
+      if (!song || isPreviewJunk(song)) continue;
+      const uid = uidFor(song);
+      if (!uid || seen.has(uid) || played.has(uid)) continue;
+      seen.add(uid);
+      pool.push(song);
+    }
+
+    // Keep the mix diverse: no artist can occupy more than 2 cards.
+    const perArtist = {};
+    const unique = pool.filter(song => {
+      const key = (splitFeaturedArtists(song.artist || "").primary || song.artist || "").toLowerCase();
+      perArtist[key] = (perArtist[key] || 0) + 1;
+      return perArtist[key] <= 2;
+    }).slice(0, 15);
+
+    if (!unique.length) return;
+
+    // Cache first; painting is intentionally deferred until the UI is idle.
+    writeListCache(YOUR_MIX_CACHE_KEY, unique);
+    renderYourMixCached();
+  } catch (_) {
+    // Cached mix remains untouched on any network/API failure.
+  } finally {
+    yourMixRefreshBusy = false;
+  }
+}
+
+function scheduleYourMixBackgroundRefresh(force = false, delay = 1200) {
+  clearTimeout(yourMixRefreshTimer);
+  yourMixRefreshTimer = setTimeout(() => {
+    const run = () => refreshYourMixInBackground(force);
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      run();
+    }
+  }, delay);
 }
 
 async function renderYourMix() {
@@ -1909,60 +2351,35 @@ async function renderYourMix() {
   const row = document.getElementById("yourMixRow");
   if (!section || !row) return;
 
-  const cached = readListCache(YOUR_MIX_CACHE_KEY);
-  if (cached && cached.data && cached.data.length) {
+  // Instant local paint. This function never waits for the network.
+  const hasCache = renderYourMixCached();
+
+  if (!hasCache) {
     section.classList.remove("hidden");
-    renderRecommendedRow(cached.data, row);
-  }
-
-  const primaryArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))];
-  const seedArtists = (primaryArtists.length ? primaryArtists : [...PRIORITY_ARTISTS]).slice(0, 4);
-  if (!seedArtists.length) { if (!cached) section.classList.add("hidden"); return; }
-
-  const similarLists = await Promise.all(seedArtists.map(a => fetchSimilarArtists(a, 6)));
-  let pool = [...new Set(similarLists.flat())].filter(Boolean);
-  // Always include the seed artists themselves too — similarartists can
-  // come back thin/empty for lesser-known Naija acts Last.fm doesn't know.
-  pool = [...new Set([...pool, ...seedArtists])].sort(() => Math.random() - 0.5).slice(0, 10);
-  if (!pool.length) { if (!cached) section.classList.add("hidden"); return; }
-
-  section.classList.remove("hidden");
-  if (!cached || !cached.data.length) {
     row.innerHTML = `<div class="flex gap-4">${Array(4).fill('<div class="rec-card"><div class="skeleton" style="width:150px;height:150px;border-radius:14px;"></div></div>').join("")}</div>`;
   }
 
-  const perArtist = await Promise.all(pool.map(a => fetchAcrossAllTables(a, 3)));
-  let unique = [];
-  const seen = new Set();
-  perArtist.forEach(tracks => tracks.forEach(t => { const u = uidFor(t); if (seen.has(u)) return; seen.add(u); unique.push(t); }));
-  unique = unique.sort(() => Math.random() - 0.5).slice(0, 15);
-
-  if (unique.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
-  renderRecommendedRow(unique, row);
-  writeListCache(YOUR_MIX_CACHE_KEY, unique);
+  // If the cache is fresh this becomes a no-op. If stale/missing, refresh later
+  // without delaying Home, search, or the audio player.
+  scheduleYourMixBackgroundRefresh(false, hasCache ? 1800 : 400);
 }
 
-// Fetches a small number of tracks for one artist across all 3 tables
-// (songs, mp3pm_songs, museek_tracks) — the same 3-table method used by
-// search. Used by Recommended For You and can be reused anywhere a
-// cross-table artist lookup is needed.
-// Pulls a WIDER pool per artist than requested, then shuffles down to
-// limitEach — otherwise this always returns the exact same first N rows
-// per artist on every call (that's the bug behind "Asake mix"/"Olivia
-// Rodrigo mix" cards looking frozen/static between opens).
+// Refresh the mix after playback has actually started. This keeps the network
+// work off the critical "tap -> music" path while still keeping the mix fresh.
+function scheduleYourMixRefreshAfterPlayback() {
+  if (yourMixRefreshBusy) return;
+  scheduleYourMixBackgroundRefresh(true, 2500);
+}
+
+// Single-API helper retained for other callers that need a small artist pool.
+// IMPORTANT: this no longer touches songs/mp3pm_songs/museek_tracks directly.
 async function fetchAcrossAllTables(artistName, limitEach = 3) {
-  const poolEach = Math.min(limitEach * 4, 20);
-  const [songsRes, mp3Res, museekRes] = await Promise.all([
-    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(poolEach)
-      .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
-    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(poolEach)
-      .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" }))),
-    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(poolEach)
-      .then(r => (r.data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url })))
-      .catch(() => []) // table may not exist on some deployments — fail soft
-  ]);
-  const pool = [...songsRes, ...mp3Res, ...museekRes].filter(s => !isPreviewJunk(s));
-  return shuffleAndTrim(pool, limitEach);
+  try {
+    const rows = await searchMuseekAPI(artistName, 1);
+    return shuffleAndTrim(rows.filter(s => !isPreviewJunk(s)), limitEach);
+  } catch (_) {
+    return [];
+  }
 }
 
 // ==================== HOT ALBUMS (glassmorphism rectangular rail) ====================
@@ -2245,7 +2662,7 @@ async function openAlbumView(album) {
 // ==================== TOP 100 NIGERIA (Last.fm chart -> matched against our DB) ====================
 // Pulls Nigeria's real trending list from Last.fm (title + artist only —
 // Last.fm is never used for streaming or images), then walks down that
-// list checking each title against songs/mp3pm_songs/museek_tracks. Only
+// list checking each title against songs/museek_tracks and the Museek API. Only
 // tracks that actually exist in our catalog get shown; anything with no
 // match is silently skipped. Only the first 4 are visible until the
 // dropdown chevron is tapped.
@@ -2350,13 +2767,15 @@ function toggleTop100Expand() {
 // fuzzySongKey: strips "feat"/"ft"/parens) so "Wave (Official Audio)" still
 // matches Last.fm's clean "Wave".
 async function findBestDbMatch(title, artist) {
+  const apiCandidates = await searchMuseekAPI(`${title} ${artist}`, 1).catch(() => []);
+  const targetKey = fuzzySongKey({ title, artist });
+  const exactApi = apiCandidates.find(c => fuzzySongKey(c) === targetKey);
+  if (exactApi) return exactApi;
+  if (apiCandidates.length) return apiCandidates[0];
   const candidates = await fetchAcrossAllTables(artist, 8);
   if (candidates.length === 0) return null;
-  const targetKey = fuzzySongKey({ title, artist });
   const exact = candidates.find(c => fuzzySongKey(c) === targetKey);
   if (exact) return exact;
-  // Loose fallback: same artist + title starts with the chart title's
-  // first significant word (catches minor punctuation/case differences).
   const targetWord = (title || "").toLowerCase().split(/\s+/)[0];
   return candidates.find(c => (c.title || "").toLowerCase().includes(targetWord)) || null;
 }
@@ -2465,49 +2884,27 @@ function fuzzySongKey(song) {
 }
 
 async function fetchByArtistsProgressive(artists, limitEach, onBatch) {
-  let combined = [];
-  const seenUid = new Set();
-  const seenFuzzy = new Set();
-  const BATCH_SIZE = 3;
+  const perArtistLists = await Promise.all(artists.map(async artistName => {
+    const artistLimit = Math.min(Math.max(limitEach, 15), 20);
+    const pagesNeeded = Math.max(1, Math.ceil(artistLimit / 50));
+    const pages = await Promise.all(Array.from({ length: pagesNeeded }, (_, i) => searchMuseekAPI(artistName, i + 1).catch(() => [])));
+    const pool = pages.flat().filter(s => !isPreviewJunk(s));
+    const seen = new Set();
+    const unique = pool.filter(s => { const k = fuzzySongKey(s); if (seen.has(k)) return false; seen.add(k); return true; });
+    return shuffleAndTrim(unique, artistLimit);
+  }));
 
-  function addUnique(song) {
-    const u = uidFor(song);
-    if (seenUid.has(u)) return false;
-    const f = fuzzySongKey(song);
-    if (seenFuzzy.has(f)) return false;
-    seenUid.add(u);
-    seenFuzzy.add(f);
+  const seen = new Set();
+  const combined = [];
+  perArtistLists.forEach(list => list.forEach(song => {
+    const key = fuzzySongKey(song);
+    if (seen.has(key)) return;
+    seen.add(key);
     combined.push(song);
-    return true;
-  }
-
-  for (let i = 0; i < artists.length; i += BATCH_SIZE) {
-    const chunk = artists.slice(i, i + BATCH_SIZE);
-    const perArtistLists = await Promise.all(chunk.map(async (a) => {
-      // Wider pool than requested + shuffle — otherwise this always
-      // returns the same first-N rows per artist every time (the bug
-      // behind artist-mix cards like "Asake mix" looking frozen/static).
-      const poolEach = Math.min(limitEach * 4, 20);
-      const [mdundo, mp3] = await Promise.all([
-        ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", a).limit(poolEach)
-          .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
-        ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", a).limit(poolEach)
-          .then(r => (r.data || []).map(s => ({ ...s, _src: "mp3pm" })))
-      ]);
-      const pool = [...mdundo, ...mp3].filter(s => !isPreviewJunk(s));
-      return shuffleAndTrim(pool, limitEach);
-    }));
-
-    let addedAny = false;
-    const maxLen = Math.max(0, ...perArtistLists.map(l => l.length));
-    for (let row = 0; row < maxLen; row++) {
-      for (const list of perArtistLists) {
-        if (list[row] && addUnique(list[row])) addedAny = true;
-      }
-    }
-    if (addedAny) onBatch && onBatch(combined.slice());
-  }
-  return combined;
+  }));
+  const shuffled = shuffleAndTrim(combined, Math.max(limitEach * artists.length, limitEach));
+  if (onBatch) onBatch(shuffled.slice());
+  return shuffled;
 }
 
 async function fetchByArtists(artists, limitEach = 12) {
@@ -2530,26 +2927,16 @@ function shuffleAndTrim(arr, limit) {
 // order — on every open, not the same fixed newest-first list each time.
 async function fetchByCategory(categoryName, limit = 60) {
   try {
-    const poolSize = Math.min(limit * 3, 200);
-    const { data, error } = await supabaseClient
-      .from("mp3pm_songs").select("*")
-      .ilike("category", `%${categoryName}%`)
-      .order("crawled_at", { ascending: false })
-      .limit(poolSize);
-    if (error) throw error;
-    const clean = (data || []).map(s => ({ ...s, _src: "mp3pm" })).filter(s => !isPreviewJunk(s));
-    let result = shuffleAndTrim(clean, limit);
-    // Category came up thin — genuinely leverage iTunes to widen it: look
-    // up the category as a genre term, pull back distinct artist names
-    // iTunes associates with it that we haven't already got, then check
-    // OUR db for real playable tracks by those artists (iTunes previews
-    // themselves are 30s clips and aren't used for playback here).
-    if (result.length < limit) {
-      const extra = await supplementFromItunesGenre(categoryName, clean.map(s => s.artist), limit - result.length);
-      result = [...result, ...extra];
-    }
-    return result;
-  } catch (e) { return []; }
+    const candidates = await loadKnownNames();
+    const artists = candidates.artists.filter(a => a.toLowerCase().includes(categoryName.toLowerCase())).slice(0, 8);
+    const [direct, artistRows] = await Promise.all([
+      searchMuseekAPI(categoryName, 1).catch(() => []),
+      artists.length ? fetchByArtists(artists, Math.max(15, Math.ceil(limit / artists.length))) : Promise.resolve([])
+    ]);
+    const rows = [...direct, ...artistRows];
+    const seen = new Set();
+    return shuffleAndTrim(rows.filter(s => { const k = fuzzySongKey(s); if (seen.has(k)) return false; seen.add(k); return true; }), limit);
+  } catch (_) { return []; }
 }
 
 // Uses iTunes' genre-tagged search results purely as an artist-discovery
@@ -2613,25 +3000,10 @@ async function fetchPresetTracks(presetKey, limit) {
 // no hardcoded category names. Whatever you tag songs with in the DB
 // (Fuji, Highlife, whatever) shows up here automatically.
 async function discoverDbCategories() {
-  try {
-    const { data, error } = await supabaseClient
-      .from("mp3pm_songs").select("category")
-      .not("category", "is", null)
-      .order("crawled_at", { ascending: false })
-      .limit(500);
-    if (error) throw error;
-    const seen = new Set();
-    const cats = [];
-    (data || []).forEach(r => {
-      const c = (r.category || "").trim();
-      if (!c) return;
-      const key = c.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      cats.push(c);
-    });
-    return cats;
-  } catch (e) { return []; }
+  // Categories were previously stored on mp3pm_songs. The search migration
+  // deliberately retires that table as a discovery source, so keep this
+  // optional section empty unless the app later adds a first-class category index.
+  return [];
 }
 
 const DB_CATEGORY_ICONS = ["fa-music", "fa-drum", "fa-guitar", "fa-headphones-simple", "fa-microphone-lines", "fa-compact-disc", "fa-radio"];
@@ -2760,18 +3132,18 @@ async function fetchArtistMagazineData(artistName) {
 async function openArtistView(artistName) {
   prevView = document.querySelector('[class*="font-bold"]:not(.hidden)')?.id?.replace("tab-","") || prevView;
   currentArtistName = artistName;
+  currentArtistApiPage = 1;
+  currentArtistApiLoading = false;
+  currentArtistApiExhausted = false;
   switchView("artist");
   document.getElementById("artistHeaderName").innerText = artistName;
-  document.getElementById("artistHeaderCount").innerText = "Loading...";
+  document.getElementById("artistHeaderCount").innerText = "";
   document.getElementById("artistHeaderVerified").classList.add("hidden");
   document.getElementById("artistBioBlock").classList.add("hidden");
   document.getElementById("artistGalleryRow").classList.add("hidden");
   document.getElementById("artistSongsList").innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
 
-  resolveImage({ artist: artistName }).then(img => {
-    document.getElementById("artistHeaderImg").src = img;
-  });
-
+  resolveImage({ artist: artistName }).then(img => { document.getElementById("artistHeaderImg").src = img; });
   fetchArtistMagazineData(artistName).then(({ bio, headerImg, images }) => {
     if (headerImg) document.getElementById("artistHeaderImg").src = headerImg;
     if (bio) {
@@ -2785,31 +3157,122 @@ async function openArtistView(artistName) {
     }
   });
 
-  getArtistSongCount(artistName).then(count => {
-    if (count >= 50) document.getElementById("artistHeaderVerified").classList.remove("hidden");
+  // First paint: one Museek API page (50 results) in parallel with the two
+  // independent legacy sources. Do not request six API pages up front.
+  const [mdundo, vistanaij, apiRows] = await Promise.all([
+    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(50)
+      .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))).catch(() => []),
+    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(50)
+      .then(r => (r.data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url }))).catch(() => []),
+    searchMuseekAPI(artistName, 1).catch(() => [])
+  ]);
+
+  currentArtistApiExhausted = apiRows.length < 45;
+  let songs = [...mdundo, ...vistanaij, ...apiRows].filter(s => !isPreviewJunk(s));
+  const seen = new Set();
+  songs = songs.filter(s => {
+    const key = fuzzySongKey(s);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 
-  const [mdundo, mp3, museek] = await Promise.all([
-    ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="songs"); return r; }),
-    ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", artistName).limit(300).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; }),
-    ilikeAllWords(supabaseClient.from("museek_tracks").select("*"), "artist", artistName).limit(300)
-      .then(r => { r.data?.forEach(s => { s._src="vistanaij"; s.image = s.cover_url; }); return r; })
-      .catch(() => ({ data: [] }))
-  ]);
-  let songs = [...(mdundo.data || []), ...(mp3.data || []), ...(museek.data || [])].filter(s => !isPreviewJunk(s));
-  const seen = new Set();
-  songs = songs.filter(s => { const u = uidFor(s); if (seen.has(u)) return false; seen.add(u); return true; });
-  // Most popular first — same signal (the `popularity` column, bumped on
-  // every play) that search results are ranked by.
-  songs.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-
+  // The combined first-page pool is enough for the boolean verified threshold.
+  // Paint only the first 50 immediately; later API pages load on scroll.
+  const verified = songs.length >= 50;
+  songs = songs.slice(0, 50);
+  songs = await orderArtistSongsByPopularity(songs);
   currentArtistSongs = songs;
-  document.getElementById("artistHeaderCount").innerText = `${songs.length} song${songs.length !== 1 ? "s" : ""}`;
-  document.getElementById("artistSongSearchInput").value = "";
+  if (verified) document.getElementById("artistHeaderVerified").classList.remove("hidden");
+
   const list = document.getElementById("artistSongsList");
   list.innerHTML = "";
-  if (songs.length === 0) { list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No songs found for this artist.</div>`; return; }
+  if (!songs.length) {
+    list.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">No songs found for this artist.</div>`;
+    updateArtistLoadMoreButton();
+    return;
+  }
   songs.forEach(song => list.appendChild(renderSearchRow(song, songs)));
+  updateArtistLoadMoreButton();
+}
+
+async function orderArtistSongsByPopularity(songs) {
+  if (!songs.length) return [];
+  const uids = [...new Set(songs.map(uidFor).filter(Boolean))];
+  const scores = new Map();
+  try {
+    for (let i = 0; i < uids.length; i += 500) {
+      const { data } = await supabaseClient.from("song_popularity").select("uid,plays").in("uid", uids.slice(i, i + 500));
+      (data || []).forEach(r => scores.set(r.uid, Number(r.plays) || 0));
+    }
+  } catch (_) {}
+  const popular = songs.filter(s => (scores.get(uidFor(s)) || 0) > 0)
+    .sort((a, b) => (scores.get(uidFor(b)) || 0) - (scores.get(uidFor(a)) || 0));
+  const unplayed = shuffleAndTrim(songs.filter(s => (scores.get(uidFor(s)) || 0) === 0), songs.length);
+  return [...popular, ...unplayed];
+}
+
+function updateArtistLoadMoreButton() {
+  const wrap = document.getElementById("artistLoadMoreWrap");
+  const btn = document.getElementById("artistLoadMoreBtn");
+  if (!wrap || !btn) return;
+
+  // The button belongs to the content flow, not the fixed player. The artist
+  // view has extra bottom padding so it can never be hidden behind playback.
+  wrap.classList.remove("hidden");
+  btn.disabled = currentArtistApiLoading || currentArtistApiExhausted;
+
+  if (currentArtistApiLoading) {
+    btn.textContent = "Loading…";
+    btn.classList.remove("opacity-60");
+  } else if (currentArtistApiExhausted) {
+    btn.textContent = "You're all caught up";
+    btn.classList.add("opacity-60");
+  } else {
+    btn.textContent = "Show more";
+    btn.classList.remove("opacity-60");
+  }
+}
+
+async function loadMoreArtistSongs() {
+  if (!currentArtistName || currentArtistApiLoading || currentArtistApiExhausted) return;
+  currentArtistApiLoading = true;
+  updateArtistLoadMoreButton();
+
+  try {
+    const nextPage = currentArtistApiPage + 1;
+    const rows = await searchMuseekAPI(currentArtistName, nextPage).catch(() => []);
+    currentArtistApiPage = nextPage;
+
+    const seen = new Set(currentArtistSongs.map(fuzzySongKey));
+    const fresh = rows.filter(s => {
+      if (isPreviewJunk(s)) return false;
+      const key = fuzzySongKey(s);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // A page counts as complete only when it produced at least 45 NEW songs.
+    // Anything smaller means there is no useful next page to expose.
+    if (fresh.length < 45) currentArtistApiExhausted = true;
+
+    if (fresh.length) {
+      currentArtistSongs = await orderArtistSongsByPopularity([
+        ...currentArtistSongs,
+        ...fresh
+      ]);
+
+      const list = document.getElementById("artistSongsList");
+      list.innerHTML = "";
+      currentArtistSongs.forEach(song =>
+        list.appendChild(renderSearchRow(song, currentArtistSongs))
+      );
+    }
+  } finally {
+    currentArtistApiLoading = false;
+    updateArtistLoadMoreButton();
+  }
 }
 
 // Client-side filter over the artist's already-loaded song list — instant,
@@ -2837,20 +3300,144 @@ function playArtistAll(shuffle) {
   updateQueueDrawer();
 }
 
-// ==================== PLAYBACK CORE ====================
-function bumpPopularity(song) {
-  if (!song || song._local || !song.id) return;
-  const table = song._src === "songs" ? "songs" : song._src === "mp3pm" ? "mp3pm_songs" : null;
-  if (!table) return;
-  supabaseClient.from(table).select("popularity").eq("id", song.id).maybeSingle()
-    .then(({ data }) => {
-      const next = (data?.popularity || 0) + 1;
-      return supabaseClient.from(table).update({ popularity: next }).eq("id", song.id);
-    })
-    .then(({ error }) => { if (error) console.warn(`[lumic] popularity update blocked (${table}):`, error.message); })
-    .catch((e) => console.warn(`[lumic] popularity update failed (${table}):`, e.message));
+// ==================== SESSION PLAYLIST CACHE ====================
+const SESSION_PLAYLIST_DB = "lumicSessionCache";
+const SESSION_PLAYLIST_STORE = "sessionPlaylistCache";
+let sessionPlaylistDbPromise = null;
+function openSessionPlaylistDb() {
+  if (sessionPlaylistDbPromise) return sessionPlaylistDbPromise;
+  sessionPlaylistDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(SESSION_PLAYLIST_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(SESSION_PLAYLIST_STORE, { keyPath: "key" });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return sessionPlaylistDbPromise;
 }
+async function cacheSessionPlaylist(contextKey, songs) {
+  if (!contextKey || !Array.isArray(songs) || !songs.length) return;
+  try {
+    const db = await openSessionPlaylistDb();
+    // Never resolve a whole playlist synchronously just to cache it. Museek
+    // API songs already have stream_url; Vistanaij gets resolved in the
+    // background only when its direct ref has no URL yet.
+    const resolved = await Promise.all(songs.map(async song => {
+      if (song.stream_url) return { ...song };
+      if (song._src === "vistanaij" || song.stream_ref) {
+        const src = await resolveVistanaijStream(song).catch(() => "");
+        return { ...song, stream_url: src };
+      }
+      return { ...song };
+    }));
+    const tx = db.transaction(SESSION_PLAYLIST_STORE, "readwrite");
+    tx.objectStore(SESSION_PLAYLIST_STORE).put({ key: String(contextKey), songs: resolved, cachedAt: Date.now() });
+  } catch (_) {}
+}
+async function pruneSessionPlaylistCache() {
+  try {
+    const db = await openSessionPlaylistDb();
+    const tx = db.transaction(SESSION_PLAYLIST_STORE, "readwrite");
+    const store = tx.objectStore(SESSION_PLAYLIST_STORE);
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) return;
+      if (Date.now() - (cursor.value.cachedAt || 0) > 6 * 60 * 60 * 1000) cursor.delete();
+      cursor.continue();
+    };
+  } catch (_) {}
+}
+pruneSessionPlaylistCache();
 
+// ==================== PLAYBACK CORE ====================
+
+async function bumpPopularity(song) {
+  if (!song || song._local) return;
+
+  const uid = uidFor(song);
+  if (!uid) return;
+
+  const title = song.title || "";
+  const artist = song.artist || "";
+  const primary = splitFeaturedArtists(artist).primary || artist;
+
+  try {
+    const result = await supabaseClient.rpc("increment_song_popularity", {
+      p_uid: uid,
+      p_title: title,
+      p_artist: artist
+    });
+
+    if (result.error) {
+      console.warn("[lumic] popularity RPC failed:", result.error.message);
+    }
+  } catch (e) {
+    console.warn("[lumic] popularity RPC failed:", e.message);
+  }
+
+  if (primary) {
+    try {
+      const result = await supabaseClient.rpc("bump_known_artist", {
+        p_name: primary
+      });
+
+      if (result.error) {
+        console.warn("[lumic] artist popularity RPC failed:", result.error.message);
+      }
+    } catch (e) {
+      console.warn("[lumic] artist popularity RPC failed:", e.message);
+    }
+  }
+
+  try {
+    const result = await supabaseClient
+      .from("known_songs")
+      .upsert(
+        {
+          uid: uid,
+          title: title,
+          artist: artist,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: "uid" }
+      );
+
+    if (result.error) {
+      console.warn("[lumic] known_songs update failed:", result.error.message);
+    }
+  } catch (e) {
+    console.warn("[lumic] known_songs update failed:", e.message);
+  }
+
+  if (knownNamesCache) {
+    if (
+      primary &&
+      !knownNamesCache.artists.some(
+        a => a.toLowerCase() === primary.toLowerCase()
+      )
+    ) {
+      knownNamesCache.artists.push(primary);
+    }
+
+    if (
+      title &&
+      !knownNamesCache.titles.some(
+        t => t.toLowerCase() === title.toLowerCase()
+      )
+    ) {
+      knownNamesCache.titles.push(title);
+    }
+  }
+
+  playCounts[uid] = (playCounts[uid] || 0) + 1;
+
+  try {
+    localStorage.setItem(
+      "lumic_play_counts",
+      JSON.stringify(playCounts)
+    );
+  } catch (e) {}
+}
 // Resolves a museek_tracks (vistanaij) row's stream_ref into a real,
 // playable audio URL via the provider's resolve endpoint. All other
 // sources (songs, mp3pm_songs) already carry a direct stream_url and skip
@@ -2888,9 +3475,42 @@ async function resolvePlaybackSrc(song) {
   return song.stream_url;
 }
 
+const streamHeadCache = new Map();
+const STREAM_HEAD_TTL = 20 * 60 * 1000;
+
+function warmStreamHead(url) {
+  if (!url || !/^https?:/i.test(url)) return;
+  const cached = streamHeadCache.get(url);
+  if (cached && Date.now() - cached < STREAM_HEAD_TTL) return;
+  streamHeadCache.set(url, Date.now());
+
+  // Best-effort 1 MiB range warm-up for UPCOMING tracks. We require a real
+  // 206 Partial Content response and abort after the first chunk so a server
+  // that ignores Range cannot accidentally download the whole MP3 on a
+  // limited connection. Playback itself is still handled by <audio>, which
+  // performs its own native byte-range buffering.
+  const controller = new AbortController();
+  fetch(url, {
+    headers: { Range: "bytes=0-1048575" },
+    cache: "force-cache",
+    signal: controller.signal
+  }).then(async response => {
+    if (response.status !== 206 || !response.body) {
+      controller.abort();
+      return;
+    }
+    const reader = response.body.getReader();
+    try { await reader.read(); } finally {
+      try { await reader.cancel(); } catch (_) {}
+      controller.abort();
+    }
+  }).catch(() => {});
+}
+
 function playTrack(song, opts = {}) {
   if (!isPlaybackAllowed()) { showPremiumBlock(); return; }
   currentTrack = song;
+  updatePlayingRowStates();
   crossfadeStarted = false;
   preloadedNext = null;
   preloadReady = false;
@@ -2899,9 +3519,6 @@ function playTrack(song, opts = {}) {
   userInitiatedPause = false;
   clearBufferingState();
   bumpPopularity(song);
-  const puid = uidFor(song);
-  playCounts[puid] = (playCounts[puid] || 0) + 1;
-  try { localStorage.setItem("lumic_play_counts", JSON.stringify(playCounts)); } catch (e) {}
 
   resolveImage(song).then(img => {
     document.getElementById("playerImg").src = img;
@@ -2920,64 +3537,78 @@ function playTrack(song, opts = {}) {
   document.getElementById("playerPlayingDot").classList.remove("hidden");
   document.getElementById("crossfadeIndicator").classList.add("hidden");
 
-  resolvePlaybackSrc(song).then(src => {
-    if (!src) { showStatus("This track is unavailable."); return; }
-    activeAudio.src = src;
+  // Museek API tracks already contain a playable stream_url. Start that
+  // request immediately instead of waiting on any database lookup or
+  // resolver. Vistanaij still resolves its stream_ref as before.
+  if (song._src === "museekapi" && song.stream_url) {
+    activeAudio.preload = "auto";
+    activeAudio.src = song.stream_url;
     activeAudio.currentTime = opts.startAt || 0;
+    activeAudio.load();
     if (window.LumicNative) {
-      window.LumicNative.play(src, song.title, song.artist);
+      window.LumicNative.play(song.stream_url, song.title, song.artist);
       activeAudio.volume = 0;
-      activeAudio.play().catch(() => {});
     } else {
       activeAudio.volume = 1;
-      activeAudio.play().catch(() => {});
     }
-  }).catch(() => {
-    showStatus("Couldn't resolve this stream — skipping.");
-    skipBrokenTrack();
-  });
+    activeAudio.play().catch(() => {
+      if (currentTrack === song) skipBrokenTrack();
+    });
+  } else {
+    // Preserve offline priority and Vistanaij stream resolution.
+    resolvePlaybackSrc(song).then(src => {
+      if (!src) { showStatus("This track is unavailable."); return; }
+      activeAudio.src = src;
+      activeAudio.currentTime = opts.startAt || 0;
+      activeAudio.load();
+      if (window.LumicNative) {
+        window.LumicNative.play(src, song.title, song.artist);
+        activeAudio.volume = 0;
+      } else {
+        activeAudio.volume = 1;
+      }
+      activeAudio.play().catch(() => {
+        if (currentTrack === song) skipBrokenTrack();
+      });
+    }).catch(() => {
+      if (currentTrack === song) skipBrokenTrack();
+    });
+  }
 
   document.getElementById("playerBar").classList.remove("translate-y-full");
   updatePlayPauseIcon(true);
   updateQueueDrawer();
+  cacheSessionPlaylist(currentPlaylistCtx || "queue", activeQueue);
   addToRecent(song);
   updateMediaSession();
+  warmPlaybackLookahead();
 
   loadLyrics(song);
   if (!document.getElementById("nowPlayingScreen").classList.contains("translate-y-full")) {
     loadArtistInfo(song);
   }
 
-  if (activeQueue.length <= 1) {
-    buildAutoQueue(song);
-  }
+  if (activeQueue.length <= 1) buildAutoQueue(song);
 }
 
 async function buildAutoQueue(song) {
   if (song._local) return;
   try {
-    const [mdundo, mp3] = await Promise.all([
-      ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", song.artist).limit(30).then(r => { r.data?.forEach(s => s._src="songs"); return r; }),
-      ilikeAllWords(supabaseClient.from("mp3pm_songs").select("*"), "artist", song.artist).limit(30).then(r => { r.data?.forEach(s => s._src="mp3pm"); return r; })
+    const [songsRes, apiRows] = await Promise.all([
+      ilikeAllWords(supabaseClient.from("songs").select("*"), "artist", song.artist).limit(30)
+        .then(r => (r.data || []).map(s => ({ ...s, _src: "songs" }))),
+      searchMuseekAPI(song.artist, 1).catch(() => [])
     ]);
-    let similar = [...(mdundo.data || []), ...(mp3.data || [])].filter(s => !isPreviewJunk(s) && uidFor(s) !== uidFor(song));
-    const seenUid = new Set([uidFor(song)]);
-    const seenFuzzy = new Set([fuzzySongKey(song)]);
-    similar = similar.filter(s => {
-      const u = uidFor(s);
-      if (seenUid.has(u)) return false;
-      const f = fuzzySongKey(s);
-      if (seenFuzzy.has(f)) return false;
-      seenUid.add(u);
-      seenFuzzy.add(f);
-      return true;
-    });
+    let similar = [...songsRes, ...apiRows].filter(s => !isPreviewJunk(s) && uidFor(s) !== uidFor(song));
+    const seen = new Set([fuzzySongKey(song)]);
+    similar = similar.filter(s => { const key = fuzzySongKey(s); if (seen.has(key)) return false; seen.add(key); return true; });
     if (similar.length > 0) {
       activeQueue = [song, ...similar.sort(() => Math.random() - 0.5).slice(0, 20)];
       currentIndex = 0;
       updateQueueDrawer();
+      warmPlaybackLookahead();
     }
-  } catch(e) {}
+  } catch (_) {}
 }
 
 // ==================== SLEEP TIMER ====================
@@ -3084,6 +3715,30 @@ function toggleRepeat() {
 }
 
 // ==================== PRELOAD + CROSSFADE ====================
+async function warmPlaybackLookahead() {
+  if (!activeQueue.length || currentIndex < 0) return;
+  const targets = [];
+  for (let offset = 1; offset <= 3; offset++) {
+    const idx = currentIndex + offset;
+    if (idx >= activeQueue.length) break;
+    targets.push(activeQueue[idx]);
+  }
+  for (const song of targets) {
+    const key = uidFor(song);
+    if (!key || playbackLookaheadBusy.has(key) || playbackLookahead.some(x => x.uid === key)) continue;
+    playbackLookaheadBusy.add(key);
+    resolvePlaybackSrc(song).then(src => {
+      if (!src) return;
+      playbackLookahead.push({ uid: key, src });
+      warmStreamHead(src);
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = src;
+      audio.load();
+    }).catch(() => {}).finally(() => playbackLookaheadBusy.delete(key));
+  }
+}
+
 function setupAudioListeners(audio) {
   audio.addEventListener("timeupdate", () => {
     if (audio !== activeAudio) return;
@@ -3105,6 +3760,7 @@ function setupAudioListeners(audio) {
       maybeAutoDownloadCurrentTrack(audio.currentTime);
 
       const remaining = audio.duration - audio.currentTime;
+      if (activeQueue.length) warmPlaybackLookahead();
       if (remaining < 15 && remaining > 0 && !preloadedNext && activeQueue.length) {
         preloadedNext = peekNextTrack();
         if (preloadedNext) {
@@ -3143,9 +3799,10 @@ function setupAudioListeners(audio) {
       }
     }
   });
-  audio.addEventListener("play", () => { if (audio !== activeAudio) return; updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; });
+  audio.addEventListener("play", () => { if (audio !== activeAudio) return; updatePlayingRowStates(); updatePlayPauseIcon(true); document.getElementById("playerPlayingDot").classList.remove("hidden"); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; });
   audio.addEventListener("pause", () => {
     if (audio !== activeAudio) return;
+    updatePlayingRowStates();
     updatePlayPauseIcon(false);
     document.getElementById("playerPlayingDot").classList.add("hidden");
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
@@ -3177,7 +3834,7 @@ function setupAudioListeners(audio) {
   // are exhausted does the track actually get skipped.
   audio.addEventListener("waiting", () => handleBuffering(audio));
   audio.addEventListener("stalled", () => handleBuffering(audio));
-  audio.addEventListener("playing", () => { if (audio === activeAudio) { clearBufferingState(); reconcilePlayPauseIcon(audio); } });
+  audio.addEventListener("playing", () => { if (audio === activeAudio) { clearBufferingState(); reconcilePlayPauseIcon(audio); scheduleYourMixRefreshAfterPlayback(); } });
   audio.addEventListener("canplay", () => { if (audio === activeAudio) clearBufferingState(); });
 
   audio.addEventListener("error", () => {
@@ -3218,6 +3875,14 @@ function clearBufferingState() {
 // consecutive failures does the track actually get skipped. This all
 // happens silently now — no "Reconnecting... (1/3)" status shown.
 function handlePlaybackError(audio) {
+  // A real media error means this source cannot currently be played. Skip it
+  // silently instead of showing a toast or making the listener wait.
+  if (currentTrack) {
+    audioRetryCount = 0;
+    skipBrokenTrack();
+    return;
+  }
+
   if (audioRetryCount < MAX_AUDIO_RETRIES) {
     audioRetryCount++;
     const backoffMs = audioRetryCount * 1500;
@@ -3266,7 +3931,6 @@ function onAutoDownloadToggle() {
 
 function skipBrokenTrack() {
   if (activeQueue.length === 0 || currentIndex < 0) return;
-  showStatus("That track is unavailable, skipping...");
   crossfadeStarted = false;
   preloadedNext = null;
   preloadReady = false;
@@ -3275,6 +3939,7 @@ function skipBrokenTrack() {
   if (currentIndex < activeQueue.length) activeQueue.splice(currentIndex, 1);
   if (activeQueue.length === 0) {
     currentTrack = null;
+    updatePlayingRowStates();
     activeAudio.pause();
     updatePlayPauseIcon(false);
     document.getElementById("playerPlayingDot").classList.add("hidden");
@@ -4111,7 +4776,7 @@ function clearRecentSearches() {
 function doSearch(query) {
   document.getElementById("searchInput").value = query;
   clearTimeout(debounceTimer);
-  runSearch(query, true);
+  submitSearch(query);
 }
 
 function saveRecentSearch(query) {
@@ -4121,23 +4786,178 @@ function saveRecentSearch(query) {
   localStorage.setItem("lumic_searches", JSON.stringify(recentSearches));
 }
 
+let suggestionApiTimer = null;
+let suggestionApiController = null;
+let suggestionSequence = 0;
+const itunesSuggestionCache = new Map();
+const ITUNES_SUGGESTION_TTL = 10 * 60 * 1000;
+
+function getCachedItunesSuggestions(query) {
+  const key = (query || "").trim().toLowerCase();
+  const hit = itunesSuggestionCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.cachedAt > ITUNES_SUGGESTION_TTL) {
+    itunesSuggestionCache.delete(key);
+    return null;
+  }
+  return hit.results || [];
+}
+
+function findWarmSuggestionPrefix(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return [];
+  let best = null;
+  for (const [key, value] of itunesSuggestionCache.entries()) {
+    if (!q.startsWith(key)) continue;
+    if (Date.now() - value.cachedAt > ITUNES_SUGGESTION_TTL) continue;
+    if (!best || key.length > best.key.length) best = { key, results: value.results || [] };
+  }
+  if (!best) return [];
+  const terms = q.split(/\s+/).filter(Boolean);
+  return best.results.filter(r => {
+    const hay = `${r.trackName || ""} ${r.artistName || ""}`.toLowerCase();
+    return terms.every(t => hay.includes(t));
+  });
+}
+
+async function fetchItunesSuggestions(query, signal) {
+  const clean = (query || "").trim();
+  if (!clean) return [];
+  const cached = getCachedItunesSuggestions(clean);
+  if (cached) return cached;
+
+  // iTunes is the ONLY live suggestion source.  Keep this request tiny and
+  // Nigeria-targeted so autocomplete stays useful on a low-bandwidth phone.
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(clean)}&country=NG&media=music&entity=song&attribute=allTrackTerm&limit=12&lang=en_us`;
+  const response = await fetchWithTimeout(url, { signal, headers: { "Accept": "application/json" } }, 5000);
+  if (!response.ok) throw new Error(`iTunes HTTP ${response.status}`);
+  const data = await response.json();
+  const rows = Array.isArray(data?.results) ? data.results : [];
+  itunesSuggestionCache.set(clean.toLowerCase(), { results: rows, cachedAt: Date.now() });
+  return rows;
+}
+
 function debounceSearch() {
-  const q = document.getElementById("searchInput").value.trim();
+  const input = document.getElementById("searchInput");
+  const q = input.value.trim();
   document.getElementById("searchClearBtn").classList.toggle("hidden", !q);
+
   clearTimeout(debounceTimer);
-  if (searchAbortController) { searchAbortController.abort(); searchAbortController = null; }
+  clearTimeout(suggestionApiTimer);
+  if (suggestionApiController) { suggestionApiController.abort(); suggestionApiController = null; }
+  const seq = ++suggestionSequence;
+
   if (!q) { renderRecentSearches(); return; }
-  if (q.length < 2) { document.getElementById("searchResults").innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">Keep typing...</div>`; return; }
-  debounceTimer = setTimeout(() => runSearch(q, false), 140);
+  if (q.length < 1) return;
+
+  // Paint a warm cached prefix immediately, then refresh from iTunes.
+  const warm = getCachedItunesSuggestions(q) || findWarmSuggestionPrefix(q);
+  if (warm.length) paintApiSuggestions(q, warm);
+  else {
+    const container = document.getElementById("searchResults");
+    if (container) container.innerHTML = `<div class="api-suggestion-list"><div class="px-4 py-5 text-xs text-slate-500">Finding matches…</div></div>`;
+  }
+
+  suggestionApiTimer = setTimeout(async () => {
+    const controller = new AbortController();
+    suggestionApiController = controller;
+    try {
+      const rows = await fetchItunesSuggestions(q, controller.signal);
+      if (seq !== suggestionSequence) return;
+      paintApiSuggestions(q, rows);
+    } catch (_) {
+      if (seq !== suggestionSequence || controller.signal.aborted) return;
+      // Keep any warm suggestions already painted; never replace them with
+      // the old “Press Enter” dead-end message.
+      const container = document.getElementById("searchResults");
+      if (container && !container.querySelector(".api-suggestion")) {
+        container.innerHTML = `<div class="api-suggestion-list"><div class="px-4 py-5 text-xs text-slate-500">Type to find songs and artists</div></div>`;
+      }
+    } finally {
+      if (suggestionApiController === controller) suggestionApiController = null;
+    }
+  }, 90);
+}
+
+function paintApiSuggestions(query, rows) {
+  const container = document.getElementById("searchResults");
+  if (!container) return;
+  const q = (query || "").trim().toLowerCase();
+  const seenArtists = new Set();
+  const artists = [];
+  const songs = [];
+
+  for (const row of (rows || [])) {
+    const artist = (row.artistName || row.collectionArtistName || "").trim();
+    const title = (row.trackName || row.collectionName || "").trim();
+    if (!artist && !title) continue;
+    const artistKey = artist.toLowerCase();
+    const hay = `${title} ${artist}`.toLowerCase();
+    if (artist && !seenArtists.has(artistKey) && artistKey.includes(q)) {
+      seenArtists.add(artistKey);
+      artists.push({ ...row, artistName: artist, trackName: title });
+    }
+    if (title && hay.includes(q)) songs.push({ ...row, artistName: artist, trackName: title });
+  }
+
+  const artistRows = artists.slice(0, 3);
+  const songRows = [];
+  const seenSongs = new Set();
+  for (const row of songs) {
+    const key = `${(row.trackName || "").toLowerCase()}::${(row.artistName || "").toLowerCase()}`;
+    if (seenSongs.has(key)) continue;
+    seenSongs.add(key);
+    songRows.push(row);
+    if (songRows.length >= 5) break;
+  }
+
+  if (!artistRows.length && !songRows.length) {
+    container.innerHTML = `<div class="api-suggestion-list"><div class="px-4 py-5 text-xs text-slate-500">Keep typing to find songs and artists</div></div>`;
+    return;
+  }
+
+  const artistHTML = artistRows.map(row => {
+    const art = (row.artworkUrl100 || "").replace(/100x100bb/g, "200x200bb");
+    return `<button type="button" class="api-suggestion" data-suggest-artist="${escapeHtml(row.artistName)}">
+      <img class="api-suggestion-art artist" src="${escapeHtml(art)}" alt="">
+      <span class="api-suggestion-copy"><span class="api-suggestion-title">${escapeHtml(row.artistName)}</span><span class="api-suggestion-sub">Artist</span></span>
+      <span class="api-suggestion-icon"><i class="fa-solid fa-chevron-right"></i></span>
+    </button>`;
+  }).join("");
+
+  const songHTML = songRows.map(row => {
+    const art = (row.artworkUrl100 || "").replace(/100x100bb/g, "200x200bb");
+    return `<button type="button" class="api-suggestion" data-suggest-song="${escapeHtml(row.trackName)}" data-suggest-song-artist="${escapeHtml(row.artistName)}">
+      <img class="api-suggestion-art song" src="${escapeHtml(art)}" alt="">
+      <span class="api-suggestion-copy"><span class="api-suggestion-title">${escapeHtml(row.trackName)}</span><span class="api-suggestion-sub">Song · ${escapeHtml(row.artistName)}</span></span>
+      <span class="api-suggestion-icon"><i class="fa-solid fa-arrow-turn-up -rotate-90"></i></span>
+    </button>`;
+  }).join("");
+
+  container.innerHTML = `<div class="api-suggestion-list">${artistHTML}${songHTML}</div>`;
+  container.querySelectorAll("[data-suggest-artist]").forEach(btn => {
+    btn.onclick = () => openArtistView(btn.getAttribute("data-suggest-artist"));
+  });
+  container.querySelectorAll("[data-suggest-song]").forEach(btn => {
+    btn.onclick = () => submitSearch(`${btn.getAttribute("data-suggest-song")} ${btn.getAttribute("data-suggest-song-artist")}`);
+  });
+}
+
+function submitSearch(queryOverride) {
+  const q = (queryOverride ?? document.getElementById("searchInput").value).trim();
+  if (!q) return;
+  document.getElementById("searchInput").value = q;
+  clearTimeout(debounceTimer);
+  clearTimeout(suggestionApiTimer);
+  if (suggestionApiController) { suggestionApiController.abort(); suggestionApiController = null; }
+  suggestionSequence++;
+  runSearch(q, true);
 }
 
 function onSearchKeydown(e) {
   if (e.key !== "Enter") return;
   e.preventDefault();
-  clearTimeout(debounceTimer);
-  const q = document.getElementById("searchInput").value.trim();
-  if (!q) return;
-  runSearch(q, true);
+  submitSearch();
 }
 
 function normalizeWords(q) { return q.trim().toLowerCase().split(/\s+/).filter(Boolean); }
@@ -4200,76 +5020,84 @@ function logFailedSearch(query) {
   supabaseClient.from("failed_searches").insert({ query: q }).then(() => {}).catch(() => {});
 }
 
-async function runSearch(query, isFullSearch) {
+async function runSearch(query, isFullSearch = true) {
   const container = document.getElementById("searchResults");
-  container.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
-
-  if (isFullSearch) saveRecentSearch(query);
+  const q = (query || "").trim();
+  if (!q) return;
 
   if (searchAbortController) searchAbortController.abort();
   const controller = new AbortController();
   searchAbortController = controller;
+  saveRecentSearch(q);
 
-  const limit = isFullSearch ? 50 : 12;
-  const seen = new Set();
-  let latestSongs = [];
-  let latestAlbums = [];
-  let songsDone = false;
-  let albumsDone = false;
+  container.innerHTML = `<div class="space-y-2">${Array(4).fill('<div class="skeleton h-14 rounded-xl"></div>').join("")}</div>`;
 
-  function paint() {
+  // One external search source: Museek API. Vistanaij remains an independent
+  // Supabase catalogue and is fetched in parallel, then merged progressively.
+  const apiPromise = searchMuseekAPI(q, 1).then(rows => ({ ok: true, rows })).catch(() => ({ ok: false, rows: [] }));
+  const vistPromise = ilikeAllWords(
+    supabaseClient.from("museek_tracks").select("*"),
+    "title", q
+  ).limit(50).then(r => ({
+    ok: !r.error,
+    rows: (r.data || []).map(s => ({ ...s, _src: "vistanaij", image: s.cover_url }))
+  })).catch(() => ({ ok: false, rows: [] }));
+
+  const first = await Promise.race([
+    apiPromise.then(r => ({ source: "api", ...r })),
+    vistPromise.then(r => ({ source: "vistanaij", ...r }))
+  ]);
+
+  if (searchAbortController !== controller) return;
+
+  let songs = first.rows || [];
+  let apiFailed = first.source === "api" && !first.ok;
+
+  const renderMerged = async (extraRows = []) => {
     if (searchAbortController !== controller) return;
-    // Don't blank the skeleton to "no results" until BOTH queries have
-    // actually finished — otherwise the faster-but-empty one flashes a
-    // premature "no results" while the other is still loading.
-    if (latestSongs.length === 0 && latestAlbums.length === 0) {
-      if (songsDone && albumsDone) checkNoResults();
-      return;
-    }
-    if (isFullSearch) renderSearchResults(latestSongs, query, container, isFullSearch, latestAlbums);
-    else renderLiveSearchResults(latestSongs, query, container, latestAlbums);
-  }
-
-  async function checkNoResults() {
-    if (searchAbortController !== controller) return;
-    if (isFullSearch) logFailedSearch(query);
-    const suggestions = await fetchSimilarArtistSuggestions(query);
-    if (searchAbortController !== controller) return;
-    renderNoResultsWithSuggestions(query, container, suggestions);
-  }
-
-  supabaseClient.rpc("search_songs", { search_query: query, max_results: limit })
-    .then(({ data, error }) => {
-      if (searchAbortController !== controller) return;
-      if (error) throw error;
-      latestSongs = (data || [])
-        .map(s => ({ ...s, _src: s.source }))
-        .filter(s => {
-          const uid = uidFor(s);
-          if (isPreviewJunk(s)) return false;
-          if (seen.has(uid)) return false;
-          seen.add(uid);
-          return true;
-        });
-      songsDone = true;
-      paint();
-    })
-    .catch(e => {
-      songsDone = true;
-      if (e.name === "AbortError") return;
-      if (searchAbortController === controller && latestAlbums.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Couldn't load results. Try again in a moment.</div>`;
-      }
+    const pool = [...songs, ...extraRows].filter(s => !isPreviewJunk(s));
+    const seen = new Set();
+    const merged = pool.filter(s => {
+      const key = fuzzySongKey(s);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
-  fetchAlbumMatches(query)
-    .then(albums => {
+    if (!merged.length) {
+      logFailedSearch(q);
+      renderNoResultsWithSuggestions(q, container, []);
+      return;
+    }
+
+    // Popular tracks are always pinned first. Everything unplayed is shuffled
+    // before it is painted, so the user never sees the API/database order.
+    sortByPopularity(merged).then(sorted => {
       if (searchAbortController !== controller) return;
-      latestAlbums = albums || [];
-      albumsDone = true;
-      paint();
-    })
-    .catch(() => { albumsDone = true; paint(); });
+      renderSearchResults(sorted.slice(0, 50), q, container, true, []);
+    }).catch(() => {
+      if (searchAbortController !== controller) return;
+      renderSearchResults(shuffleAndTrim(merged, Math.min(50, merged.length)), q, container, true, []);
+    });
+  };
+
+  if (apiFailed) {
+    showStatus("Limited results — some sources are unavailable.", 3200, "info");
+  }
+  await renderMerged([]);
+
+  // Merge the slower source without forcing the user to wait for it.
+  const second = first.source === "api" ? await vistPromise : await apiPromise;
+  if (searchAbortController !== controller) return;
+  if (second.ok && second.rows?.length) {
+    songs = [...songs, ...second.rows];
+    await renderMerged([]);
+  }
+
+  if (!songs.length) {
+    logFailedSearch(q);
+    renderNoResultsWithSuggestions(q, container, []);
+  }
 }
 
 // Fallback for zero matches — broadens the artist match (drops the last
@@ -4280,18 +5108,19 @@ async function fetchSimilarArtistSuggestions(query) {
   if (q.length < 2) return [];
   try {
     const firstWord = q.split(/\s+/)[0];
-    const broadened = firstWord.length > 3 ? firstWord.slice(0, firstWord.length - 1) : firstWord;
-    const [songsRes, mp3Res] = await Promise.all([
+    const broadened = firstWord.length > 3 ? firstWord.slice(0, -1) : firstWord;
+    const [songsRes, knownRes, apiRows] = await Promise.all([
       supabaseClient.from("songs").select("artist").ilike("artist", `%${broadened}%`).limit(30),
-      supabaseClient.from("mp3pm_songs").select("artist").ilike("artist", `%${broadened}%`).limit(30)
+      supabaseClient.from("known_artists").select("name").ilike("name", `%${broadened}%`).limit(30),
+      searchMuseekAPI(broadened, 1).catch(() => [])
     ]);
     const names = new Set();
-    [...(songsRes.data || []), ...(mp3Res.data || [])].forEach(r => {
-      const primary = splitFeaturedArtists(r.artist || "").primary;
+    [...(songsRes.data || []).map(r => r.artist), ...(knownRes.data || []).map(r => r.name), ...(apiRows || []).map(r => r.artist)].forEach(name => {
+      const primary = splitFeaturedArtists(name || "").primary;
       if (primary) names.add(primary);
     });
     return [...names].slice(0, 6);
-  } catch (e) { return []; }
+  } catch (_) { return []; }
 }
 
 function renderNoResultsWithSuggestions(query, container, suggestions) {
@@ -4314,21 +5143,16 @@ function renderNoResultsWithSuggestions(query, container, suggestions) {
 // Cached per-artist total song counts (across songs/mp3pm_songs/museek_tracks)
 // so the "verified" badge (50+ songs in catalog) doesn't re-query on every
 // keystroke — only once per artist name for the life of the page.
-const artistSongCountCache = {};
+const artistVerifiedCache = {};
 async function getArtistSongCount(artistName) {
+  // Backward-compatible function name for existing callers; returns only a
+  // boolean threshold result, never an exact count.
   const key = (artistName || "").trim().toLowerCase();
   if (!key) return 0;
-  if (artistSongCountCache[key] !== undefined) return artistSongCountCache[key];
-  try {
-    const [a, b, c] = await Promise.all([
-      supabaseClient.from("songs").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`),
-      supabaseClient.from("mp3pm_songs").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`),
-      supabaseClient.from("museek_tracks").select("id", { count: "exact", head: true }).ilike("artist", `%${artistName}%`)
-    ]);
-    const total = (a.count || 0) + (b.count || 0) + (c.count || 0);
-    artistSongCountCache[key] = total;
-    return total;
-  } catch (e) { return 0; }
+  if (artistVerifiedCache[key] !== undefined) return artistVerifiedCache[key] ? 50 : 0;
+  const verified = await isArtistVerified(artistName);
+  artistVerifiedCache[key] = verified;
+  return verified ? 50 : 0;
 }
 
 // Resolves an artist photo by reusing resolveImage()'s artist-image cache
@@ -4486,10 +5310,20 @@ function renderAlbumSearchRow(album) {
 // Renders a row for a song. When opts.removable is true (used inside a
 // playlist view), a remove button is shown that strips the song from that
 // specific playlist via removeSongFromPlaylist().
+function updatePlayingRowStates() {
+  const activeUid = currentTrack ? uidFor(currentTrack) : "";
+  document.querySelectorAll("[data-song-uid]").forEach(el => {
+    const isCurrent = !!activeUid && el.getAttribute("data-song-uid") === activeUid;
+    el.classList.toggle("song-row-now-playing", isCurrent);
+    el.setAttribute("aria-current", isCurrent ? "true" : "false");
+  });
+}
+
 function renderSearchRow(song, queueContext, opts = {}) {
   const card = document.createElement("div");
   card.className = "glass-card p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer hover:bg-white/10 transition group";
   card.setAttribute("data-song-uid", uidFor(song));
+  if (currentTrack && uidFor(currentTrack) === uidFor(song)) card.classList.add("song-row-now-playing");
   const downloaded = isSongDownloaded(song);
   card.innerHTML = `
     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -5327,6 +6161,7 @@ function setCurrentPlaylistSongs(songs, opts) {
   currentPlaylistSongsRaw = songs || [];
   currentPlaylistRenderOpts = opts || {};
   currentSortMode = "default";
+  if (songs && songs.length) cacheSessionPlaylist(currentPlaylistCtx || "playlist", songs);
 }
 
 function openSortMenu() {
@@ -6310,6 +7145,11 @@ function copyUid() {
 }
 
 async function logout(silent) {
+  try {
+    const db = await openSessionPlaylistDb();
+    const tx = db.transaction(SESSION_PLAYLIST_STORE, "readwrite");
+    tx.objectStore(SESSION_PLAYLIST_STORE).clear();
+  } catch (_) {}
   await supabaseClient.auth.signOut();
   sessionPollTimer && clearInterval(sessionPollTimer);
   premiumCheckTimer && clearInterval(premiumCheckTimer);
@@ -6486,4 +7326,3 @@ async function respondToShare(req, status) {
 </script>
 </body>
 </html>
-
