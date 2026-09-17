@@ -1,65 +1,105 @@
+// ============================================================================
+// Lumic service worker
+// ============================================================================
+// Why this file exists: index.html has always called
+// navigator.serviceWorker.register('sw.js'), but no sw.js was ever actually
+// provided — so that call silently failed, and NONE of the app's CDN
+// dependencies (Tailwind, the Supabase SDK, Font Awesome, Google Fonts) were
+// ever cached for offline use. Opening the app with no network meant those
+// CDN scripts/styles simply never loaded: Tailwind not loading doesn't mean
+// "no styling", it means every .text-white / .flex / .rounded-3xl / .p-4
+// class in the whole app silently does nothing, which is exactly the
+// collapsed, unreadable black-on-black layout you saw.
+//
+// This service worker caches the app shell up front, then opportunistically
+// caches every other GET request (including the CDN scripts/fonts) the first
+// time it succeeds — so after one normal online visit, reopening fully
+// offline serves everything from cache instead of failing silently.
+//
+// Bump CACHE_VERSION any time index.html changes and you need every open
+// tab/device to pick up the new file instead of an old cached copy.
+// ============================================================================
 
-// Bump this on every deploy so old caches get cleared out.
-const CACHE = "lumic-shell-v1";
+const CACHE_VERSION = "lumic-shell-v1";
 
-// App shell: the files that must be available with zero network so a
-// returning user can open the app offline. Add any other local static
-// assets (icons, self-hosted fonts, etc.) here — do NOT add CDN URLs here;
-// those are cached opportunistically by the fetch handler below instead.
-const SHELL = [
+// Same-origin files only here — cross-origin CDN files get cached lazily by
+// the fetch handler below the first time they're actually requested, since
+// their exact URLs (especially Google Fonts' hashed font file URLs) aren't
+// something this file can safely hardcode in advance.
+const PRECACHE_URLS = [
   "./",
-  "index.html",
-  "lumic.html",
-  "manifest.json",
-  "logo.png",
-  "home.jpg"
+  "./index.html",
+  "./manifest.json"
 ];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((cache) =>
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_VERSION).then((cache) =>
       Promise.all(
-        SHELL.map((url) =>
-          cache.add(url).catch((err) => console.warn("[sw] failed to precache", url, err))
+        PRECACHE_URLS.map((url) =>
+          cache.add(url).catch((err) => {
+            // A missing/failed individual URL (e.g. no manifest.json on this
+            // deployment) should never block the rest of the shell from
+            // caching successfully.
+            console.warn("[sw] precache skipped:", url, err && err.message);
+          })
         )
       )
     )
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
 
-  // Never intercept Supabase API/auth calls — those must hit the network
-  // (or fail fast) so the app's own offline-handling logic can react,
-  // rather than serving a stale cached API response.
-  if (e.request.url.includes("supabase.co")) return;
+  // Live Supabase calls (auth, database, storage, realtime) must be allowed
+  // to genuinely fail when offline rather than silently serving stale data —
+  // the app's own code already handles those failures gracefully.
+  if (req.url.includes(".supabase.co")) return;
 
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const networkFetch = fetch(e.request)
+  event.respondWith(
+    caches.open(CACHE_VERSION).then(async (cache) => {
+      const cached = await cache.match(req);
+
+      const networkFetch = fetch(req)
         .then((res) => {
-          if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-          }
+          if (res && res.ok) cache.put(req, res.clone());
           return res;
         })
-        .catch(() => cached);
+        .catch(() => null);
 
-      // Cache-first for the app shell (instant load, updates in background).
-      // Network-first-fallback-to-cache for everything else.
-      return cached || networkFetch;
+      if (cached) {
+        // Stale-while-revalidate: serve what's cached immediately (this is
+        // what makes offline instant instead of hanging on a dead network
+        // request), and quietly refresh the cache in the background for
+        // next time in case the file has since changed.
+        event.waitUntil(networkFetch);
+        return cached;
+      }
+
+      const fresh = await networkFetch;
+      if (fresh) return fresh;
+
+      // Nothing cached and no network. For a full page navigation, fall
+      // back to the cached app shell so the UI still loads instead of the
+      // browser's own "no internet" error page.
+      if (req.mode === "navigate") {
+        const shell = await cache.match("./index.html");
+        if (shell) return shell;
+      }
+      return new Response("Offline and not yet cached.", { status: 503, statusText: "Offline" });
     })
   );
 });
+
