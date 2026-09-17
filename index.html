@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html class="h-full bg-slate-950" lang="en">
@@ -56,7 +55,16 @@
         linear-gradient(180deg, #0a0a10, #060608 60%, #050506);
       background-attachment:fixed;
       font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; letter-spacing:-0.01em; -webkit-tap-highlight-color:transparent;
+      color:#e2e8f0;
     }
+    /* Plain, Tailwind-independent safety net. If the Tailwind CDN script
+       ever fails to load (e.g. the very first offline open, before the
+       service worker has anything cached yet), .hidden — which the entire
+       app uses to switch between Home/Search/Library/Profile/every modal —
+       would otherwise not exist as a rule at all, and every view would
+       render stacked on top of every other one at once. This one rule is
+       the difference between "unstyled but usable" and "completely broken". */
+    .hidden { display:none !important; }
     * { box-sizing: border-box; }
     .app-content-wrap { overflow-x: hidden; max-width: 100vw; }
     /* ===== Aurora corner-radius scale — a single global bump that softens
@@ -242,7 +250,7 @@
 
 /* ===== Hero slider (Home) ===== */
 .hero-slide-wrap { position:relative; }
-.hero-slide { flex:0 0 100%; width:100%; scroll-snap-align:start; border-radius:26px; min-height:200px; padding:22px 20px; display:flex; flex-direction:column; justify-content:flex-end; gap:4px; background-size:cover; background-position:center; border:1px solid rgba(255,255,255,0.08); box-shadow:0 14px 34px rgba(0,0,0,0.35); }
+.hero-slide { flex:0 0 100%; width:100%; scroll-snap-align:start; border-radius:26px; min-height:200px; padding:22px 20px; display:flex; flex-direction:column; justify-content:flex-end; gap:4px; background-size:cover; background-position:center; border:1px solid rgba(255,255,255,0.08); box-shadow:0 14px 34px rgba(0,0,0,0.35); cursor:pointer; }
 .hero-slide-eyebrow { font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#6ee7b7; }
 .hero-slide h3 { font-size:26px; font-weight:900; color:#fff; letter-spacing:-0.02em; line-height:1.1; }
 .hero-slide p { font-size:12.5px; color:rgba(255,255,255,0.75); max-width:85%; margin-bottom:8px; }
@@ -251,6 +259,34 @@
 .hero-slide-play i { font-size:10px; }
 #heroSliderDots span { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.25); transition:all .2s; }
 #heroSliderDots span.active { width:18px; border-radius:4px; background:linear-gradient(90deg,#10b981,#7c3aed); }
+
+/* ===== Trending Songs: paginated 5-at-a-time columns ===== */
+.top100-page { flex:0 0 100%; width:100%; scroll-snap-align:start; display:flex; flex-direction:column; gap:6px; }
+.top100-row { display:flex; align-items:center; gap:12px; padding:8px; border-radius:14px; cursor:pointer; transition:background .15s; }
+.top100-row:active { background:rgba(255,255,255,0.06); }
+.top100-row .rank { width:22px; text-align:center; font-weight:900; font-size:15px; color:#6ee7b7; flex-shrink:0; }
+.top100-row img { width:44px; height:44px; border-radius:10px; object-fit:cover; flex-shrink:0; background:#1e293b; }
+#top100Dots span { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.25); transition:all .2s; }
+#top100Dots span.active { width:18px; border-radius:4px; background:linear-gradient(90deg,#10b981,#7c3aed); }
+
+/* ===== Profile — redesigned identity hero + grouped settings list ===== */
+.uid-mono { font-family:ui-monospace,Menlo,monospace; letter-spacing:.1em; }
+.profile-hero { position:relative; text-align:center; padding:28px 20px 20px; border-radius:26px; border:1px solid rgba(255,255,255,0.08); background:radial-gradient(120% 140% at 50% 0%, rgba(16,185,129,0.16), rgba(124,58,237,0.06) 55%, transparent 80%); }
+.profile-hero-logout-icon { position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,0.06); color:#94a3b8; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; }
+.profile-hero-logout-icon:hover { background:rgba(239,68,68,0.14); color:#f87171; }
+.settings-row { display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.settings-row-icon { width:38px; height:38px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; }
+html[data-theme="light"] .settings-row { border-bottom-color:rgba(15,23,42,0.06); }
+html[data-theme="light"] .profile-hero { background:radial-gradient(120% 140% at 50% 0%, rgba(16,185,129,0.10), rgba(124,58,237,0.05) 55%, transparent 80%); }
+
+/* ===== Library — square quick-access tiles + restyled import zone ===== */
+.library-tile { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.08); border-radius:22px; padding:16px; transition:transform .15s, background .15s; }
+.library-tile:active { transform:scale(0.97); }
+.library-tile-icon { width:42px; height:42px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; box-shadow:0 6px 16px rgba(0,0,0,0.3); }
+html[data-theme="light"] .library-tile { background:linear-gradient(160deg, rgba(255,255,255,0.8), rgba(255,255,255,0.5)); border-color:var(--border-soft); }
+.import-zone-v2 { border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); border-radius:18px; padding:14px 16px; cursor:pointer; transition:background .15s, border-color .15s; }
+.import-zone-v2:hover { background:rgba(16,185,129,0.06); border-color:rgba(16,185,129,0.25); }
+html[data-theme="light"] .import-zone-v2 { background:rgba(15,23,42,0.03); border-color:var(--border-soft); }
 
 /* ===== Recommended: a deliberately different, lighter type voice from the
    rest of Home's bold section headers ===== */
@@ -529,9 +565,9 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 </div>
 </div>
 <!-- MAIN WRAPPER -->
-<div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-32 flex-1 flex flex-col app-content-wrap">
+<div class="max-w-2xl mx-auto w-full px-4 pt-4 pb-56 flex-1 flex flex-col app-content-wrap">
 <!-- Filter Chips Header -->
-<header class="sticky top-0 z-30 pt-2 pb-5 bg-[#09090b]/90 backdrop-blur-md" id="mainHeader" style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<header class="sticky top-0 z-30 pt-2 pb-5" id="mainHeader">
 <div class="flex items-center gap-2 mb-4">
 <div class="gem-badge" id="gemBadge" onclick="switchView('profile')">?</div>
 <div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
@@ -562,29 +598,29 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
      from actually playing (not just a static banner). -->
 <div class="hero-slider-wrap -mx-4 px-4">
 <div class="flex gap-3 overflow-x-auto no-scrollbar scroll-snap-x" id="heroSlider">
-<div class="hero-slide scroll-snap-item" style="background-image:linear-gradient(180deg, rgba(5,8,7,0.15), rgba(5,8,7,0.92)), url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=900')">
+<div class="hero-slide scroll-snap-item" onclick="openHeroSlidePlaylist('late_night_drive','Evening Vibes')" style="background-image:linear-gradient(180deg, rgba(5,8,7,0.15), rgba(5,8,7,0.92)), url('https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=900')">
 <span class="hero-slide-eyebrow">Evening mood</span>
 <h3>Evening Vibes</h3>
 <p>Smooth sounds for the hours that hit different.</p>
-<button class="hero-slide-play" onclick="playHeroSlide('late_night_drive','Evening Vibes')"><i class="fa-solid fa-play"></i> Play</button>
+<button class="hero-slide-play" onclick="event.stopPropagation();playHeroSlide('late_night_drive','Evening Vibes')"><i class="fa-solid fa-play"></i> Play</button>
 </div>
-<div class="hero-slide scroll-snap-item" style="background-image:linear-gradient(180deg, rgba(8,5,10,0.15), rgba(8,5,10,0.92)), url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=900')">
+<div class="hero-slide scroll-snap-item" onclick="openHeroSlidePlaylist('hiphop_for_you','Top Hip Hop')" style="background-image:linear-gradient(180deg, rgba(8,5,10,0.15), rgba(8,5,10,0.92)), url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=900')">
 <span class="hero-slide-eyebrow">Just for you</span>
 <h3>Top Hip Hop</h3>
 <p>The tracks going hardest right now, picked for you.</p>
-<button class="hero-slide-play" onclick="playHeroSlide('hiphop_for_you','Top Hip Hop')"><i class="fa-solid fa-play"></i> Play</button>
+<button class="hero-slide-play" onclick="event.stopPropagation();playHeroSlide('hiphop_for_you','Top Hip Hop')"><i class="fa-solid fa-play"></i> Play</button>
 </div>
-<div class="hero-slide scroll-snap-item" style="background-image:linear-gradient(180deg, rgba(6,9,7,0.15), rgba(6,9,7,0.92)), url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=900')">
+<div class="hero-slide scroll-snap-item" onclick="openHeroSlidePlaylist('your_mix_live','Your Mix')" style="background-image:linear-gradient(180deg, rgba(6,9,7,0.15), rgba(6,9,7,0.92)), url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=900')">
 <span class="hero-slide-eyebrow">Your algorithm</span>
 <h3>Your Mix</h3>
 <p>Built from artists close to what you've actually been playing.</p>
-<button class="hero-slide-play" onclick="playHeroSlide('your_mix_live','Your Mix')"><i class="fa-solid fa-play"></i> Play</button>
+<button class="hero-slide-play" onclick="event.stopPropagation();playHeroSlide('your_mix_live','Your Mix')"><i class="fa-solid fa-play"></i> Play</button>
 </div>
-<div class="hero-slide scroll-snap-item" style="background-image:linear-gradient(180deg, rgba(6,8,12,0.15), rgba(6,8,12,0.92)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900')">
+<div class="hero-slide scroll-snap-item" onclick="openHeroSlidePlaylist('sleep_sounds','Relaxing Sleep Sounds')" style="background-image:linear-gradient(180deg, rgba(6,8,12,0.15), rgba(6,8,12,0.92)), url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900')">
 <span class="hero-slide-eyebrow">Wind down</span>
 <h3>Relaxing Sleep Sounds</h3>
 <p>Shuffled, ambient, and gentle enough to fall asleep to.</p>
-<button class="hero-slide-play" onclick="playHeroSlide('sleep_sounds','Relaxing Sleep Sounds')"><i class="fa-solid fa-play"></i> Play</button>
+<button class="hero-slide-play" onclick="event.stopPropagation();playHeroSlide('sleep_sounds','Relaxing Sleep Sounds')"><i class="fa-solid fa-play"></i> Play</button>
 </div>
 </div>
 <div class="flex items-center justify-center gap-1.5 mt-3" id="heroSliderDots"></div>
@@ -606,7 +642,7 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <!-- Recommended for You: horizontal cards, based on recently played artists -->
 <div class="hidden" id="recommendedSection">
 <span class="recommended-eyebrow">Handpicked</span>
-<h2 class="recommended-heading"><i class="fa-regular fa-compass"></i> Recommended for you</h2>
+<h2 class="recommended-heading"><i class="fa-regular fa-compass"></i> <span id="recommendedHeadingText">Recommended for you</span></h2>
 <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x pb-2" id="recommendedRow"></div>
 </div>
 <div>
@@ -650,6 +686,13 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <div>
 <h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Artist spotlight</h2>
 <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2 scroll-snap-x" id="artistSpotlightRow"></div>
+</div>
+<!-- Trending Songs: Nigeria's real chart (Last.fm, matched against our DB),
+     shown 5-at-a-time in swipeable columns instead of one long list. -->
+<div class="hidden" id="top100Section">
+<h2 class="text-xl font-extrabold text-white mb-3 tracking-tight">Trending Songs</h2>
+<div class="flex gap-4 overflow-x-auto no-scrollbar scroll-snap-x" id="top100PagedRow"></div>
+<div class="flex items-center justify-center gap-1.5 mt-3" id="top100Dots"></div>
 </div>
 </div>
 </section>
@@ -705,9 +748,9 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <!-- VIEW: LIBRARY -->
 <section class="hidden space-y-6" id="view-library">
 <div class="flex items-center justify-between">
-<h3 class="font-bold text-lg text-slate-200">Your Library</h3>
-<button class="w-8 h-8 rounded-full bg-emerald-500 text-black flex items-center justify-center active:scale-90 transition" onclick="openCreatePlaylistModal()">
-<i class="fa-solid fa-plus text-sm"></i>
+<h3 class="font-black text-2xl text-white tracking-tight">Your Library</h3>
+<button class="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition" onclick="openCreatePlaylistModal()" style="background:linear-gradient(135deg,#10b981,#7c3aed);">
+<i class="fa-solid fa-plus text-sm text-black"></i>
 </button>
 </div>
 <div class="hidden" id="requestsSection">
@@ -717,15 +760,18 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 </div>
 <div class="space-y-3" id="requestsList"></div>
 </div>
-<div class="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition" onclick="openPlaylistView('__favorites')">
-<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-600 to-rose-800 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-heart text-white"></i></div>
-<div class="min-w-0 flex-1"><h4 class="font-bold text-sm text-white">Favourites</h4><p class="text-[11px] text-slate-400" id="favCount">0 songs</p></div>
-<i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+<!-- Quick access: square tiles instead of two full-width stacked rows -->
+<div class="grid grid-cols-2 gap-3">
+<div class="library-tile cursor-pointer" onclick="openPlaylistView('__favorites')">
+<div class="library-tile-icon" style="background:linear-gradient(135deg,#ec4899,#9d174d);"><i class="fa-solid fa-heart"></i></div>
+<h4 class="font-bold text-sm text-white mt-3">Favourites</h4>
+<p class="text-[11px] text-slate-400" id="favCount">0 songs</p>
 </div>
-<div class="glass-card p-3 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-white/10 transition" onclick="openPlaylistView('__offline')">
-<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-600 to-blue-900 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-download text-white"></i></div>
-<div class="min-w-0 flex-1"><div class="flex items-center gap-2"><h4 class="font-bold text-sm text-white">Downloaded</h4><span class="offline-pill"><i class="fa-solid fa-shield-halved"></i>On device</span></div><p class="text-[11px] text-slate-400" id="offlineCount">0 songs saved</p></div>
-<i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+<div class="library-tile cursor-pointer" onclick="openPlaylistView('__offline')">
+<div class="library-tile-icon" style="background:linear-gradient(135deg,#0ea5e9,#1e3a8a);"><i class="fa-solid fa-download"></i></div>
+<div class="flex items-center gap-2 mt-3"><h4 class="font-bold text-sm text-white">Downloaded</h4><span class="offline-pill"><i class="fa-solid fa-shield-halved"></i>On device</span></div>
+<p class="text-[11px] text-slate-400" id="offlineCount">0 songs saved</p>
+</div>
 </div>
 <!-- Local files import -->
 <div>
@@ -734,11 +780,13 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <label class="w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 cursor-pointer flex items-center justify-center transition" for="localFileInput"><i class="fa-solid fa-plus text-[10px]"></i></label>
 <input accept="audio/*" class="hidden" id="localFileInput" multiple="" onchange="importLocalFiles(event)" type="file"/>
 </div>
-<label class="import-zone block" for="localFileInput">
-<div class="pointer-events-none">
-<i class="fa-solid fa-music text-emerald-400 text-2xl mb-2 block"></i>
-<p class="text-sm text-slate-300 font-semibold">Import local songs</p>
-<p class="text-[11px] text-slate-500 mt-1">MP3, AAC, FLAC, WAV supported</p>
+<label class="import-zone-v2 block" for="localFileInput">
+<div class="pointer-events-none flex items-center gap-3.5">
+<div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(16,185,129,0.14);"><i class="fa-solid fa-music text-emerald-400"></i></div>
+<div class="text-left min-w-0">
+<p class="text-sm text-white font-semibold">Import local songs</p>
+<p class="text-[11px] text-slate-500 mt-0.5">MP3, AAC, FLAC, WAV — stays on this device</p>
+</div>
 </div>
 </label>
 <div class="mt-3 space-y-2" id="localFilesList"></div>
@@ -782,21 +830,20 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <!-- VIEW: PROFILE -->
 <section class="hidden" id="view-profile">
 <button class="text-slate-400 hover:text-white mb-4 text-sm flex items-center gap-2" onclick="switchView(prevView || 'home')"><i class="fa-solid fa-arrow-left"></i> Back</button>
-<!-- Identity -->
-<div class="relative rounded-3xl overflow-hidden mb-5 border border-white/10 p-6" style="background:radial-gradient(120% 140% at 0% 0%, rgba(16,185,129,0.18), rgba(9,9,11,0.2) 60%);">
-<div class="flex items-center gap-4">
-<div class="gem-badge" id="profileGem" style="width:64px;height:64px;font-size:26px;">?</div>
-<div class="min-w-0 flex-1">
-<p class="font-black text-lg text-white truncate" id="profileDisplayName">—</p>
-<p class="text-xs text-slate-400 truncate mt-0.5" id="profileEmail">—</p>
+
+<!-- Identity — centered, editorial hero instead of a left-aligned info row -->
+<div class="profile-hero mb-6">
+<button class="profile-hero-logout-icon" onclick="logout()" title="Log out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+<div class="gem-badge mx-auto" id="profileGem" style="width:76px;height:76px;font-size:30px;">?</div>
+<p class="font-black text-xl text-white mt-3.5" id="profileDisplayName">—</p>
+<p class="text-xs text-slate-400 mt-0.5" id="profileEmail">—</p>
+<div class="flex items-center justify-center gap-2 mt-4">
+<span class="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-full uid-mono" id="profileUidBadge">—</span>
+<button class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0" onclick="copyUid()"><i class="fa-regular fa-copy"></i></button>
 </div>
+<p class="text-[11px] text-slate-500 mt-3">Member since <span id="profileMemberSince" class="text-slate-400 font-semibold">—</span></p>
 </div>
-<div class="flex items-center gap-2 mt-4">
-<span class="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full" id="profileUidBadge" style="font-family:ui-monospace,Menlo,monospace;letter-spacing:.1em;">—</span>
-<button class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-white/5 flex items-center justify-center" onclick="copyUid()"><i class="fa-regular fa-copy"></i></button>
-<button class="ml-auto text-xs font-semibold text-slate-400 hover:text-rose-400 flex items-center gap-1.5" onclick="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</button>
-</div>
-</div>
+
 <!-- Premium status -->
 <div class="rounded-3xl p-5 mb-5 border" id="profilePremiumCard" style="background:linear-gradient(135deg,rgba(16,185,129,0.14),rgba(5,150,105,0.04));border-color:rgba(16,185,129,0.22);">
 <div class="flex items-start justify-between mb-1">
@@ -804,54 +851,62 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400" id="profilePremiumBadgeLabel">Free trial</span>
 <h2 class="text-lg font-black text-white mt-1" id="profilePremiumTitle">Unlock Lumic Premium</h2>
 </div>
-<i class="fa-solid fa-gem text-2xl text-amber-400"></i>
+<div class="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.14);"><i class="fa-solid fa-gem text-xl text-amber-400"></i></div>
 </div>
 <p class="text-xs text-slate-300 leading-relaxed mb-4" id="profilePremiumSub">Offline downloads, unlimited skips and zero interruptions — ₦300/month.</p>
 <button class="w-full text-black font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition" id="profilePayBtn" onclick="startPayment()" style="background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 20px rgba(16,185,129,0.35);">
           Pay ₦300 with Paystack
         </button>
 </div>
-<!-- Playback & storage settings -->
-<div class="glass-card rounded-3xl p-5 mb-5 space-y-4">
-<h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-sliders text-emerald-400 mr-2"></i>Playback &amp; storage</h3>
-<div class="flex items-center justify-between gap-3">
-<div class="min-w-0">
+
+<!-- Preferences — one grouped settings list instead of several stacked
+     boxy cards; icon-led rows, matching the pattern of a native settings
+     screen rather than a pile of separate panels. -->
+<div class="glass-card rounded-3xl mb-5 overflow-hidden">
+<h3 class="text-[11px] font-black uppercase tracking-widest text-slate-500 px-5 pt-5 pb-1">Preferences</h3>
+<div class="settings-row">
+<div class="settings-row-icon" style="background:rgba(16,185,129,0.12);color:#34d399;"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+<div class="min-w-0 flex-1">
 <p class="text-sm font-semibold text-white">Auto-save songs I finish</p>
-<p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Downloads a song for offline playback once you've listened past 30 seconds.</p>
+<p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Saved offline once you've listened past 30 seconds.</p>
 </div>
-<label class="toggle-switch">
+<label class="toggle-switch flex-shrink-0">
 <input id="autoDownloadToggle" onchange="onAutoDownloadToggle()" type="checkbox"/>
 <span class="toggle-slider"></span>
 </label>
 </div>
-<div class="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
-<div class="min-w-0">
+<div class="settings-row">
+<div class="settings-row-icon" style="background:rgba(124,58,237,0.12);color:#a78bfa;"><i class="fa-solid fa-shuffle"></i></div>
+<div class="min-w-0 flex-1">
 <p class="text-sm font-semibold text-white">Crossfade</p>
-<p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Smoothly blend into the next track instead of a hard cut.</p>
+<p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Blend smoothly into the next track.</p>
 </div>
-<label class="toggle-switch">
+<label class="toggle-switch flex-shrink-0">
 <input id="crossfadeToggle" onchange="setCrossfadeEnabled(this.checked)" type="checkbox"/>
 <span class="toggle-slider"></span>
 </label>
 </div>
-<div class="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
-<div class="min-w-0">
+<div class="settings-row">
+<div class="settings-row-icon" style="background:rgba(59,130,246,0.12);color:#60a5fa;"><i class="fa-solid fa-hard-drive"></i></div>
+<div class="min-w-0 flex-1">
 <p class="text-sm font-semibold text-white">Downloads on this device</p>
 <p class="text-[11px] text-slate-400 mt-0.5" id="profileDownloadsSizeLabel">—</p>
 </div>
-<button class="text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 px-3 py-2 rounded-full transition flex-shrink-0" onclick="clearAllDownloads()">Clear downloads</button>
+<button class="text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15 px-3 py-2 rounded-full transition flex-shrink-0" onclick="clearAllDownloads()">Clear</button>
 </div>
-</div>
-<!-- Appearance -->
-<div class="glass-card rounded-3xl p-5 mb-5">
-<h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-circle-half-stroke text-emerald-400 mr-2"></i>Appearance</h3>
-<p class="text-[11px] text-slate-400 mb-3.5 leading-relaxed">Choose how Lumic looks on this device.</p>
+<div class="settings-row border-b-0">
+<div class="settings-row-icon" style="background:rgba(245,158,11,0.12);color:#fbbf24;"><i class="fa-solid fa-circle-half-stroke"></i></div>
+<div class="min-w-0 flex-1">
+<p class="text-sm font-semibold text-white mb-2.5">Appearance</p>
 <div class="theme-segment" role="group" aria-label="Theme">
 <button class="theme-seg-btn" data-theme-option="light" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i><span>Light</span></button>
 <button class="theme-seg-btn" data-theme-option="dark" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i><span>Dark</span></button>
 <button class="theme-seg-btn" data-theme-option="auto" onclick="setTheme('auto')"><i class="fa-solid fa-circle-half-stroke"></i><span>Auto</span></button>
 </div>
 </div>
+</div>
+</div>
+
 <!-- Referral -->
 <div class="glass-card rounded-3xl p-5 mb-5">
 <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-user-group text-emerald-400 mr-2"></i>Refer 3, get Premium free</h3>
@@ -864,18 +919,15 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 </div>
 <div class="flex items-center gap-2">
 <div class="flex-1 glass-card rounded-xl px-3.5 py-2.5 flex items-center justify-between">
-<span class="text-sm font-bold text-white" id="profileReferralShareUid" style="font-family:ui-monospace,Menlo,monospace;">—</span>
+<span class="text-sm font-bold text-white uid-mono" id="profileReferralShareUid">—</span>
 </div>
 <button class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center flex-shrink-0 transition" onclick="copyUid()"><i class="fa-solid fa-share-nodes text-sm text-white"></i></button>
 </div>
 </div>
+
 <!-- Account info -->
 <div class="glass-card rounded-3xl p-5 mb-5 space-y-3">
 <h3 class="text-sm font-black text-white mb-1"><i class="fa-solid fa-circle-info text-slate-400 mr-2"></i>Account</h3>
-<div class="flex items-center justify-between text-xs">
-<span class="text-slate-400">Member since</span>
-<span class="text-white font-semibold" id="profileMemberSince">—</span>
-</div>
 <div class="flex items-center justify-between text-xs">
 <span class="text-slate-400">Referred by</span>
 <span class="text-white font-semibold" id="profileReferredByLabel">—</span>
@@ -883,38 +935,19 @@ html[data-theme="light"] .theme-seg-btn.theme-opt-active { color:#052e1f; }
 <div class="flex items-center justify-between text-xs">
 <span class="text-slate-400">This device</span>
 <span class="text-white font-semibold">Active session</span>
-<button id="lumicLogoutBtn" style="
-  width:100%;
-  padding:12px;
-  border-radius:16px;
-  background:rgba(239,68,68,0.12);
-  color:#f87171;
-  font-weight:700;
-  font-size:14px;
-  border:1px solid rgba(239,68,68,0.25);
-  cursor:pointer;">
-  Log out
-</button>
-<script>
-document.getElementById('lumicLogoutBtn').addEventListener('click', async () => {
-  await supabaseClient.auth.signOut();
-  // Clear the "this device already finished onboarding" flag too — otherwise
-  // index.html's offline-friendly returning-device shortcut will just send
-  // you straight back into lumic.html without actually requiring login.
-  localStorage.removeItem('lumic_device_registered');
-  localStorage.removeItem('lumic_pending_uid');
-  localStorage.removeItem('lumic_pending_ref');
-  window.location.href = "index.html";
-});
-</script>
 </div>
-<div class="hidden pt-2 border-t border-white/10" id="adminPanelEntryRow">
+</div>
+
+<div class="hidden mb-5" id="adminPanelEntryRow">
 <button class="w-full flex items-center justify-between text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-3 py-2.5 rounded-xl transition" onclick="openAdminPanel()">
 <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-2"></i>Admin panel</span>
 <i class="fa-solid fa-chevron-right text-slate-500"></i>
 </button>
 </div>
-</div>
+
+<button class="w-full text-center font-bold text-sm py-3.5 rounded-2xl transition active:scale-[0.98]" onclick="logout()" style="background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.22);">
+<i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Log out
+</button>
 </section>
 <!-- VIEW: ADMIN -->
 <section class="hidden" id="view-admin">
@@ -1130,6 +1163,10 @@ document.getElementById('lumicLogoutBtn').addEventListener('click', async () => 
 <div class="as-item" id="asDownloadItem" onclick="actionDownload()">
 <div class="as-icon bg-sky-500/15" id="asDownloadIcon"><i class="fa-solid fa-download text-sky-400"></i></div>
 <span class="text-sm text-white font-medium" id="asDownloadLabel">Save offline</span>
+</div>
+<div class="as-item" onclick="actionSaveMp3()">
+<div class="as-icon bg-emerald-500/15"><i class="fa-solid fa-file-audio text-emerald-400"></i></div>
+<span class="text-sm text-white font-medium">Save as MP3 to device</span>
 </div>
 <div class="as-item" onclick="actionMoreByArtist()">
 <div class="as-icon bg-amber-500/15"><i class="fa-solid fa-user text-amber-400"></i></div>
@@ -1601,7 +1638,7 @@ const PLAYLIST_PRESETS = {
   focus_study: ["ludovico einaudi","max richter","brian eno","nils frahm","ólafur arnalds"],
   wedding_jams: ["flavour","davido","tiwa savage","2baba","yemi alade","kizz daniel"],
   sleep_sounds: { type: "search", value: "sleep sound" },
-  hiphop_for_you: ["kendrick lamar","j. cole","drake","travis scott","odumodublvck","blaqbonez","ycee"]
+  hiphop_for_you: { type: "vistanaij" }
 };
 
 // Only used if a live DB fetch for spotlight artists fails outright (e.g.
@@ -2048,6 +2085,7 @@ window.addEventListener("DOMContentLoaded", () => {
   renderArtistSpotlight();
   renderRecommended();
   renderMoodCardsGrid();
+  loadTop100Nigeria();
   hydrateJumpBackInColors();
   restoreLastSession();
   initOfflineDB();
@@ -2446,6 +2484,41 @@ function playHeroSlide(presetKey, title) {
   showStatus(`Loading ${title}…`);
   playCuratedPlaylist(presetKey);
 }
+function openHeroSlidePlaylist(presetKey, title) {
+  if (presetKey === "your_mix_live") { openYourMixPlaylistView(); return; }
+  openCuratedPlaylistView(presetKey, title);
+}
+function openYourMixPlaylistView() {
+  const cached = getYourMixCache();
+  const songs = cached && cached.data ? cached.data : [];
+  currentPlaylistCtx = "your-mix-live";
+  currentPlaylistPresetTitle = "Your Mix";
+  prevView = ["home", "search", "library"].includes(prevView) ? prevView : "home";
+  document.getElementById("playlistName").innerText = "Your Mix";
+  document.getElementById("playlistKind").innerText = "Mix";
+  document.getElementById("playlistDownloadBtn").classList.remove("hidden");
+  document.getElementById("playlistShareBtn").classList.remove("hidden");
+  document.getElementById("playlistHeaderCollage").innerHTML = "";
+  switchView("playlist");
+  if (!songs.length) {
+    document.getElementById("playlistMeta").innerText = "Still building…";
+    document.getElementById("playlistSongsList").innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">Still building your mix — play a few more songs and check back.</div>`;
+    refreshYourMixInBackground(true);
+    return;
+  }
+  const shuffled = [...songs].sort(() => Math.random() - 0.5);
+  currentPlaylistPresetSongs = shuffled;
+  document.getElementById("playlistMeta").innerText = `${shuffled.length} songs`;
+  setCurrentPlaylistSongs(shuffled, { removable: false });
+  const collage = document.getElementById("playlistHeaderCollage");
+  shuffled.slice(0, 4).forEach(s => {
+    const img = document.createElement("img");
+    img.className = "w-full h-full object-cover";
+    img.src = placeholderFor(s.title);
+    collage.appendChild(img);
+    resolveImage(s).then(url => img.src = url);
+  });
+}
 function playYourMixFromHero() {
   const cached = getYourMixCache();
   const songs = cached && cached.data ? cached.data : [];
@@ -2515,10 +2588,18 @@ async function renderArtistSpotlight() {
   if (!row) return;
   row.innerHTML = Array(6).fill('<div class="flex-shrink-0"><div class="skeleton" style="width:80px;height:80px;border-radius:50%;"></div></div>').join("");
 
-  const pool = await fetchSpotlightArtistPool();
-  const names = pool && pool.length >= 6
-    ? [...pool].sort(() => Math.random() - 0.5).slice(0, 6)
-    : ARTIST_SPOTLIGHT_FALLBACK.map(a => a.name).sort(() => Math.random() - 0.5).slice(0, 6);
+  // Prefer what the user actually searches most — falls back to the
+  // trending/priority pool only once there's not enough search history yet.
+  const mostSearched = getMostSearchedTerms(6);
+  let names;
+  if (mostSearched.length >= 3) {
+    names = mostSearched;
+  } else {
+    const pool = await fetchSpotlightArtistPool();
+    names = pool && pool.length >= 6
+      ? [...pool].sort(() => Math.random() - 0.5).slice(0, 6)
+      : ARTIST_SPOTLIGHT_FALLBACK.map(a => a.name).sort(() => Math.random() - 0.5).slice(0, 6);
+  }
 
   row.innerHTML = "";
   names.forEach((name, i) => {
@@ -2581,67 +2662,26 @@ const RECOMMENDED_CACHE_KEY = "lumic_cache_recommended_v1";
 async function renderRecommended() {
   const section = document.getElementById("recommendedSection");
   const row = document.getElementById("recommendedRow");
+  const headingText = document.getElementById("recommendedHeadingText");
   if (!section || !row) return;
 
-  const cached = readListCache(RECOMMENDED_CACHE_KEY);
-  if (cached && cached.data && cached.data.length) {
-    section.classList.remove("hidden");
-    renderRecommendedRow(cached.data, row);
+  if (headingText) {
+    const name = currentProfile?.display_name || (currentUser?.email || "").split("@")[0];
+    headingText.innerText = name ? `Made for ${name}` : "Made for you";
   }
 
-  const primaryArtists = [...new Set(recentSongs.map(s => splitFeaturedArtists(s.artist || "").primary).filter(Boolean))];
-  const featuredArtists = [];
-  recentSongs.slice(0, 12).forEach(s => featuredArtists.push(...extractFeaturedArtists(s)));
-
-  // Reverse lookup (parallel): who ELSE features the artists you've been
-  // playing — this is what actually surfaces new, related artists instead
-  // of looping the same recent-play names.
-  const reverseTargets = primaryArtists.slice(0, 4);
-  const collabLists = await Promise.all(reverseTargets.map(a =>
-    supabaseClient.from("songs").select("artist").ilike("artist", `%ft%${a}%`).limit(5)
-      .then(r => (r.data || []).map(x => splitFeaturedArtists(x.artist).primary))
-      .catch(() => [])
-  ));
-
-  let candidateArtists = [...new Set([...primaryArtists, ...featuredArtists])];
-  collabLists.forEach(list => candidateArtists.push(...list));
-  if (candidateArtists.length === 0) candidateArtists = [...PRIORITY_ARTISTS];
-
-  // Weight toward trending/priority artists (Davido, Wizkid, Asake,
-  // Zlatan...) by doubling their odds of being picked, without letting
-  // them crowd out everything else.
-  const weighted = [...candidateArtists, ...candidateArtists.filter(a => PRIORITY_ARTISTS.some(p => p.toLowerCase() === (a || "").toLowerCase()))];
-  candidateArtists = [...new Set(weighted)].sort(() => Math.random() - 0.5).slice(0, 10);
-
-  if (candidateArtists.length === 0) { if (!cached) section.classList.add("hidden"); return; }
+  // This now deliberately mirrors the hero slider's "Your Mix" data —
+  // one personalized mix, shown two ways, instead of running a second,
+  // separate recommendation algorithm alongside it.
+  const cached = getYourMixCache();
+  const songs = cached && cached.data ? cached.data : [];
+  if (!songs.length) {
+    section.classList.add("hidden");
+    refreshYourMixInBackground(false);
+    return;
+  }
   section.classList.remove("hidden");
-  if (!cached || !cached.data.length) {
-    row.innerHTML = `<div class="flex gap-4">${Array(4).fill('<div class="rec-card"><div class="skeleton" style="width:150px;height:150px;border-radius:14px;"></div></div>').join("")}</div>`;
-  }
-
-  const alreadyPlayedUids = new Set(recentSongs.map(uidFor));
-  // All candidate artists fetched together — this is what makes the
-  // section fast, versus awaiting one artist at a time.
-  const perArtist = await Promise.all(candidateArtists.map(a => fetchAcrossAllTables(a, 4)));
-  const picks = [];
-  perArtist.forEach(tracks => tracks.forEach(t => { if (!alreadyPlayedUids.has(uidFor(t))) picks.push(t); }));
-
-  const seen = new Set();
-  let unique = picks.filter(t => { const u = uidFor(t); if (seen.has(u)) return false; seen.add(u); return true; });
-  unique = unique.sort(() => Math.random() - 0.5);
-
-  // Hard cap of 2 tracks per artist in the final row — without this, a
-  // couple of prolific artists can end up filling most of the 15 slots.
-  const perArtistCount = {};
-  unique = unique.filter(t => {
-    const key = (t.artist || "").toLowerCase();
-    perArtistCount[key] = (perArtistCount[key] || 0) + 1;
-    return perArtistCount[key] <= 2;
-  }).slice(0, 15);
-
-  if (unique.length === 0) { if (!cached || !cached.data.length) section.classList.add("hidden"); return; }
-  renderRecommendedRow(unique, row);
-  writeListCache(RECOMMENDED_CACHE_KEY, unique);
+  renderRecommendedRow(songs.slice(0, 15), row);
 }
 
 function renderRecommendedRow(list, row) {
@@ -3078,24 +3118,23 @@ async function openAlbumView(album) {
 // ==================== TOP 100 NIGERIA (Last.fm chart -> matched against our DB) ====================
 // Pulls Nigeria's real trending list from Last.fm (title + artist only —
 // Last.fm is never used for streaming or images), then walks down that
-// list checking each title against songs/museek_tracks and the Museek API. Only
-// tracks that actually exist in our catalog get shown; anything with no
-// match is silently skipped. Only the first 4 are visible until the
-// dropdown chevron is tapped.
+// list checking each title against songs/museek_tracks and the Museek API.
+// Only tracks that actually exist in our catalog get shown, up to 20 —
+// shown 5 at a time as swipeable columns, not one long scrolling list.
 const TOP100_CACHE_KEY = "lumic_cache_top100_v1";
 
 async function loadTop100Nigeria() {
   const section = document.getElementById("top100Section");
-  const grid = document.getElementById("top100Grid");
+  const grid = document.getElementById("top100PagedRow");
   if (!section || !grid) return;
 
   const cached = readListCache(TOP100_CACHE_KEY);
   section.classList.remove("hidden");
   if (cached && cached.data && cached.data.length) {
     currentTop100 = cached.data;
-    renderTop100Grid(cached.data, grid);
+    renderTop100Paged(cached.data, grid);
   } else {
-    grid.innerHTML = Array(4).fill('<div class="skeleton" style="aspect-ratio:1;border-radius:12px;"></div>').join("");
+    grid.innerHTML = '<div class="top100-page">' + Array(5).fill('<div class="skeleton" style="height:60px;border-radius:14px;"></div>').join("") + '</div>';
   }
 
   let chartEntries = [];
@@ -3139,43 +3178,55 @@ async function loadTop100Nigeria() {
   }
 
   currentTop100 = matched;
-  renderTop100Grid(matched, grid);
+  renderTop100Paged(matched, grid);
   writeListCache(TOP100_CACHE_KEY, matched);
 }
 let currentTop100 = [];
 
-function renderTop100Grid(matched, grid) {
-  grid.innerHTML = "";
-  matched.forEach((track, i) => {
-    const card = document.createElement("div");
-    card.className = "chart-card";
-    if (i >= 4 && !top100Expanded) card.classList.add("hidden");
-    const cachedImg = getCachedImage(track.artist) || placeholderFor(track.title);
-    card.innerHTML = `
-      <span class="chart-rank">#${i + 1}</span>
-      <img data-song-img src="${cachedImg}" alt="${escapeHtml(track.title)}">
-      <h4 class="text-xs font-bold text-white truncate mt-2">${escapeHtml(track.title)}</h4>
-      <p class="text-[11px] text-slate-400 truncate">${escapeHtml(track.artist)}</p>
-    `;
-    card.onclick = () => { activeQueue = matched; currentIndex = i; playTrack(track); };
-    grid.appendChild(card);
-    resolveImage(track).then(img => { const el = card.querySelector("[data-song-img]"); if (el) el.src = img; });
+function renderTop100Paged(matched, container) {
+  container.innerHTML = "";
+  const pages = [];
+  for (let i = 0; i < matched.length; i += 5) pages.push(matched.slice(i, i + 5));
+  pages.forEach((pageSongs, pageIdx) => {
+    const page = document.createElement("div");
+    page.className = "top100-page scroll-snap-item";
+    pageSongs.forEach((track, i) => {
+      const rank = pageIdx * 5 + i + 1;
+      const row = document.createElement("div");
+      row.className = "top100-row";
+      const cachedImg = getCachedImage(track.artist) || placeholderFor(track.title);
+      row.innerHTML = `
+        <span class="rank">${rank}</span>
+        <img data-song-img src="${cachedImg}" alt="">
+        <div class="min-w-0 flex-1">
+          <h4 class="text-xs font-bold text-white truncate">${escapeHtml(track.title)}</h4>
+          <p class="text-[11px] text-slate-400 truncate">${escapeHtml(track.artist)}</p>
+        </div>
+      `;
+      row.onclick = () => { activeQueue = matched; currentIndex = rank - 1; playTrack(track); };
+      page.appendChild(row);
+      resolveImage(track).then(img => { const el = row.querySelector("[data-song-img]"); if (el) el.src = img; });
+    });
+    container.appendChild(page);
   });
-  const toggleBtn = document.getElementById("top100ToggleBtn");
-  if (toggleBtn) toggleBtn.classList.toggle("hidden", matched.length <= 4);
+  initTop100Dots(pages.length);
 }
-
-// Toggles the Top Nigeria grid between "first 4 only" and "show all" —
-// only the chevron button triggers the expanded view.
-function toggleTop100Expand() {
-  top100Expanded = !top100Expanded;
-  document.querySelectorAll("#top100Grid .chart-card").forEach((el, i) => {
-    if (i >= 4) el.classList.toggle("hidden", !top100Expanded);
-  });
-  const icon = document.getElementById("top100ToggleIcon");
-  if (icon) icon.style.transform = top100Expanded ? "rotate(180deg)" : "rotate(0deg)";
-  const label = document.getElementById("top100ToggleLabel");
-  if (label) label.innerText = top100Expanded ? "Show less" : "Show more";
+function initTop100Dots(count) {
+  const dotsWrap = document.getElementById("top100Dots");
+  const track = document.getElementById("top100PagedRow");
+  if (!dotsWrap || !track) return;
+  dotsWrap.innerHTML = Array.from({ length: count }, (_, i) => `<span class="${i === 0 ? "active" : ""}"></span>`).join("");
+  const dots = dotsWrap.querySelectorAll("span");
+  let ticking = false;
+  track.onscroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const idx = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+      ticking = false;
+    });
+  };
 }
 
 // Finds the closest match in our DB for a Last.fm {title, artist} pair —
@@ -3520,6 +3571,9 @@ async function openCuratedPlaylistView(presetKey, title) {
     }
   }
   if (currentPlaylistCtx !== ctxKey) return;
+  // Always shuffle — a curated/algorithmic mix should feel different each
+  // time it's opened, not play back in the same fixed fetch order.
+  songs = [...songs].sort(() => Math.random() - 0.5);
   currentPlaylistPresetSongs = songs;
   document.getElementById("playlistMeta").innerText = `${songs.length} song${songs.length === 1 ? "" : "s"}`;
   setCurrentPlaylistSongs(songs, { removable: false });
@@ -4993,16 +5047,15 @@ function renderRecentlyPlayed() {
   row.innerHTML = "";
   recentSongs.slice(0, 10).forEach(song => {
     const card = document.createElement("div");
-    card.className = "w-32 flex-shrink-0 cursor-pointer group scroll-snap-item";
+    card.className = "w-[72px] flex-shrink-0 cursor-pointer group scroll-snap-item text-center";
     card.innerHTML = `
-      <div class="w-32 h-32 rounded-2xl overflow-hidden mb-2 bg-slate-800 border border-white/10 relative">
+      <div class="w-[72px] h-[72px] rounded-full overflow-hidden mb-1.5 bg-slate-800 border border-white/10 relative mx-auto">
         <img data-song-img src="${placeholderFor(song.title)}" class="w-full h-full object-cover fade-img group-hover:scale-105 transition duration-300">
         <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-          <i class="fa-solid fa-play text-white text-xl"></i>
+          <i class="fa-solid fa-play text-white text-sm"></i>
         </div>
       </div>
-      <h4 class="text-[11px] font-bold text-white truncate">${escapeHtml(song.title)}</h4>
-      <p class="text-[10px] text-slate-400 truncate">${escapeHtml(song.artist)}</p>
+      <h4 class="text-[10px] font-bold text-white truncate">${escapeHtml(song.title)}</h4>
     `;
     card.onclick = () => { activeQueue = recentSongs; currentIndex = recentSongs.findIndex(s => uidFor(s) === uidFor(song)); playTrack(song); };
     row.appendChild(card);
@@ -5230,6 +5283,28 @@ function saveRecentSearch(query) {
   recentSearches.unshift(query);
   recentSearches = recentSearches.slice(0, 15);
   localStorage.setItem("lumic_searches", JSON.stringify(recentSearches));
+  bumpSearchFrequency(query);
+}
+
+// Frequency counter (separate from recentSearches, which is recency-only
+// and drops the count the moment a repeated term gets moved to the front).
+// This is what lets Artist Spotlight surface what the user actually
+// searches most, not just what they searched most *recently*.
+function bumpSearchFrequency(query) {
+  const key = (query || "").trim().toLowerCase();
+  if (!key) return;
+  let counts = {};
+  try { counts = JSON.parse(localStorage.getItem("lumic_search_counts") || "{}"); } catch (e) {}
+  counts[key] = (counts[key] || 0) + 1;
+  try { localStorage.setItem("lumic_search_counts", JSON.stringify(counts)); } catch (e) {}
+}
+function getMostSearchedTerms(limit = 6) {
+  let counts = {};
+  try { counts = JSON.parse(localStorage.getItem("lumic_search_counts") || "{}"); } catch (e) {}
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([term]) => term.replace(/\b\w/g, c => c.toUpperCase()));
 }
 
 let suggestionApiTimer = null;
@@ -5888,6 +5963,61 @@ async function actionDownload() {
     refreshDownloadedBadges();
   }
 }
+// ==================== SAVE TO DEVICE (real .mp3 file) ====================
+// Deliberately separate from actionDownload()/OPFS above: "Save offline" is
+// a private, fast, in-app cache used only for offline playback inside
+// Lumic — it was never meant to be the answer to "give me an actual file".
+// This is that: a real, standalone .mp3 written to the device itself —
+// playable in any music app, shareable, and it survives even if Lumic
+// itself is ever uninstalled.
+async function actionSaveMp3() {
+  if (!actionSheetTarget) return;
+  const song = actionSheetTarget;
+  closeActionSheet();
+  showStatus(`Preparing "${song.title}"…`, 4000);
+  try {
+    const blob = await fetchAudioBlob(song);
+    if (!blob || !blob.size) throw new Error("empty audio");
+    const filename = `${song.title} - ${song.artist}`.replace(/[\\/:*?"<>|]+/g, "").slice(0, 120) + ".mp3";
+    const mp3Blob = blob.type && blob.type.startsWith("audio/") ? blob : new Blob([blob], { type: "audio/mpeg" });
+
+    // File System Access API (Chromium desktop + Android Chrome) — a real
+    // native save dialog, letting the person choose exactly where it goes.
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: "MP3 audio", accept: { "audio/mpeg": [".mp3"] } }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(mp3Blob);
+        await writable.close();
+        showStatus(`Saved "${song.title}"`, 2500, "success");
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // they cancelled the picker, not an error
+        // Anything else (unsupported here, permission denied) — fall
+        // through to the universal path below instead of failing outright.
+      }
+    }
+
+    // Universal fallback — works everywhere, including iOS Safari and
+    // older Android WebViews: a genuine browser download into the device's
+    // normal Downloads location. A real file, not a blob kept in app or
+    // browser storage.
+    const url = URL.createObjectURL(mp3Blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showStatus(`Saved "${song.title}" to your device`, 2500, "success");
+  } catch (e) {
+    showStatus("Couldn't save that file — try again.", 3000, "error");
+  }
+}
 async function actionMoreByArtist() {
   if (!actionSheetTarget) return;
   closeActionSheet();
@@ -6259,16 +6389,30 @@ function importLocalFiles(event) {
     const song = { id, title, artist, stream_url: url, image: null, _local: true, _localName: file.name };
     localSongs.push(song);
     imported++;
-    if (offlineDB) {
-      const tx = offlineDB.transaction("localTracks", "readwrite");
-      tx.objectStore("localTracks").put({ id, title, artist, localName: file.name, blob: file, addedAt: Date.now() });
-    } else {
-      showStatus("Offline storage isn't ready yet — this import may not survive a refresh. Try again in a moment.");
-    }
+    saveLocalTrackWhenDbReady({ id, title, artist, localName: file.name, blob: file, addedAt: Date.now() });
   });
   renderLocalFiles();
   if (imported) showStatus(`Imported ${imported} local song${imported !== 1 ? "s" : ""}`);
   event.target.value = "";
+}
+
+// Guards against the moment right after opening the app: IndexedDB usually
+// finishes initializing in well under a second, but if someone imports a
+// file before it has, the old code just warned "may not survive a
+// refresh" and silently dropped the save. This retries for a few seconds
+// instead of giving up immediately, so an import right at launch still
+// actually persists.
+function saveLocalTrackWhenDbReady(record, attempt = 0) {
+  if (offlineDB) {
+    const tx = offlineDB.transaction("localTracks", "readwrite");
+    tx.objectStore("localTracks").put(record);
+    return;
+  }
+  if (attempt >= 20) {
+    showStatus("Couldn't save that import for next time — storage isn't available on this device.", 3500, "error");
+    return;
+  }
+  setTimeout(() => saveLocalTrackWhenDbReady(record, attempt + 1), 250);
 }
 
 function loadLocalTracksFromDB() {
@@ -7776,7 +7920,15 @@ async function logout(silent) {
   await supabaseClient.auth.signOut();
   sessionPollTimer && clearInterval(sessionPollTimer);
   premiumCheckTimer && clearInterval(premiumCheckTimer);
-  if (window.LumicEntry) window.LumicEntry.show(); else window.location.href = "lumic.html";
+  // Without clearing this, the entry gate's "already finished onboarding on
+  // this device" fast path would treat a signed-out device as still signed
+  // in on the next load, skipping straight past the login screen.
+  try {
+    localStorage.removeItem("lumic_device_registered");
+    localStorage.removeItem("lumic_pending_uid");
+    localStorage.removeItem("lumic_pending_ref");
+  } catch (_) {}
+  if (window.LumicEntry) window.LumicEntry.show(); else window.location.reload();
 }
 
 // ==================== PAYSTACK ====================
